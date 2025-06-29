@@ -1,4 +1,4 @@
 python-telegram-bot==20.7
 motor==3.3.2
-pillow==10.3.0
+Pillow
 requests==2.31.0
