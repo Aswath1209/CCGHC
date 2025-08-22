@@ -1260,7 +1260,7 @@ async def finish_match(context: ContextTypes.DEFAULT_TYPE, match, winner):
         import requests
         url = f"https://partner.adsgram.ai/api/bot/{ADGRAM_PLATFORM_ID}/ad"
         params = {
-            "user_id": chat_id,  # group ID or winner’s ID
+            "user_id": winner,  # ✅ use actual user ID of the winner  # group ID or winner’s ID
             "block_id": ADGRAM_BLOCK_ID,
             "token": ADGRAM_API_TOKEN
         }
