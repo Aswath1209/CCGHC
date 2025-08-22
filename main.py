@@ -90,6 +90,33 @@ async def load_users():
 
 # --- Commands ---
 
+import requests
+
+ADGRAM_PLATFORM_ID = "12185"       # From your bot’s AdGram platform
+ADGRAM_BLOCK_ID = "14128"          # From your ad block
+ADGRAM_API_TOKEN = "YOUR_ADGRAM_API_TOKEN"  # From AdGram dashboard
+
+async def show_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    url = f"https://partner.adsgram.ai/api/bot/{ADGRAM_PLATFORM_ID}/ad"
+    params = {
+        "user_id": user_id,
+        "block_id": ADGRAM_BLOCK_ID,
+        "token": ADGRAM_API_TOKEN
+    }
+    
+    try:
+        response = requests.get(url, params=params).json()
+        if "message" in response:
+            ad_text = response["message"]["text"]
+            ad_buttons = response["message"].get("reply_markup")
+            await update.message.reply_text(ad_text, reply_markup=ad_buttons)
+        else:
+            await update.message.reply_text("📢 No ads available right now.")
+    except Exception as e:
+        await update.message.reply_text(f"Error fetching ad: {e}")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     ensure_user(user)
@@ -1227,6 +1254,23 @@ async def finish_match(context: ContextTypes.DEFAULT_TYPE, match, winner):
     await save_user(loser)
 
     await context.bot.send_message(chat_id=chat_id, text=f"🏆 {USERS[winner]['name']} won the match! Congratulations! 🎉")
+
+    # 🔹 Show AdGram ad after match
+    try:
+        import requests
+        url = f"https://partner.adsgram.ai/api/bot/{ADGRAM_PLATFORM_ID}/ad"
+        params = {
+            "user_id": chat_id,  # group ID or winner’s ID
+            "block_id": ADGRAM_BLOCK_ID,
+            "token": ADGRAM_API_TOKEN
+        }
+        response = requests.get(url, params=params).json()
+        if "message" in response:
+            ad_text = response["message"]["text"]
+            ad_buttons = response["message"].get("reply_markup")
+            await context.bot.send_message(chat_id=chat_id, text=ad_text, reply_markup=ad_buttons)
+    except Exception as e:
+        await context.bot.send_message(chat_id=chat_id, text=f"(Ad error: {e})")
 
     USER_CCL_MATCH[initiator] = None
     USER_CCL_MATCH[opponent] = None
