@@ -439,7 +439,14 @@ const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('Cricket Bot is safely running!'));
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Dummy web server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Dummy web server running on port ${PORT}`);
+  console.log("Cricket Bot is starting polling...");
+});
 
-bot.start();
-console.log("Cricket Bot Final Code started!");
+bot.start().catch((err) => {
+  console.error("FATAL: Bot failed to start polling!", err);
+  process.exit(1);
+});
+
+console.log("Cricket Bot Final Code is now LIVE!");
