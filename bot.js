@@ -466,3 +466,13 @@ bot.start().catch((err) => {
 });
 
 console.log("Cricket Bot Final Code is now LIVE!");
+
+process.once("SIGINT", () => {
+  console.log("SIGINT received, stopping bot...");
+  bot.stop();
+});
+process.once("SIGTERM", () => {
+  console.log("SIGTERM received, stopping bot...");
+  bot.stop();
+});
+
