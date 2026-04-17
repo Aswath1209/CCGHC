@@ -323,6 +323,11 @@ bot.on('message:text', async (ctx) => {
     if (!game || game.state !== 'PLAYING') return; 
     
     const res = gameManager.submitPlay(game.id, userId, txt);
+    if (!res.success) {
+        if (res.error === 'Not in game') return;
+        return await ctx.reply("❌ " + res.error);
+    }
+
     if (userId === game.batsmanId) {
         await ctx.reply(`✅ You played: ${res.batStr || txt}`);
     } else {
@@ -343,6 +348,7 @@ bot.on('message:text', async (ctx) => {
     
     await handleRoundResult(ctx, res);
 });
+
 
 
 async function sendEventUpdate(ctx, chatId, eventKey) {
@@ -388,18 +394,23 @@ async function handleRoundResult(ctx, res) {
   } else {
       await sendEventUpdate(ctx, chatId, batStr);
   }
+  await sleep(1000);
   
-  const currentScore = game.innings === 1 ? game.score1 : game.score2;
-  await ctx.api.sendMessage(chatId, `Current Score: ${currentScore}`);
-
+  // Display correct score (if innings just ended, show score1)
+  if (res.inningsEnded) {
+      await ctx.api.sendMessage(chatId, `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: ${game.score1}\nTarget for Team 2: ${game.score1 + 1}`, { parse_mode: 'HTML' });
+  } else {
+      const currentScore = game.innings === 1 ? game.score1 : game.score2;
+      const targetText = game.target ? ` (Target: ${game.target})` : (game.innings === 2 ? ` (Target: ${game.score1 + 1})` : "");
+      await ctx.api.sendMessage(chatId, `📊 Scorecard: ${currentScore}/${game.innings === 1 ? 0 : 0} ${targetText}`);
+  }
 
   // End conditions
   if (isWicket) {
       if (inningsEnded) {
           game.halfCenturyAnnounced = false;
           game.centuryAnnounced = false;
-          await ctx.api.sendMessage(chatId, `Innings break! Target for second innings: ${game.score1 + 1}`);
-          // Send instructions again
+          // Send instructions again for new innings
           const nBatP = game.players.find(p => p.id === game.batsmanId);
           const nBowlP = game.players.find(p => p.id === game.bowlerId);
           await sendDMInstructions(ctx, game, nBatP, nBowlP);
@@ -420,7 +431,8 @@ async function handleRoundResult(ctx, res) {
           await ctx.api.sendMessage(chatId, "🤝 The match is a tie!");
       } else {
           const winnerP = game.players.find(p => p.id === res.winnerId);
-          await ctx.api.sendMessage(chatId, `🏆 ${winnerP.first_name} won the match! Congratulations! 🎉`);
+          const reason = isWicket ? "on a wicket!" : "by chasing down the target!";
+          await ctx.api.sendMessage(chatId, `🏆 <b>${winnerP.first_name} won the match ${reason}</b> 🎉`, { parse_mode: 'HTML' });
           if (game.bet > 0) {
               await ctx.api.sendMessage(chatId, `💰 ${game.bet}🪙 coins transferred to ${winnerP.first_name} as bet winnings!`);
           }
@@ -428,6 +440,7 @@ async function handleRoundResult(ctx, res) {
       }
       gameManager.deleteGame(game.id);
   } else if (!inningsEnded) {
+
       // Round continuous!
       const batP = game.players.find(p => p.id === game.batsmanId);
       const bowlP = game.players.find(p => p.id === game.bowlerId);
