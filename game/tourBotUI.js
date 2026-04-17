@@ -225,17 +225,16 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
        return true; 
   };
   
-  async function handleTourResult(ctx, res) {
+async function handleTourResult(ctx, res) {
       const { tour, batStr, bowlStr, isWicket } = res;
       const bPName = pName(tour, res.originalBowlerId);
       
       const over = Math.floor((res.ballsThisRound - 1) / 6);
       const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
       
-      await ctx.api.sendMessage(tour.chatId, `Over ${over+1} | Ball ${ballInOver}`);
-      await sleep(3500);
-      await ctx.api.sendMessage(tour.chatId, `${bPName} bowls a ${bowlStr}!`);
-      await sleep(3500);
+      // Consolidate "Over/Ball" and "Bowler bowls" into one message
+      await ctx.api.sendMessage(tour.chatId, `📍 <b>Over ${over+1} | Ball ${ballInOver}</b>\n${bPName} bowls a <b>${bowlStr}</b>!`, { parse_mode: 'HTML' });
+      await sleep(1500);
       
       if (isWicket) {
           await sendEventUpdate(ctx, tour.chatId, "out");
@@ -243,9 +242,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           await sendEventUpdate(ctx, tour.chatId, batStr);
       }
       
+      await sleep(1000);
+      
       // Print score
       const batT = tour[tour.battingTeamId];
-      await ctx.api.sendMessage(tour.chatId, `Score: ${batT.score}/${batT.wickets} (Wickets Left: ${batT.inningsRemainingWickets})`);
+      await ctx.api.sendMessage(tour.chatId, `📊 Score: ${batT.score}/${batT.wickets} (Wickets Left: ${batT.inningsRemainingWickets})`);
+
       
       if (res.matchEnded) {
           if (res.tie) await ctx.api.sendMessage(tour.chatId, "🤝 Match Tied!");

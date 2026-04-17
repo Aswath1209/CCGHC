@@ -369,28 +369,26 @@ async function sendEventUpdate(ctx, chatId, eventKey) {
 //
 async function handleRoundResult(ctx, res) {
   const { game, batNum, bowlNum, batStr, bowlStr, isWicket, inningsEnded, matchEnded, tie, hit50, hit100 } = res;
-  
+  const batsmanP = game.players.find(p => p.id === game.batsmanId);
+  const bowlerP = game.players.find(p => p.id === game.bowlerId);
   const chatId = game.chatId;
 
   const over = Math.floor((res.ballsThisRound - 1) / 6);
   const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
-  
-  const bowlerP = game.players.find(p => p.id === res.originalBowlerId);
-  
-  await ctx.api.sendMessage(chatId, `Over ${over + 1}`);
-  await ctx.api.sendMessage(chatId, `Ball ${ballInOver}`);
-  await sleep(4000);
-  
-  await ctx.api.sendMessage(chatId, `${bowlerP.first_name} bowls a ${bowlStr} delivery!`);
-  await sleep(4000);
+
+  // Consolidate "Over/Ball" and "Bowler bowls" into one message
+  await ctx.api.sendMessage(chatId, `📍 <b>Over ${over + 1} | Ball ${ballInOver}</b>\n${bowlerP.first_name} bowls a <b>${bowlStr}</b> delivery!`, { parse_mode: 'HTML' });
+  await sleep(2000);
 
   if (isWicket) {
       await sendEventUpdate(ctx, chatId, "out");
   } else {
       await sendEventUpdate(ctx, chatId, batStr);
-      const currentScore = game.innings === 1 ? game.score1 : game.score2;
-      await ctx.api.sendMessage(chatId, `Current Score: ${currentScore}`);
   }
+  
+  await sleep(1000);
+  const currentScore = game.innings === 1 ? game.score1 : game.score2;
+  await ctx.api.sendMessage(chatId, `📊 Scorecard: ${currentScore}/${game.wickets} (Target: ${game.target || 'N/A'})`);
 
   // End conditions
   if (isWicket) {
