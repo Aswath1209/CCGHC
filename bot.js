@@ -16,7 +16,8 @@ const CCL_GIFS = {
         "https://media0.giphy.com/media/3o7btXfjIjTcU64YdG/giphy.gif"
     ],
     "6": [
-        "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUya3R1eHhuaW85Mno1OTlycmJ2OXFibnA5NW5qc3Vid3djbXZkMjZ0NyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oKIPoelgPeRrfqKlO/giphy.gif"
+        "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUya3R1eHhuaW85Mno1OTlycmJ2OXFibnA5NW5qc3Vid3djbXZkMjZ0NyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oKIPoelgPeRrfqKlO/giphy.gif",
+        "https://media.giphy.com/media/kDXtscxqmTgm9XIWXk/giphy.gif"
     ],
     "out": [
         "https://media3.giphy.com/media/Wq3WRGe9N5HkSqjITT/giphy.gif"
