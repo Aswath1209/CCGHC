@@ -375,8 +375,12 @@ function deleteTour(tourId) {
     tours.delete(tourId);
 }
 
+function getAllTours() {
+    return tours.values();
+}
+
 module.exports = {
   createTour, getTour, getUserTour, deleteTour, joinTeam,
   appointCaptain, setBatsman, setBowler, submitPlay, adjustRuns, rebatPlayer,
-  totalScore
+  totalScore, getAllTours
 };

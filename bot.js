@@ -189,6 +189,7 @@ bot.api.setMyCommands([
   { command: 'batting', description: '/batting [index]' },
   { command: 'bowling', description: '/bowling [index]' },
   { command: 'scoreboard', description: 'View match status' },
+  { command: 'endmatch', description: 'Force end match (Admin)' },
   { command: 'penalty', description: '/penalty [A/B] [runs]' },
   { command: 'bonus', description: '/bonus [A/B] [runs]' },
   { command: 'innings_switch', description: 'Switch to next innings' },
@@ -257,6 +258,54 @@ bot.command('help', async (ctx) => {
     "➕ /add [id] [amount] - Give coins",
     { parse_mode: 'HTML' }
   );
+});
+
+bot.command('daily', async (ctx) => {
+  const result = await sb.claimDaily(ctx.from.id);
+  if (result.success) await ctx.reply(`✅ 2000🪙 added to your account!`);
+  else await ctx.reply(`⏳ ${result.error}`);
+});
+
+bot.command('ccl', async (ctx) => {
+  if (ctx.chat.type === 'private') return ctx.reply("CCL matches must be played in group chats.");
+  
+  const args = ctx.message.text.split(' ');
+  const bet = parseInt(args[1]) || 0;
+  
+  const user = await sb.getUser(ctx.from.id);
+  if (!user) return ctx.reply("⚠️ You need to /register first!");
+  if (user.coins < bet) return ctx.reply(`⚠️ Insufficient coins! You have ${user.coins}🪙`);
+
+  const res = gameManager.createGame(ctx.chat.id, null, { id: ctx.from.id, first_name: ctx.from.first_name }, bet);
+  if (!res.success) return ctx.reply("❌ " + res.error);
+
+  const kb = new InlineKeyboard().text("Join Match 🏏", `ccl_join_${res.game.id}`);
+  await ctx.reply(
+    `🏏 <b>CCL Match Started!</b>\n` +
+    `Host: ${ctx.from.first_name}\n` +
+    `Bet: ${bet}🪙\n\n` +
+    `Click below to join!`,
+    { reply_markup: kb, parse_mode: 'HTML' }
+  );
+});
+
+bot.command('endmatch', async (ctx) => {
+  // Check if user is host of a game in this chat or is admin
+  const isAdmin = ctx.from.id.toString() === "6268846393"; // Example admin ID from previous logs check
+  
+  let matches = [...gameManager.getAllGames()].concat([...tourManager.getAllTours()]);
+  const match = matches.find(m => m.chatId === ctx.chat.id);
+  
+  if (!match) return ctx.reply("No active match found in this chat.");
+  
+  if (match.hostId !== ctx.from.id && !isAdmin) {
+      return ctx.reply("Only the host or an admin can end the match.");
+  }
+
+  if (match.teamA) tourManager.deleteTour(match.id);
+  else gameManager.deleteGame(match.id);
+  
+  await ctx.reply("🛑 Match has been forcibly ended.");
 });
 
 bot.command('tour', async (ctx) => {
