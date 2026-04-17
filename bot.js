@@ -370,7 +370,7 @@ async function sendEventUpdate(ctx, chatId, eventKey) {
 async function handleRoundResult(ctx, res) {
   const { game, batNum, bowlNum, batStr, bowlStr, isWicket, inningsEnded, matchEnded, tie, hit50, hit100 } = res;
   const batsmanP = game.players.find(p => p.id === game.batsmanId);
-  const bowlerP = game.players.find(p => p.id === game.bowlerId);
+  const bowlerP = game.players.find(p => p.id === res.originalBowlerId);
   const chatId = game.chatId;
 
   const over = Math.floor((res.ballsThisRound - 1) / 6);
