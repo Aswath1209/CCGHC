@@ -17,10 +17,15 @@ const CCL_GIFS = {
     ],
     "6": [
         "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUya3R1eHhuaW85Mno1OTlycmJ2OXFibnA5NW5qc3Vid3djbXZkMjZ0NyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oKIPoelgPeRrfqKlO/giphy.gif",
-        "https://media.giphy.com/media/kDXtscxqmTgm9XIWXk/giphy.gif"
+        "https://media.giphy.com/media/kDXtscxqmTgm9XIWXk/giphy.gif",
+        "https://media.giphy.com/media/3DHe8wnmz5VKpyucJt/giphy.gif",
+        "https://media.giphy.com/media/tBfzeRunuQrP2kuTEb/giphy.gif"
     ],
     "out": [
-        "https://media3.giphy.com/media/Wq3WRGe9N5HkSqjITT/giphy.gif"
+        "https://media3.giphy.com/media/Wq3WRGe9N5HkSqjITT/giphy.gif",
+        "https://media.giphy.com/media/trVKor40BRBF649Wad/giphy.gif",
+        "https://media.giphy.com/media/fXcP4RuOgAah2g9dOb/giphy.gif",
+        "https://media.giphy.com/media/DYbTfb0Gqe148AAcMP/giphy.gif"
     ],
     "50": [
         "https://media0.giphy.com/media/v1.Y2lkPTZjMDliOTUyYm5ueGVod2Z0MHcxNTF1dWVvY2EzOXo5bGxhcXdxMWFsOWl5Z3d6YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LRsCOm65R3NHVwqiml/giphy.gif"
