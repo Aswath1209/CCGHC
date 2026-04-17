@@ -30,16 +30,131 @@ const CCL_GIFS = {
 };
 
 const COMMENTARY = {
-    "0": ["😶 Dot ball! Pressure builds...", "🎯 Tight delivery, no run.", "🛑 No run, good fielding!"],
-    "1": ["🏃 Quick single taken.", "👟 Running hard for one.", "⚡ One run added."],
-    "2": ["🏃‍♂️ Two runs!", "💨 Good running between wickets.", "🔥 Two runs scored."],
-    "3": ["🏃‍♂️ Three runs! Great running!", "💨 Three runs added.", "🔥 Three runs scored."],
-    "4": ["🔥 Cracking four! What a shot!", "💥 The ball races to the boundary!", "🏏 Beautiful timing for four runs!"],
-    "6": ["🚀 Massive six! Into the stands!", "🎉 What a smash! Six runs!", "🔥 Smoked it for a sixer! 🔥"],
-    "out": ["💥 Bowled him! What a delivery!", "😢 Caught out! End of the innings!", "🚫 Out! The crowd goes silent..."],
-    "50": ["🎉 Half-century! What a milestone!", "🏆 50 runs scored! Keep it up!", "🔥 Fifty up! Player is on fire!"],
-    "100": ["🏅 CENTURY! What a magnificent innings!", "🎊 100 runs! A true champion!", "🔥 Century scored! The crowd erupts!"]
+    "0": [
+        "😶 Dot ball! Pressure builds...", 
+        "🎯 Tight delivery, no run.", 
+        "🛑 No run, good fielding!",
+        "🤌 'The ball is red, round and weighs about five ounces.' - Legendary dot ball.",
+        "🥱 You couldn't hit a barn door today!",
+        "🎤 'He's looking for some runs, but finds only fresh air!'",
+        "🤡 Why are you so fat? Only because every time I hit a shot, your sister gives me a biscuit!",
+        "🧱 Solid defense, but the scoreboard is crying.",
+        "🐢 Faster than a turtle, but slower than the score.",
+        "🧥 'You can't bowl there!' - Narrator: He just did.",
+        "🦗 Cricket or Golf? You're missing everything!",
+        "📉 Your strike rate is lower than my phone battery.",
+        "😴 Waking up for the match? Or just watching the dots?",
+        "🤐 Shhh... do you hear that? It's the sound of nothing happening."
+    ],
+    "1": [
+        "🏃 Quick single taken.", 
+        "👟 Running hard for one.", 
+        "⚡ One run added.",
+        "🔥 Fast feet! One run.",
+        "🐕 Like a dog chasing a bone!",
+        "🚶 Just a gentle stroll for a single.",
+        "🔄 Rotating strike like a pro.",
+        "🤏 'Taking the easy option, one run.'",
+        "👀 Keeping the scoreboard ticking.",
+        "🏎️ Zoom! A quick single.",
+        "🤝 Teamwork makes the dream work (for one run).",
+        "🎯 Precision placement for a single."
+    ],
+    "2": [
+        "🏃‍♂️ Two runs!", 
+        "💨 Good running between wickets.", 
+        "🔥 Two runs scored.",
+        "✌️ Double trouble!",
+        "🐆 Prowling for those two runs.",
+        "🏃🏃 Two more to the tally.",
+        "📈 Moving the score along nicely.",
+        "🌪️ A whirlwind of running! Two runs.",
+        "🛤️ Smooth as silk for a double.",
+        "🚀 Pushing hard for the second!"
+    ],
+    "3": [
+        "🏃‍♂️ Three runs! Great running!", 
+        "💨 Three runs added.", 
+        "🔥 Three runs scored.",
+        "🦵 Fitness test! Three runs taken.",
+        "🥇 A hat-trick of runs in one ball!",
+        "🏁 Chasing them down... three runs!",
+        "💨 The fielders are getting a workout. 3 runs.",
+        "⚡ Blazing speed for a triple!"
+    ],
+    "4": [
+        "🔥 Cracking four! What a shot!", 
+        "💥 The ball races to the boundary!", 
+        "🏏 Beautiful timing for four runs!",
+        "🚀 'Like a tracer bullet!' - Ravi Shastri mode.",
+        "🎸 Rocks the stadium! Four runs!",
+        "🔨 Hammered away to the fence!",
+        "🎯 Precision of a surgeon. Four runs.",
+        "🤩 'Everything about that was class!'",
+        "📣 The crowd is loving this boundary!",
+        "💸 Easy money! Four runs.",
+        "🏹 Shot through the covers like an arrow!",
+        "🔥 Pure timing, no effort. 4 runs.",
+        "🧨 Exploded off the bat!",
+        "🚁 'The helicopter take-off!' - Wait, it's just a 4."
+    ],
+    "6": [
+        "🚀 Massive six! Into the stands!", 
+        "🎉 What a smash! Six runs!", 
+        "🔥 Smoked it for a sixer! 🔥",
+        "🌌 'That's gone into orbit!'",
+        "🏟️ 'If you're a fan in the top tier, keep your eyes open!'",
+        "💣 KA-BOOM! Out of the park!",
+        "🍿 Get the popcorn, this is a show! 6 runs.",
+        "🤯 'He's making them look like schoolboys!'",
+        "🦅 Flight 101: Destination Boundary Heights.",
+        "⚡ 'Absolute carnage!'",
+        "🤴 King of the crease! Huge six.",
+        "📈 Scoreboard impact: HIGH.",
+        "🧨 Power, timing, and pure disrespect! 6!",
+        "😲 'I can't believe he's hit that!'",
+        "🕺 Dance down the track and smash it!"
+    ],
+    "out": [
+        "💥 Bowled him! What a delivery!", 
+        "😢 Caught out! End of the innings!", 
+        "🚫 Out! The crowd goes silent...",
+        "👋 'Cheerio!' - Off you go.",
+        "🚾 Mind the windows on your way out!",
+        "🎤 'He's gone! The finger goes up!'",
+        "🤡 'Why don't you get some runs, mate?'",
+        "🚮 Trash disposal complete. Out!",
+        "🎈 'In the air... and taken!'",
+        "🚪 This way to the pavilion, please.",
+        "🤫 Silence in the ground. Wicket falls.",
+        "💔 Heartbreak! The batter is walking.",
+        "📦 Pack your bags! You're done.",
+        "🏏 'You're just a bits and pieces player!' - Sledge of the day.",
+        "🥶 Ice cold delivery. Out!",
+        "💀 GONE! Absolutely clinical."
+    ],
+    "50": [
+        "🎉 Half-century! What a milestone!", 
+        "🏆 50 runs scored! Keep it up!", 
+        "🔥 Fifty up! Player is on fire!",
+        "👑 Class is permanent. 50 runs.",
+        "📊 A captain's innings! Half-century.",
+        "🌟 Shining bright with a 50.",
+        "🍾 Pop the champagne! 50 up.",
+        "📈 The graphs are all pointing up!"
+    ],
+    "100": [
+        "🏅 CENTURY! What a magnificent innings!", 
+        "🎊 100 runs! A true champion!", 
+        "🔥 Century scored! The crowd erupts!",
+        "🦅 'Touching the sky!' 100 runs.",
+        "🏅 Legendary status unlocked. 100!",
+        "🔱 The master of the crease. 100 runs.",
+        "🎂 A ton of runs! Magnificent.",
+        "🙌 Bow down to the centurion!"
+    ]
 };
+
 
 process.on('unhandledRejection', (reason) => console.error("Unhandled Rejection:", reason));
 process.on('uncaughtException', (error) => console.error("Uncaught Exception:", error));
@@ -432,8 +547,7 @@ async function handleRoundResult(ctx, res) {
           await ctx.api.sendMessage(chatId, "🤝 The match is a tie!");
       } else {
           const winnerP = game.players.find(p => p.id === res.winnerId);
-          const reason = isWicket ? "on a wicket!" : "by chasing down the target!";
-          await ctx.api.sendMessage(chatId, `🏆 <b>${winnerP.first_name} won the match ${reason}</b> 🎉`, { parse_mode: 'HTML' });
+          await ctx.api.sendMessage(chatId, `🏆 <b>${winnerP.first_name} won the match!</b> 🎉`, { parse_mode: 'HTML' });
           if (game.bet > 0) {
               await ctx.api.sendMessage(chatId, `💰 ${game.bet}🪙 coins transferred to ${winnerP.first_name} as bet winnings!`);
           }
