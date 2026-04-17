@@ -10,11 +10,9 @@ function generateTourId() {
 }
 
 function createTour(chatId, hostUser) {
-  // Check if GC already has a game
   for (const t of tours.values()) {
     if (t.chatId === chatId) return { success: false, error: "A match is already active in this group!" };
   }
-  // Check if user is in any game
   if (userTourMap.has(hostUser.id)) return { success: false, error: "You are already in an active match!" };
 
   const tourId = generateTourId();
@@ -22,51 +20,45 @@ function createTour(chatId, hostUser) {
     id: tourId,
     chatId: chatId,
     hostId: hostUser.id,
-    state: 'LOBBY',
+    state: 'INIT', // Initial state before /create_team
     config: {
       overs: 5,
       wickets: 10,
       bet: 0
     },
-    pool: [hostUser], // unassigned
     teamA: {
-      id: 'teamA',
-      name: 'Team A',
-      players: [],
+      players: [], // First one is captain usually
       captainId: null,
       score: 0,
       wickets: 0,
-      inningsRemainingWickets: 10,
+      outPlayers: [],
       strikerId: null,
       nonStrikerId: null,
-      outPlayers: []
+      penaltyRuns: 0,
+      bonusRuns: 0,
+      rebats: [] // { userId, originalName }
     },
     teamB: {
-      id: 'teamB',
-      name: 'Team B',
       players: [],
       captainId: null,
       score: 0,
       wickets: 0,
-      inningsRemainingWickets: 10,
+      outPlayers: [],
       strikerId: null,
       nonStrikerId: null,
-      outPlayers: []
+      penaltyRuns: 0,
+      bonusRuns: 0,
+      rebats: []
     },
-    tossWinnerId: null,
-    innings: 1, // 1 or 2
-    battingTeamId: null, // 'teamA' or 'teamB'
+    innings: 1,
+    battingTeamId: null,
     bowlingTeamId: null,
     balls: 0,
-    maxBalls: 30, // config.overs * 6
     activeBowlerId: null,
     previousBowlerId: null,
-    choices: {
-      batChoice: null,
-      bowlChoice: null,
-      bowlNum: null
-    },
-    votesToHost: new Set(),
+    tossWinnerId: null,
+    choices: { batChoice: null, bowlChoice: null, bowlNum: null },
+    voteHost: { inProgress: false, yesVotes: new Set(), totalNeeded: 0 },
     createdAt: Date.now()
   };
   tours.set(tourId, tour);
@@ -74,28 +66,39 @@ function createTour(chatId, hostUser) {
   return { success: true, tour };
 }
 
-function getAllTours() {
-    return tours.values();
-}
-
-function getTour(tourId) {
-    return tours.get(tourId);
-}
-
-function getUserTour(userId) {
-    const tourId = userTourMap.get(userId);
-    return tourId ? tours.get(tourId) : null;
-}
-
-function deleteTour(tourId) {
+function joinTeam(tourId, user, teamKey) {
     const tour = tours.get(tourId);
-    if (!tour) return;
+    if (!tour) return { success: false, error: 'Tour not found.' };
     
-    tour.pool.forEach(p => userTourMap.delete(p.id));
-    tour.teamA.players.forEach(p => userTourMap.delete(p.id));
-    tour.teamB.players.forEach(p => userTourMap.delete(p.id));
+    const targetState = teamKey === 'teamA' ? 'LOBBY_A' : 'LOBBY_B';
+    if (tour.state !== targetState) return { success: false, error: 'Team joining window is closed.' };
     
-    tours.delete(tourId);
+    if (userTourMap.has(user.id) && !tour.teamA.players.find(p => p.id === user.id) && !tour.teamB.players.find(p => p.id === user.id)) {
+        return { success: false, error: 'You are already in another match.' };
+    }
+
+    const team = tour[teamKey];
+    if (team.players.some(p => p.id === user.id)) return { success: false, error: 'Already in team.' };
+
+    team.players.push(user);
+    userTourMap.set(user.id, tourId);
+    return { success: true, tour };
+}
+
+function appointCaptain(tourId, hostId, targetUserId, teamKey) {
+    const tour = tours.get(tourId);
+    if (!tour || tour.hostId !== hostId) return false;
+
+    const team = tour[teamKey];
+    if (!team.players.some(p => p.id === targetUserId)) return false;
+
+    // Remove from current position and move to index 0
+    const pIdx = team.players.findIndex(p => p.id === targetUserId);
+    const pObj = team.players.splice(pIdx, 1)[0];
+    team.players.unshift(pObj); 
+    
+    team.captainId = targetUserId;
+    return true;
 }
 
 function joinPool(tourId, user) {
@@ -167,78 +170,67 @@ function handleToss(tourId, userId, choice) {
     return { tour, tossResult, winnerTeam: won ? 'A' : 'B' };
 }
 
-function chooseBatBowl(tourId, userId, choice) {
+function setBatsman(tourId, userId, playerIndex, position) {
     const tour = tours.get(tourId);
-    if (!tour || tour.state !== 'CHOOSE' || tour.tossWinnerId !== userId) return null;
+    if (!tour || (tour.state !== 'SELECT_BATTERS' && tour.state !== 'WICKET_FALL')) return { success: false, error: 'Cannot select batters now.' };
     
-    const isTeamA = tour.teamA.captainId === userId;
-    
-    if (choice === 'bat') {
-        tour.battingTeamId = isTeamA ? 'teamA' : 'teamB';
-        tour.bowlingTeamId = isTeamA ? 'teamB' : 'teamA';
-    } else {
-        tour.battingTeamId = isTeamA ? 'teamB' : 'teamA';
-        tour.bowlingTeamId = isTeamA ? 'teamA' : 'teamB';
-    }
-    
-    tour.state = 'BATTING_LINEUP'; // Next state: Batting Captain picks Striker & Non-Striker
-    return tour;
+    const team = tour[tour.battingTeamId];
+    if (tour.hostId !== userId && team.captainId !== userId) return { success: false, error: 'Only host or captain can select.' };
+
+    const player = team.players[playerIndex - 1];
+    if (!player) return { success: false, error: 'Invalid player index.' };
+
+    // Check if player is out or already batting (unless rebatting, which is handled via /rebat)
+    if (team.outPlayers.includes(player.id)) return { success: false, error: 'Player is already out.' };
+    if (player.id === team.strikerId || player.id === team.nonStrikerId) return { success: false, error: 'Player is already batting.' };
+
+    if (position === 'S') team.strikerId = player.id;
+    else team.nonStrikerId = player.id;
+
+    return { success: true, player };
 }
 
-// Sets the Striker or Non Striker
-function setBatsman(tourId, captainId, batsmanId, position) {
+function setBowler(tourId, userId, playerIndex) {
     const tour = tours.get(tourId);
-    if (!tour || (tour.state !== 'BATTING_LINEUP' && tour.state !== 'WICKET_FALL')) return false;
-    
-    const batTeam = tour[tour.battingTeamId];
-    if (batTeam.captainId !== captainId) return false;
-    
-    // Verify player is in team
-    if (!batTeam.players.some(p => p.id === batsmanId)) return false;
-    
-    // Cannot be the other active batsman
-    if (position === 'striker' && batTeam.nonStrikerId === batsmanId) return false;
-    if (position === 'non-striker' && batTeam.strikerId === batsmanId) return false;
-    
-    if (position === 'striker') batTeam.strikerId = batsmanId;
-    if (position === 'non-striker') batTeam.nonStrikerId = batsmanId;
-    
-    // State transition
-    if (tour.state === 'BATTING_LINEUP') {
-        const wantsNonStriker = batTeam.players.length > 1;
-        if (batTeam.strikerId !== null && (!wantsNonStriker || batTeam.nonStrikerId !== null)) {
-            // We have openings filled! Move to Bowler selection.
-            tour.state = 'BOWLING_LINEUP';
-        }
-    } else if (tour.state === 'WICKET_FALL') {
-         // Incoming batsman after wicket
-         // Filled the empty spot. Is there a bowler active? (Usually yes, unless it was end of over)
-         if (tour.balls % 6 === 0) {
-             tour.state = 'BOWLING_LINEUP';
-         } else {
-             tour.state = 'PLAYING';
-         }
-    }
-    
-    return true;
-}
+    if (!tour || tour.state !== 'SELECT_BOWLER') return { success: false, error: 'Cannot select bowler now.' };
 
-function setBowler(tourId, captainId, bowlerId) {
-    const tour = tours.get(tourId);
-    if (!tour || tour.state !== 'BOWLING_LINEUP') return false;
-    
-    const bowlTeam = tour[tour.bowlingTeamId];
-    if (bowlTeam.captainId !== captainId) return false;
-    if (!bowlTeam.players.some(p => p.id === bowlerId)) return false;
-    
-    // Constraint: Can't bowl 2 consecutive overs unless they are the only player
-    if (tour.previousBowlerId === bowlerId && bowlTeam.players.length > 1) {
-        return false; // Error: Consecutive over
+    const team = tour[tour.bowlingTeamId];
+    if (tour.hostId !== userId && team.captainId !== userId) return { success: false, error: 'Only host or captain can select.' };
+
+    const player = team.players[playerIndex - 1];
+    if (!player) return { success: false, error: 'Invalid player index.' };
+
+    if (player.id === tour.previousBowlerId && team.players.length > 1) {
+        return { success: false, error: 'Bowler cannot bowl consecutive overs.' };
     }
-    
-    tour.activeBowlerId = bowlerId;
+
+    tour.activeBowlerId = player.id;
     tour.state = 'PLAYING';
-    return true;
+    return { success: true, player };
+}
+
+function adjustRuns(tourId, hostId, teamChar, amount, isPenalty) {
+    const tour = tours.get(tourId);
+    if (!tour || tour.hostId !== hostId) return null;
+
+    const team = teamChar.toUpperCase() === 'A' ? tour.teamA : tour.teamB;
+    if (isPenalty) team.penaltyRuns += amount;
+    else team.bonusRuns += amount;
+
+    return { teamName: teamChar.toUpperCase() === 'A' ? 'Team A' : 'Team B', total: team.penaltyRuns + team.bonusRuns };
+}
+
+function rebatPlayer(tourId, hostId, teamChar, playerIndex) {
+    const tour = tours.get(tourId);
+    if (!tour || tour.hostId !== hostId) return null;
+
+    const team = teamChar.toUpperCase() === 'A' ? tour.teamA : tour.teamB;
+    const player = team.players[playerIndex - 1];
+    if (!player) return null;
+
+    const rebatObj = { id: player.id + '_rebat_' + Date.now(), originalId: player.id, first_name: player.first_name + " (rebat)" };
+    team.players.push(rebatObj);
+    return rebatObj;
 }
 
 function submitPlay(tourId, userId, rawInput) {
@@ -282,13 +274,12 @@ function submitPlay(tourId, userId, rawInput) {
     
     const isWicket = batNum === bowlNum;
     const endOfOver = tour.balls % 6 === 0;
-    const isLMS = batTeam.players.length === 1 || (batTeam.inningsRemainingWickets === 1 && batTeam.nonStrikerId === null);
     
     let res = {
         tour, batNum, bowlNum, batStr, bowlStr,
         ballsThisRound: tour.balls,
         originalBowlerId: tour.activeBowlerId,
-        isWicket: isWicket,
+        isWicket,
         inningsEnded: false,
         matchEnded: false,
         winnerTeamId: null,
@@ -299,73 +290,50 @@ function submitPlay(tourId, userId, rawInput) {
     
     if (!isWicket) {
         batTeam.score += batNum;
-        
-        // Strike Rotation Logic
         if ((batNum === 1 || batNum === 3) && batTeam.nonStrikerId) {
             const tmp = batTeam.strikerId;
             batTeam.strikerId = batTeam.nonStrikerId;
             batTeam.nonStrikerId = tmp;
         }
-        
-        if (endOfOver) {
-            if (batTeam.nonStrikerId) {
-                const tmp = batTeam.strikerId;
-                batTeam.strikerId = batTeam.nonStrikerId;
-                batTeam.nonStrikerId = tmp;
-            }
-        }
-        
-    } else {
-        // Wicket
-        batTeam.wickets++;
-        batTeam.inningsRemainingWickets--;
-        batTeam.outPlayers.push(batTeam.strikerId);
-        batTeam.strikerId = null; // Blank it out for replacement
-        
         if (endOfOver && batTeam.nonStrikerId) {
-            // End of over, non striker rotates into striker spot!
+            const tmp = batTeam.strikerId;
             batTeam.strikerId = batTeam.nonStrikerId;
-            batTeam.nonStrikerId = null; // The incoming batsman will take non-striker
+            batTeam.nonStrikerId = tmp;
         }
+    } else {
+        batTeam.wickets++;
+        batTeam.outPlayers.push(batTeam.strikerId);
+        batTeam.strikerId = null;
     }
     
-    // Check Innings/Match End Conditions
-    const targetPassed = tour.innings === 2 && batTeam.score > tour[tour.bowlingTeamId].score;
-    const oversFinished = tour.balls >= tour.maxBalls;
-    const allOut = batTeam.inningsRemainingWickets <= 0;
+    const totalScore = (team) => team.score + team.bonusRuns - team.penaltyRuns;
+    const bowlingTeamScore = totalScore(tour[tour.bowlingTeamId]);
+    const currentBatTeamScore = totalScore(batTeam);
+
+    const targetPassed = tour.innings === 2 && currentBatTeamScore > bowlingTeamScore;
+    const oversFinished = tour.balls >= tour.config.overs * 6;
+    const allOut = batTeam.wickets >= tour.config.wickets || (batTeam.strikerId === null && batTeam.nonStrikerId === null && batTeam.players.length > 0);
     
     if (targetPassed || oversFinished || allOut) {
         if (tour.innings === 1) {
-            // Setup Innings 2
             res.inningsEnded = true;
-            tour.innings = 2;
-            tour.balls = 0;
-            const tmpTeam = tour.battingTeamId;
-            tour.battingTeamId = tour.bowlingTeamId;
-            tour.bowlingTeamId = tmpTeam;
-            
-            tour.state = 'BATTING_LINEUP'; // Pause for captain picks
-            tour.activeBowlerId = null;
-            tour.previousBowlerId = null;
-            tour[tour.battingTeamId].strikerId = null;
-            tour[tour.battingTeamId].nonStrikerId = null;
+            tour.state = 'INNINGS_BREAK';
         } else {
-            // End Match
             res.matchEnded = true;
             tour.state = 'COMPLETED';
-            const s1 = tour.teamA.score;
-            const s2 = tour.teamB.score;
+            const s1 = totalScore(tour.teamA);
+            const s2 = totalScore(tour.teamB);
             if (s1 > s2) res.winnerTeamId = 'teamA';
             else if (s2 > s1) res.winnerTeamId = 'teamB';
             else res.tie = true;
+            res.motm = calculateMOTM(tour);
         }
     } else {
-        // Continue Innings
         if (isWicket) {
             tour.state = 'WICKET_FALL';
             res.needsNewBatsman = true;
         } else if (endOfOver) {
-            tour.state = 'BOWLING_LINEUP';
+            tour.state = 'SELECT_BOWLER';
             res.needsNewBowler = true;
             tour.previousBowlerId = tour.activeBowlerId;
             tour.activeBowlerId = null;
@@ -375,40 +343,19 @@ function submitPlay(tourId, userId, rawInput) {
     return { success: true, ...res };
 }
 
-function voteHost(tourId, voterId, targetHostId) {
-    // Basic implementation: if this is called, assumes 1 voter. In real scenario, would track per-user.
-    // Simplifying: the Host allows `/votehost` to just transfer directly if the host is completely asleep,
-    // or we just trust the users to agree. 
-    // To make it robust: 
-    const tour = tours.get(tourId);
-    if (!tour) return false;
-    tour.hostId = targetHostId; 
-    return true; 
+function calculateMOTM(tour) {
+    // Basic logic: Higher score/wickets mix. For now: just the highest runs scorer from the winning team.
+    const winTeamId = (totalScore(tour.teamA) > totalScore(tour.teamB)) ? 'teamA' : 'teamB';
+    const players = tour[winTeamId].players;
+    // In a real bot, we'd track per-player stats in the tour object. 
+    // For now, let's just return a placeholder or the captain.
+    return players[0]; 
 }
 
-function kickAFK(tourId, hostId, afkUserId) {
-    // Only Host can force actions
-    const tour = tours.get(tourId);
-    if (!tour || tour.hostId !== hostId) return false;
-    
-    // Blank their slot so captain is forced to repick
-    if (tour.activeBowlerId === afkUserId) {
-         tour.previousBowlerId = null;
-         tour.activeBowlerId = null;
-         tour.choices.bowlChoice = null;
-         tour.state = 'BOWLING_LINEUP';
-         return 'bowler';
-    } 
-    if (tour[tour.battingTeamId].strikerId === afkUserId) {
-         tour[tour.battingTeamId].strikerId = null;
-         tour.choices.batChoice = null;
-         tour.state = 'WICKET_FALL'; // Recycles state to let cap pick new batsman
-         return 'striker';
-    }
-    return false;
+function totalScore(team) {
+    return team.score + team.bonusRuns - team.penaltyRuns;
 }
 
-setInterval(cleanupExpiredGames, 3600000);
 function cleanupExpiredGames() {
   const now = Date.now();
   for (const [key, t] of tours.entries()) {
@@ -418,8 +365,18 @@ function cleanupExpiredGames() {
   }
 }
 
+function getTour(tourId) { return tours.get(tourId); }
+function getUserTour(userId) { const id = userTourMap.get(userId); return id ? tours.get(id) : null; }
+function deleteTour(tourId) {
+    const tour = tours.get(tourId);
+    if (!tour) return;
+    tour.teamA.players.forEach(p => userTourMap.delete(p.id));
+    tour.teamB.players.forEach(p => userTourMap.delete(p.id));
+    tours.delete(tourId);
+}
+
 module.exports = {
-  createTour, getTour, getUserTour, deleteTour, joinPool,
-  assignPlayerCommand, startTour, handleToss, chooseBatBowl,
-  setBatsman, setBowler, submitPlay, voteHost, kickAFK, getAllTours
+  createTour, getTour, getUserTour, deleteTour, joinTeam,
+  appointCaptain, setBatsman, setBowler, submitPlay, adjustRuns, rebatPlayer,
+  totalScore
 };

@@ -178,12 +178,22 @@ bot.api.setMyCommands([
   { command: 'start', description: 'Welcome message' },
   { command: 'register', description: 'Create account & get coins' },
   { command: 'ccl', description: 'Start a 1v1 CCL match' },
-  { command: 'tour', description: 'Start a Team Tour match (group only)' },
-  { command: 'tourconfig', description: 'Configure tour: /tourconfig overs 5' },
+  { command: 'tour', description: 'Initiate a Team Tour' },
+  { command: 'create_team', description: 'Start Team A joining window' },
+  { command: 'join_teama', description: 'Join Team A' },
+  { command: 'join_teamb', description: 'Join Team B' },
+  { command: 'appointa_captain', description: 'Appoint Team A Captain' },
+  { command: 'appointb_captain', description: 'Appoint Team B Captain' },
+  { command: 'setovers', description: 'Set match overs' },
+  { command: 'teams', description: 'Show team rosters' },
+  { command: 'batting', description: '/batting [index]' },
+  { command: 'bowling', description: '/bowling [index]' },
+  { command: 'scoreboard', description: 'View match status' },
+  { command: 'penalty', description: '/penalty [A/B] [runs]' },
+  { command: 'bonus', description: '/bonus [A/B] [runs]' },
+  { command: 'innings_switch', description: 'Switch to next innings' },
+  { command: 'changehost', description: 'Transfer host permissions' },
   { command: 'profile', description: 'View your stats' },
-  { command: 'daily', description: 'Claim daily reward' },
-  { command: 'leaderboard', description: 'Top players' },
-  { command: 'endmatch', description: 'End active match (Admin only)' },
   { command: 'help', description: 'Commands list' }
 ]).catch(console.error);
 
@@ -249,68 +259,350 @@ bot.command('help', async (ctx) => {
   );
 });
 
-bot.command('ccl', async (ctx) => {
-  if (ctx.chat.type === 'private') {
-      return ctx.reply("CCL matches can only be started in groups.");
-  }
-  
-  const user = await sb.getUser(ctx.from.id);
-  if (!user) return ctx.reply(`You must /register first.`);
-
-  const args = ctx.message.text.split(' ');
-  let bet = 0;
-  if (args[1]) {
-    bet = parseInt(args[1]);
-    if (isNaN(bet) || bet < 0) return ctx.reply("Bet amount cannot be negative.");
-    if (user.coins < bet) return ctx.reply(`You don't have enough coins to bet ${bet}🪙.`);
-  }
-
-  const res = gameManager.createGame(ctx.chat.id, null, { id: ctx.from.id, first_name: ctx.from.first_name }, bet);
+bot.command('tour', async (ctx) => {
+  if (ctx.chat.type === 'private') return ctx.reply("Tour matches can only be started in groups.");
+  const res = tourManager.createTour(ctx.chat.id, { id: ctx.from.id, first_name: ctx.from.first_name });
   if (!res.success) return ctx.reply("❌ " + res.error);
-  const game = res.game;
   
-  const keyboard = new InlineKeyboard()
-      .text("Join ✅", `ccl_join_${game.id}`).row()
-      .text("Cancel ❌", `ccl_cancel_${game.id}`);
-      
-  const betText = bet > 0 ? ` with a bet of ${bet}🪙` : "";
-  const sent = await ctx.reply(
-    `🏏 CCL Match started by ${ctx.from.first_name}${betText}!\nWaiting for an opponent to join.`,
-    { reply_markup: keyboard }
-  );
-  game.messageId = sent.message_id;
+  await ctx.reply(`🏏 <b>Tour Match Initiated!</b>\nHost: ${ctx.from.first_name}\n\nHost, please start team creation by sending /create_team`, { parse_mode: 'HTML' });
 });
 
-bot.command('endmatch', async (ctx) => {
-  const userId = ctx.from.id;
-  const chatId = ctx.chat.id;
-  
-  // Check if there is a match in this chat
-  let activeGame = null;
-  let matches = [...gameManager.getAllGames()].concat([...tourManager.getAllTours()]);
-  activeGame = matches.find(m => m.chatId === chatId);
-  
-  if (!activeGame) return ctx.reply("❌ No active match found in this group.");
-  
-  // Check permissions: Admin or Host
-  const member = await ctx.getChatMember(userId);
-  const isAdmin = ['creator', 'administrator'].includes(member.status);
-  const isHost = activeGame.hostId === userId || (activeGame.players && activeGame.players[0].id === userId);
-  
-  if (!isAdmin && !isHost) return ctx.reply("❌ Only Group Admins or the Match Host can end the match.");
-  
-  const type = activeGame.players ? 'ccl' : 'tour';
-  const kb = new InlineKeyboard()
-    .text("✅ Confirm End", `endmatch_yes_${type}_${activeGame.id}`)
-    .text("❌ Cancel", `endmatch_no`);
+bot.command('create_team', async (ctx) => {
+  const tour = tourManager.getUserTour(ctx.from.id);
+  if (!tour || tour.hostId !== ctx.from.id || tour.state !== 'INIT') return;
+
+  tour.state = 'LOBBY_A';
+  await ctx.reply("👥 <b>Team A Creation is Underway!</b>\nJoin Team A by sending /join_teama\nWindow ends in 60s.", { parse_mode: 'HTML' });
+
+  setTimeout(async () => {
+    if (tour.state !== 'LOBBY_A') return;
+    tour.state = 'LOBBY_B';
+    await ctx.api.sendMessage(tour.chatId, "👥 <b>Team B Creation is Underway!</b>\nJoin Team B by sending /join_teamb\nWindow ends in 60s.", { parse_mode: 'HTML' });
     
-  await ctx.reply(`⚠️ Are you sure you want to end the current match? This cannot be undone.`, { reply_markup: kb });
+    setTimeout(async () => {
+        if (tour.state !== 'LOBBY_B') return;
+        tour.state = 'PRE_TOSS';
+        await ctx.api.sendMessage(tour.chatId, "⏳ <b>Team joining windows closed.</b>\nHost, please appoint captains using /appointa_captain and /appointb_captain (reply to a member or mention them).", { parse_mode: 'HTML' });
+    }, 60000);
+  }, 60000);
+});
+
+bot.command('join_teama', async (ctx) => {
+  const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id && t.state === 'LOBBY_A');
+  if (!tour) return;
+  const res = tourManager.joinTeam(tour.id, { id: ctx.from.id, first_name: ctx.from.first_name }, 'teamA');
+  if (res.success) await ctx.reply(`✅ ${ctx.from.first_name} joined Team A!`);
+  else await ctx.reply(`❌ ${res.error}`);
+});
+
+bot.command(['appointa_captain', 'appointb_captain'], async (ctx) => {
+    const isTeamA = ctx.message.text.includes('appointa');
+    const tour = tourManager.getUserTour(ctx.from.id);
+    if (!tour || tour.hostId !== ctx.from.id) return;
+
+    let targetId = null;
+    if (ctx.message.reply_to_message) {
+        targetId = ctx.message.reply_to_message.from.id;
+    } else {
+        const entity = ctx.message.entities?.find(e => e.type === 'mention' || e.type === 'text_mention');
+        if (entity) {
+            // Mention handling is complex as we only get the offset. 
+            // For now, let's assume reply is the main way, or they can use ID.
+            return ctx.reply("Please reply to a team member's message with this command to appoint them as captain.");
+        }
+    }
+
+    if (!targetId) return ctx.reply("Please reply to a team member's message to appoint them.");
+
+    const teamKey = isTeamA ? 'teamA' : 'teamB';
+    const success = tourManager.appointCaptain(tour.id, ctx.from.id, targetId, teamKey);
+    
+    if (success) {
+        await ctx.reply(`👑 ${isTeamA ? 'Team A' : 'Team B'} Captain appointed!`);
+        if (tour.teamA.captainId && tour.teamB.captainId) {
+            await ctx.reply("🚀 Both captains appointed! Host, please set the overs using /setovers");
+        }
+    } else {
+        await ctx.reply("❌ Error: Player not found in team or invalid host.");
+    }
+});
+
+bot.command('setovers', async (ctx) => {
+    const tour = tourManager.getUserTour(ctx.from.id);
+    if (!tour || tour.hostId !== ctx.from.id) return;
+
+    const kb = new InlineKeyboard();
+    for (let i = 1; i <= 20; i++) {
+        kb.text(`${i}`, `tour_overs_${tour.id}_${i}`);
+        if (i % 5 === 0) kb.row();
+    }
+    await ctx.reply("📊 <b>Select Match Overs:</b>", { reply_markup: kb, parse_mode: 'HTML' });
 });
 
 // Inline Callbacks for Group Chat
+bot.command('teams', async (ctx) => {
+    const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+    if (!tour) return;
+
+    let text = "👥 <b>Team Rosters:</b>\n\n";
+    
+    text += "<b>Team A:</b>\n";
+    tour.teamA.players.forEach((p, i) => {
+        const cap = p.id === tour.teamA.captainId ? " (C)" : "";
+        text += `${i + 1}) ${p.first_name}${cap}\n`;
+    });
+
+    text += "\n<b>Team B:</b>\n";
+    tour.teamB.players.forEach((p, i) => {
+        const cap = p.id === tour.teamB.captainId ? " (C)" : "";
+        text += `${i + 1}) ${p.first_name}${cap}\n`;
+    });
+
+    await ctx.reply(text, { parse_mode: 'HTML' });
+});
+
+bot.command('batting', async (ctx) => {
+    const args = ctx.message.text.split(' ');
+    const index = parseInt(args[1]);
+    if (isNaN(index)) return ctx.reply("Usage: /batting [index]");
+
+    const tour = tourManager.getUserTour(ctx.from.id);
+    if (!tour) return;
+
+    const team = tour[tour.battingTeamId];
+    const position = team.strikerId === null ? 'S' : 'NS';
+    
+    const res = tourManager.setBatsman(tour.id, ctx.from.id, index, position);
+    if (res.success) {
+        await ctx.reply(`🏏 ${res.player.first_name} selected as ${position === 'S' ? 'Striker' : 'Non-Striker'}!`);
+        if (team.strikerId && team.nonStrikerId) {
+            await ctx.reply("🔥 Both batters ready! Bowling captain, select your bowler using /bowling [index]");
+            tour.state = 'SELECT_BOWLER';
+        }
+    } else {
+        await ctx.reply(`❌ ${res.error}`);
+    }
+});
+
+bot.command('bowling', async (ctx) => {
+    const args = ctx.message.text.split(' ');
+    const index = parseInt(args[1]);
+    if (isNaN(index)) return ctx.reply("Usage: /bowling [index]");
+
+    const tour = tourManager.getUserTour(ctx.from.id);
+    if (!tour) return;
+
+    const res = tourManager.setBowler(tour.id, ctx.from.id, index);
+    if (res.success) {
+        await ctx.reply(`🧤 ${res.player.first_name} is bowling! Let the over begin! 🏏🔥`);
+        // Notify players
+        const batTeam = tour[tour.battingTeamId];
+        const striker = batTeam.players.find(p => p.id === batTeam.strikerId);
+        const bowler = tour[tour.bowlingTeamId].players.find(p => p.id === tour.activeBowlerId);
+        
+        await ctx.api.sendMessage(striker.id, "🏏 You are Batting (Striker)! Send your shot (0,1,2,3,4,6).");
+        await ctx.api.sendMessage(bowler.id, "🧤 You are Bowling! Send your delivery:\nRS, Bouncer, Yorker, Short, Slower, Knuckle");
+    } else {
+        await ctx.reply(`❌ ${res.error}`);
+    }
+});
+bot.command(['adda', 'addb'], async (ctx) => {
+    const isTeamA = ctx.message.text.toLowerCase().includes('adda');
+    const tour = tourManager.getUserTour(ctx.from.id);
+    if (!tour || (tour.hostId !== ctx.from.id && tour.teamA.captainId !== ctx.from.id && tour.teamB.captainId !== ctx.from.id)) return;
+
+    if (!ctx.message.reply_to_message) return ctx.reply("Please reply to the user's message you want to add.");
+    const user = ctx.message.reply_to_message.from;
+    
+    const teamKey = isTeamA ? 'teamA' : 'teamB';
+    const res = tourManager.joinTeam(tour.id, { id: user.id, first_name: user.first_name }, teamKey);
+    if (res.success) await ctx.reply(`✅ ${user.first_name} added to ${isTeamA ? 'Team A' : 'Team B'}!`);
+    else await ctx.reply(`❌ ${res.error}`);
+});
+
+bot.command('remove_player', async (ctx) => {
+    const tour = tourManager.getUserTour(ctx.from.id);
+    if (!tour || (tour.hostId !== ctx.from.id && tour.teamA.captainId !== ctx.from.id && tour.teamB.captainId !== ctx.from.id)) return;
+
+    if (!ctx.message.reply_to_message) return ctx.reply("Please reply to the user's message you want to remove.");
+    const targetId = ctx.message.reply_to_message.from.id;
+
+    const findAndRemove = (team) => {
+        const idx = team.players.findIndex(p => p.id === targetId);
+        if (idx !== -1) {
+            const p = team.players.splice(idx, 1)[0];
+            return p;
+        }
+        return null;
+    };
+
+    const removed = findAndRemove(tour.teamA) || findAndRemove(tour.teamB);
+    if (removed) await ctx.reply(`🚪 ${removed.first_name} removed from the match.`);
+    else await ctx.reply("❌ Player not found in any team.");
+});
+
+bot.command('penalty', async (ctx) => {
+    const args = ctx.message.text.split(' ');
+    const team = args[1]; 
+    const runs = parseInt(args[2]);
+    if (!team || isNaN(runs)) return ctx.reply("Usage: /penalty [A/B] [runs]");
+    const tour = tourManager.getUserTour(ctx.from.id);
+    const res = tourManager.adjustRuns(tour?.id, ctx.from.id, team, runs, true);
+    if (res) await ctx.reply(`🚫 <b>Penalty!</b> ${res.teamName} penalized by ${runs} runs.`, { parse_mode: 'HTML' });
+});
+
+bot.command('bonus', async (ctx) => {
+    const args = ctx.message.text.split(' ');
+    const team = args[1];
+    const runs = parseInt(args[2]);
+    if (!team || isNaN(runs)) return ctx.reply("Usage: /bonus [A/B] [runs]");
+    const tour = tourManager.getUserTour(ctx.from.id);
+    const res = tourManager.adjustRuns(tour?.id, ctx.from.id, team, runs, false);
+    if (res) await ctx.reply(`✨ <b>Bonus!</b> ${res.teamName} awarded ${runs} runs.`, { parse_mode: 'HTML' });
+});
+
+bot.command('innings_switch', async (ctx) => {
+    const tour = tourManager.getUserTour(ctx.from.id);
+    if (!tour || tour.hostId !== ctx.from.id || tour.state !== 'INNINGS_BREAK') return;
+    tour.state = 'SELECT_BATTERS';
+    tour.innings = 2;
+    tour.balls = 0;
+    const tmp = tour.battingTeamId;
+    tour.battingTeamId = tour.bowlingTeamId;
+    tour.bowlingTeamId = tmp;
+    tour.teamA.strikerId = null; tour.teamA.nonStrikerId = null;
+    tour.teamB.strikerId = null; tour.teamB.nonStrikerId = null;
+    tour.activeBowlerId = null; tour.previousBowlerId = null;
+    await ctx.reply(`🔄 <b>Innings Switch!</b>\nTarget: ${tourManager.totalScore(tour[tour.bowlingTeamId]) + 1}\n\nCaptain, select your opening batters using /batting [index]`, { parse_mode: 'HTML' });
+});
+
+bot.command(['rebata', 'rebatb'], async (ctx) => {
+    const isTeamA = ctx.message.text.toLowerCase().includes('rebata');
+    const args = ctx.message.text.split(' ');
+    const index = parseInt(args[1]);
+    if (isNaN(index)) return ctx.reply("Usage: /rebat[a/b] [index]");
+    const tour = tourManager.getUserTour(ctx.from.id);
+    const player = tourManager.rebatPlayer(tour?.id, ctx.from.id, isTeamA ? 'A' : 'B', index);
+    if (player) await ctx.reply(`🔄 ${player.first_name} added for rebatting! (Index: ${tour[isTeamA ? 'teamA' : 'teamB'].players.length})`);
+});
+
+bot.command('help', async (ctx) => {
+  await ctx.reply(
+    "📜 <b>Tour Mode Guide:</b>\n" +
+    "1. /tour - Start Tour\n" +
+    "2. /create_team - Start 60s join windows\n" +
+    "3. /join_teama / /join_teamb - Join teams\n" +
+    "4. /appointa_captain / /appointb_captain - (Reply to msg) Set Caps\n" +
+    "5. /setovers - Set match length\n" +
+    "6. /teams - View roster indices\n" +
+    "7. /batting [index] - Select Striker/Non-Striker\n" +
+    "8. /bowling [index] - Select Bowler\n" +
+    "9. /penalty [A/B] [runs] / /bonus [A/B] [runs]\n" +
+    "10. /rebata/b [index] - Assign rebatting\n" +
+    "11. /changehost - Vote for new host\n\n" +
+    "<i>Instructions loop in GC to guide you!</i>",
+    { parse_mode: 'HTML' }
+  );
+});
+bot.command('changehost', async (ctx) => {
+    const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+    if (!tour) return;
+
+    tour.voteHost.inProgress = true;
+    tour.voteHost.yesVotes.clear();
+    tour.voteHost.totalNeeded = Math.ceil( (tour.teamA.players.length + tour.teamB.players.length) / 2 );
+
+    const kb = new InlineKeyboard().text("Vote Yes ✅", `tour_votehost_${tour.id}`);
+    await ctx.reply(`🗳 <b>Host Transfer Initiated!</b>\nNeed ${tour.voteHost.totalNeeded} votes to unlock "I'm Host" button.`, { reply_markup: kb, parse_mode: 'HTML' });
+});
+
 bot.on('callback_query:data', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
+
+  if (data.startsWith('tour_votehost_')) {
+      const tourId = data.split('_')[2];
+      const tour = tourManager.getTour(tourId);
+      if (!tour || !tour.voteHost.inProgress) return ctx.answerCallbackQuery();
+      
+      tour.voteHost.yesVotes.add(userId);
+      ctx.answerCallbackQuery(`Voted! (${tour.voteHost.yesVotes.size}/${tour.voteHost.totalNeeded})`);
+
+      if (tour.voteHost.yesVotes.size >= tour.voteHost.totalNeeded) {
+          tour.voteHost.inProgress = false;
+          const kb = new InlineKeyboard().text("I'm Host 🙋‍♂️", `tour_claimhost_${tourId}`);
+          await ctx.api.sendMessage(tour.chatId, "✅ <b>Vote Passed!</b>\nThe first person to click below becomes the new Host.", { reply_markup: kb, parse_mode: 'HTML' });
+      }
+      return;
+  }
+
+  if (data.startsWith('tour_claimhost_')) {
+      const tourId = data.split('_')[2];
+      const tour = tourManager.getTour(tourId);
+      if (!tour) return ctx.answerCallbackQuery();
+      tour.hostId = userId;
+      await ctx.editMessageText(`🎊 <b>${ctx.from.first_name}</b> is the new Host!`, { parse_mode: 'HTML' });
+      return;
+  }
+
+  if (data.startsWith('tour_overs_')) {
+    const parts = data.split('_');
+    const tourId = parts[2];
+    const overs = parseInt(parts[3]);
+    const tour = tourManager.getTour(tourId);
+    if (!tour || tour.hostId !== userId) return ctx.answerCallbackQuery({ text: "Only host can set overs.", show_alert: true });
+    
+    tour.config.overs = overs;
+    ctx.answerCallbackQuery(`Overs set to ${overs}!`);
+    await ctx.editMessageText(`📊 <b>Match Overs: ${overs}</b>\n\nToss will happen in 10s...`, { parse_mode: 'HTML' });
+    
+    setTimeout(async () => {
+        const kb = new InlineKeyboard().text("Heads", `tour_toss_${tourId}_heads`).text("Tails", `tour_toss_${tourId}_tails`);
+        await ctx.api.sendMessage(tour.chatId, `🪙 <b>Toss Time!</b>\nCaptains, choose Heads or Tails!`, { reply_markup: kb, parse_mode: 'HTML' });
+    }, 10000);
+    return;
+  }
+
+  if (data.startsWith('tour_toss_')) {
+      const parts = data.split('_');
+      const tourId = parts[2];
+      const choice = parts[3];
+      const tour = tourManager.getTour(tourId);
+      if (!tour || tour.state !== 'PRE_TOSS') return ctx.answerCallbackQuery();
+      if (userId !== tour.teamA.captainId && userId !== tour.teamB.captainId) return ctx.answerCallbackQuery({ text: "Only captains can toss!", show_alert: true });
+
+      const tossResult = Math.random() < 0.5 ? 'heads' : 'tails';
+      const won = choice === tossResult;
+      tour.tossWinnerId = userId;
+      tour.state = 'TOSS_DECISION';
+
+      ctx.answerCallbackQuery(`The coin landed on ${tossResult}!`);
+      const kb = new InlineKeyboard().text("Bat 🏏", `tour_decide_${tourId}_bat`).text("Bowl 🧤", `tour_decide_${tourId}_bowl`);
+      await ctx.editMessageText(`🪙 Match Toss: <b>${tossResult.toUpperCase()}</b>\n\n${ctx.from.first_name} won the toss! Choose Bat or Bowl:`, { reply_markup: kb, parse_mode: 'HTML' });
+      return;
+  }
+
+  if (data.startsWith('tour_decide_')) {
+      const parts = data.split('_');
+      const tourId = parts[2];
+      const choice = parts[3];
+      const tour = tourManager.getTour(tourId);
+      if (!tour || tour.state !== 'TOSS_DECISION' || tour.tossWinnerId !== userId) return ctx.answerCallbackQuery();
+
+      const isTeamA = tour.teamA.captainId === userId;
+      if (choice === 'bat') {
+          tour.battingTeamId = isTeamA ? 'teamA' : 'teamB';
+          tour.bowlingTeamId = isTeamA ? 'teamB' : 'teamA';
+      } else {
+          tour.battingTeamId = isTeamA ? 'teamB' : 'teamA';
+          tour.bowlingTeamId = isTeamA ? 'teamA' : 'teamB';
+      }
+
+      tour.state = 'SELECT_BATTERS';
+      ctx.answerCallbackQuery("Match starting!");
+      await ctx.editMessageText(`🚀 <b>Match Start!</b>\nTeam Batting: ${tour.battingTeamId === 'teamA' ? 'Team A' : 'Team B'}\n\nCaptain, select your opening batters using /batting [index]`, { parse_mode: 'HTML' });
+      return;
+  }
 
   if (data === 'lb_coins' || data === 'lb_wins') {
     try {
