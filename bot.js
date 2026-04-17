@@ -398,7 +398,8 @@ async function handleRoundResult(ctx, res) {
   
   // Display correct score (if innings just ended, show score1)
   if (res.inningsEnded) {
-      await ctx.api.sendMessage(chatId, `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: ${game.score1}\nTarget for Team 2: ${game.score1 + 1}`, { parse_mode: 'HTML' });
+      const newBatP = game.players.find(p => p.id === game.batsmanId);
+      await ctx.api.sendMessage(chatId, `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: ${game.score1}\nTarget for ${newBatP.first_name}: ${game.score1 + 1}`, { parse_mode: 'HTML' });
   } else {
       const currentScore = game.innings === 1 ? game.score1 : game.score2;
       const targetText = game.target ? ` (Target: ${game.target})` : (game.innings === 2 ? ` (Target: ${game.score1 + 1})` : "");
