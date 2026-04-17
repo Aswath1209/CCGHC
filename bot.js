@@ -44,17 +44,22 @@ const COMMENTARY = {
         "😶 Dot ball! Pressure builds...", 
         "🎯 Tight delivery, no run.", 
         "🛑 No run, good fielding!",
-        "🤌 'The ball is red, round and weighs about five ounces.' - Legendary dot ball.",
-        "🥱 You couldn't hit a barn door today!",
+        "🤌 'The ball is red, round and weighs about five ounces.'",
+        "🥱 Abey saale! Bat pakadna sikh le pehle. (Hindi Sledge)",
         "🎤 'He's looking for some runs, but finds only fresh air!'",
         "🤡 Why are you so fat? Only because every time I hit a shot, your sister gives me a biscuit!",
         "🧱 Solid defense, but the scoreboard is crying.",
         "🐢 Faster than a turtle, but slower than the score.",
-        "🧥 'You can't bowl there!' - Narrator: He just did.",
-        "🦗 Cricket or Golf? You're missing everything!",
-        "📉 Your strike rate is lower than my phone battery.",
         "😴 Waking up for the match? Or just watching the dots?",
-        "🤐 Shhh... do you hear that? It's the sound of nothing happening."
+        "🤐 Shhh... do you hear that? It's the sound of nothing happening.",
+        "😤 Andha hai kya? (Are you blind?) Clearly missed that!",
+        "🧟 Bhootnike! Bowl better than that!",
+        "🧊 Ice in the veins, or just frozen at the crease?",
+        "🚧 Roadblock! Can't find a way through.",
+        "🏏 That bat has more holes than Swiss cheese!",
+        "🤷‍♂️ Even my grandma could hit that for a single.",
+        "🥶 Chilled out? You need to score, mate!",
+        "💤 ZZZ... Wake me up when a run is scored."
     ],
     "1": [
         "🏃 Quick single taken.", 
@@ -64,11 +69,17 @@ const COMMENTARY = {
         "🐕 Like a dog chasing a bone!",
         "🚶 Just a gentle stroll for a single.",
         "🔄 Rotating strike like a pro.",
-        "🤏 'Taking the easy option, one run.'",
         "👀 Keeping the scoreboard ticking.",
         "🏎️ Zoom! A quick single.",
-        "🤝 Teamwork makes the dream work (for one run).",
-        "🎯 Precision placement for a single."
+        "🤝 Teamwork makes the dream work.",
+        "🎯 Precision placement for a single.",
+        "🤌 'Taking the easy option, one run.'",
+        "🌟 Ek gaya! (One done!) Keep them coming.",
+        "💨 Blink and you'll miss the single!",
+        "🦊 Crafty running, snatching a run.",
+        "🥇 Every run counts in this battle!",
+        "🌪️ Speeding through for one.",
+        "🔥 Burning up the pitch for a single."
     ],
     "2": [
         "🏃‍♂️ Two runs!", 
@@ -80,7 +91,12 @@ const COMMENTARY = {
         "📈 Moving the score along nicely.",
         "🌪️ A whirlwind of running! Two runs.",
         "🛤️ Smooth as silk for a double.",
-        "🚀 Pushing hard for the second!"
+        "🚀 Pushing hard for the second!",
+        "💪 Tagda running! (Strong running!) Double taken.",
+        "🏹 Two runs harvested from the field.",
+        "⚖️ Balancing the risk with two runs.",
+        "🌊 Rolling in the runs, two at a time.",
+        "🔋 Recharging the total with a double."
     ],
     "3": [
         "🏃‍♂️ Three runs! Great running!", 
@@ -89,8 +105,12 @@ const COMMENTARY = {
         "🦵 Fitness test! Three runs taken.",
         "🥇 A hat-trick of runs in one ball!",
         "🏁 Chasing them down... three runs!",
-        "💨 The fielders are getting a workout. 3 runs.",
-        "⚡ Blazing speed for a triple!"
+        "💨 The fielders are getting a workout.",
+        "⚡ Blazing speed for a triple!",
+        "🥵 Fielder is panting! 3 runs taken.",
+        "💥 Gajab running, bhai! (Amazing running, brother!)",
+        "🏃‍♂️🏃‍♂️🏃‍♂️ Non-stop action for three runs!",
+        "🎯 Exploiting the gaps beautifully for 3."
     ],
     "4": [
         "🔥 Cracking four! What a shot!", 
@@ -104,9 +124,13 @@ const COMMENTARY = {
         "📣 The crowd is loving this boundary!",
         "💸 Easy money! Four runs.",
         "🏹 Shot through the covers like an arrow!",
-        "🔥 Pure timing, no effort. 4 runs.",
+        "🔥 Timing, no effort. 4 runs.",
         "🧨 Exploded off the bat!",
-        "🚁 'The helicopter take-off!' - Wait, it's just a 4."
+        "🥵 Maza aa gaya! (I loved it!) What a boundary!",
+        "🚁 Helicopter 4? Almost!",
+        "💎 A gem of a boundary. 4 runs.",
+        "🐅 Roaring with power! Four!",
+        "⚡ 'Absolute lightning to the fence!'"
     ],
     "6": [
         "🚀 Massive six! Into the stands!", 
@@ -120,10 +144,13 @@ const COMMENTARY = {
         "🦅 Flight 101: Destination Boundary Heights.",
         "⚡ 'Absolute carnage!'",
         "🤴 King of the crease! Huge six.",
-        "📈 Scoreboard impact: HIGH.",
-        "🧨 Power, timing, and pure disrespect! 6!",
-        "😲 'I can't believe he's hit that!'",
-        "🕺 Dance down the track and smash it!"
+        "🧨 Power, timing, and pure disrespect!",
+        "🕺 Dance down the track and smash it!",
+        "💥 DHO dala! (Washed them!) Sixer!",
+        "🔱 God-level hitting! 6 runs.",
+        "🌋 Eruption of power! Out of the stadium!",
+        "🛰️ NASA just spotted the ball. 6 runs.",
+        "🌈 Arcing beautifully into the crowd. 6!"
     ],
     "out": [
         "💥 Bowled him! What a delivery!", 
@@ -134,14 +161,17 @@ const COMMENTARY = {
         "🎤 'He's gone! The finger goes up!'",
         "🤡 'Why don't you get some runs, mate?'",
         "🚮 Trash disposal complete. Out!",
-        "🎈 'In the air... and taken!'",
         "🚪 This way to the pavilion, please.",
         "🤫 Silence in the ground. Wicket falls.",
         "💔 Heartbreak! The batter is walking.",
         "📦 Pack your bags! You're done.",
-        "🏏 'You're just a bits and pieces player!' - Sledge of the day.",
-        "🥶 Ice cold delivery. Out!",
-        "💀 GONE! Absolutely clinical."
+        "🏏 'You're just a bits and pieces player!'",
+        "💀 GONE! Absolutely clinical.",
+        "💩 Bhai, tujhse na ho payega. (Brother, you can't do it.) OUT!",
+        "💨 'Snicked it... and taken!'",
+        "👻 Disappeared! Like your chances of winning. OUT!",
+        "😵 Stunned! The stumps are flying.",
+        "📉 Career-ending delivery? Maybe!"
     ],
     "50": [
         "🎉 Half-century! What a milestone!", 
@@ -151,7 +181,9 @@ const COMMENTARY = {
         "📊 A captain's innings! Half-century.",
         "🌟 Shining bright with a 50.",
         "🍾 Pop the champagne! 50 up.",
-        "📈 The graphs are all pointing up!"
+        "📈 The graphs are all pointing up!",
+        "🦁 Sher hai tu! (You're a lion!) Magnificent 50.",
+        "🏅 Quality through and through. 50 runs."
     ],
     "100": [
         "🏅 CENTURY! What a magnificent innings!", 
@@ -161,7 +193,9 @@ const COMMENTARY = {
         "🏅 Legendary status unlocked. 100!",
         "🔱 The master of the crease. 100 runs.",
         "🎂 A ton of runs! Magnificent.",
-        "🙌 Bow down to the centurion!"
+        "🙌 Bow down to the centurion!",
+        "👑 Badshah of the stadium! (King of the stadium!) 100!",
+        "🔱 Simply unstoppable. 100 runs."
     ]
 };
 
@@ -631,6 +665,55 @@ bot.on('callback_query:data', async (ctx) => {
       return;
   }
 
+  if (data.startsWith('tour_pickS_')) {
+      const parts = data.split('_');
+      const tourId = parts[2];
+      const index = parseInt(parts[3]);
+      const tour = tourManager.getTour(tourId);
+      if (!tour) return ctx.answerCallbackQuery();
+      
+      const res = tourManager.setBatsman(tourId, userId, index, tour[tour.battingTeamId].strikerId ? 'N' : 'S');
+      if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+      
+      ctx.answerCallbackQuery(`Selected: ${res.player.first_name}`);
+      
+      if (tour.state === 'SELECT_BATTERS') {
+          // Need second batter
+          const batT = tour[tour.battingTeamId];
+          const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId && p.id !== batT.nonStrikerId);
+          const kb = new InlineKeyboard();
+          available.forEach(p => kb.text(p.first_name, `tour_pickS_${tourId}_${batT.players.indexOf(p) + 1}`).row());
+          await ctx.editMessageText(`🏏 <b>Match Start!</b>\nSelected Opening Batter: ${res.player.first_name}\n\nCaptain, select the <b>second batter</b>:`, { reply_markup: kb, parse_mode: 'HTML' });
+      } else if (tour.state === 'SELECT_BOWLER') {
+          // Both batters set, now bowler
+          const bowlT = tour[tour.bowlingTeamId];
+          const kb = new InlineKeyboard();
+          bowlT.players.forEach(p => kb.text(p.first_name, `tour_pickB_${tourId}_${bowlT.players.indexOf(p) + 1}`).row());
+          await ctx.editMessageText(`🏏 <b>Batters Set!</b>\nStriker: ${tour[tour.battingTeamId].players.find(p=>p.id===tour[tour.battingTeamId].strikerId)?.first_name}\nNon-Striker: ${tour[tour.battingTeamId].players.find(p=>p.id===tour[tour.battingTeamId].nonStrikerId)?.first_name}\n\nCaptain, select the <b>Opening Bowler</b>:`, { reply_markup: kb, parse_mode: 'HTML' });
+      } else {
+          try { await ctx.deleteMessage(); } catch(e){}
+      }
+      return;
+  }
+
+  if (data.startsWith('tour_pickB_')) {
+      const parts = data.split('_');
+      const tourId = parts[2];
+      const index = parseInt(parts[3]);
+      const tour = tourManager.getTour(tourId);
+      if (!tour) return ctx.answerCallbackQuery();
+      
+      const res = tourManager.setBowler(tourId, userId, index);
+      if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+      
+      ctx.answerCallbackQuery(`Bowler set: ${res.player.first_name}`);
+      await ctx.editMessageText(`🏟 <b>Tournament Start!</b>\nAll players ready. Let the games begin!`, { parse_mode: 'HTML' });
+      
+      // Trigger initial tag for the first ball
+      if (bot.tourTagActive) await bot.tourTagActive(ctx, tour);
+      return;
+  }
+
   if (data.startsWith('tour_decide_')) {
       const parts = data.split('_');
       const tourId = parts[2];
@@ -649,7 +732,12 @@ bot.on('callback_query:data', async (ctx) => {
 
       tour.state = 'SELECT_BATTERS';
       ctx.answerCallbackQuery("Match starting!");
-      await ctx.editMessageText(`🚀 <b>Match Start!</b>\nTeam Batting: ${tour.battingTeamId === 'teamA' ? 'Team A' : 'Team B'}\n\nCaptain, select your opening batters using /batting [index]`, { parse_mode: 'HTML' });
+      
+      const batT = tour[tour.battingTeamId];
+      const kb = new InlineKeyboard();
+      batT.players.forEach(p => kb.text(p.first_name, `tour_pickS_${tourId}_${batT.players.indexOf(p) + 1}`).row());
+      
+      await ctx.editMessageText(`🚀 <b>Match Start!</b>\nTeam Batting: ${tour.battingTeamId === 'teamA' ? 'Team A' : 'Team B'}\n\nCaptain, select your <b>first opening batter</b>:`, { reply_markup: kb, parse_mode: 'HTML' });
       return;
   }
 

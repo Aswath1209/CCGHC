@@ -180,12 +180,20 @@ function setBatsman(tourId, userId, playerIndex, position) {
     const player = team.players[playerIndex - 1];
     if (!player) return { success: false, error: 'Invalid player index.' };
 
-    // Check if player is out or already batting (unless rebatting, which is handled via /rebat)
     if (team.outPlayers.includes(player.id)) return { success: false, error: 'Player is already out.' };
     if (player.id === team.strikerId || player.id === team.nonStrikerId) return { success: false, error: 'Player is already batting.' };
 
     if (position === 'S') team.strikerId = player.id;
     else team.nonStrikerId = player.id;
+
+    // Auto-progress state
+    const activeCount = team.players.length - team.outPlayers.length;
+    const battingCount = (team.strikerId ? 1 : 0) + (team.nonStrikerId ? 1 : 0);
+    
+    if (battingCount === Math.min(2, activeCount)) {
+        if (tour.state === 'SELECT_BATTERS') tour.state = 'SELECT_BOWLER';
+        else tour.state = 'PLAYING';
+    }
 
     return { success: true, player };
 }
@@ -312,7 +320,9 @@ function submitPlay(tourId, userId, rawInput) {
 
     const targetPassed = tour.innings === 2 && currentBatTeamScore > bowlingTeamScore;
     const oversFinished = tour.balls >= tour.config.overs * 6;
-    const allOut = batTeam.wickets >= tour.config.wickets || (batTeam.strikerId === null && batTeam.nonStrikerId === null && batTeam.players.length > 0);
+    
+    // All Out only if roster is fully exhausted
+    const allOut = batTeam.wickets >= batTeam.players.length;
     
     if (targetPassed || oversFinished || allOut) {
         if (tour.innings === 1) {

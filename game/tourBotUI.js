@@ -46,7 +46,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
         `🔔 <b>Next Ball!</b>\n` +
         `👤 Batter: <a href="tg://user?id=${striker.id}">${striker.first_name}</a>\n` +
         `👤 Bowler: <a href="tg://user?id=${bowler.id}">${bowler.first_name}</a>\n\n` +
-        `Click below to send your play!`, 
+        `<i>Click below to send your play!</i>`, 
         { reply_markup: kb, parse_mode: 'HTML' }
     );
   }
@@ -100,12 +100,33 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       } else if (res.inningsEnded) {
           await ctx.api.sendMessage(tour.chatId, `🏁 <b>Innings Over!</b>\nTarget: ${tourManager.totalScore(batT) + 1}\n\nHost/Captain, use /innings_switch to proceed.`, { parse_mode: 'HTML' });
       } else if (res.needsNewBatsman) {
-          await ctx.api.sendMessage(tour.chatId, `☝️ <b>Wicket!</b>\nCaptain, select new batsman using /batting [index]`, { parse_mode: 'HTML' });
+          const batT = tour[tour.battingTeamId];
+          const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId && p.id !== batT.nonStrikerId);
+          
+          if (available.length > 0) {
+              const kb = new InlineKeyboard();
+              available.forEach(p => kb.text(p.first_name, `tour_pickS_${tour.id}_${batT.players.indexOf(p) + 1}`).row());
+              await ctx.api.sendMessage(tour.chatId, `☝️ <b>Wicket!</b>\nCaptain, select new batsman:`, { reply_markup: kb, parse_mode: 'HTML' });
+          } else {
+              // LMS handled by engine, but if no one to pick then just tag active
+              await tagActivePlayers(ctx, tour);
+          }
       } else if (res.needsNewBowler) {
-          await ctx.api.sendMessage(tour.chatId, `🔚 <b>Over Over!</b>\nCaptain, select new bowler using /bowling [index]\n<i>(Note: Bowler cannot bowl consecutive overs)</i>`, { parse_mode: 'HTML' });
+          const bowlT = tour[tour.bowlingTeamId];
+          const kb = new InlineKeyboard();
+          bowlT.players.forEach(p => {
+              if (p.id !== tour.previousBowlerId || bowlT.players.length === 1) {
+                  kb.text(p.first_name, `tour_pickB_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row();
+              }
+          });
+          await ctx.api.sendMessage(tour.chatId, `🔚 <b>Over Over!</b>\nCaptain, select new bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
       } else {
           // Ball by ball follow up
           await tagActivePlayers(ctx, tour);
       }
   }
+
+  bot.tourTagActive = async (ctx, tour) => {
+      await tagActivePlayers(ctx, tour);
+  };
 };
