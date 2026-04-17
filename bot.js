@@ -208,29 +208,33 @@ bot.use(session({ initial: () => ({}) }));
 
 tourBotUI(bot, sleep, sendEventUpdate);
 
-bot.api.setMyCommands([
-  { command: 'start', description: 'Welcome message' },
-  { command: 'register', description: 'Create account & get coins' },
-  { command: 'ccl', description: 'Start a 1v1 CCL match' },
-  { command: 'tour', description: 'Initiate a Team Tour' },
-  { command: 'create_team', description: 'Start Team A joining window' },
-  { command: 'join_teama', description: 'Join Team A' },
-  { command: 'join_teamb', description: 'Join Team B' },
-  { command: 'appointa_captain', description: 'Appoint Team A Captain' },
-  { command: 'appointb_captain', description: 'Appoint Team B Captain' },
-  { command: 'setovers', description: 'Set match overs' },
-  { command: 'teams', description: 'Show team rosters' },
-  { command: 'batting', description: '/batting [index]' },
-  { command: 'bowling', description: '/bowling [index]' },
-  { command: 'scoreboard', description: 'View match status' },
-  { command: 'endmatch', description: 'Force end match (Admin)' },
-  { command: 'penalty', description: '/penalty [A/B] [runs]' },
-  { command: 'bonus', description: '/bonus [A/B] [runs]' },
-  { command: 'innings_switch', description: 'Switch to next innings' },
-  { command: 'changehost', description: 'Transfer host permissions' },
-  { command: 'profile', description: 'View your stats' },
-  { command: 'help', description: 'Commands list' }
-]).catch(console.error);
+try {
+  bot.api.setMyCommands([
+    { command: 'start', description: 'Welcome message' },
+    { command: 'register', description: 'Create account & get coins' },
+    { command: 'ccl', description: 'Start a 1v1 CCL match' },
+    { command: 'tour', description: 'Initiate a Team Tour' },
+    { command: 'create_team', description: 'Start Team A joining window' },
+    { command: 'join_teama', description: 'Join Team A' },
+    { command: 'join_teamb', description: 'Join Team B' },
+    { command: 'appointa_captain', description: 'Appoint Team A Captain' },
+    { command: 'appointb_captain', description: 'Appoint Team B Captain' },
+    { command: 'setovers', description: 'Set match overs' },
+    { command: 'teams', description: 'Show team rosters' },
+    { command: 'batting', description: '/batting [index]' },
+    { command: 'bowling', description: '/bowling [index]' },
+    { command: 'scoreboard', description: 'View match status' },
+    { command: 'endmatch', description: 'Force end match (Admin)' },
+    { command: 'penalty', description: '/penalty [A/B] [runs]' },
+    { command: 'bonus', description: '/bonus [A/B] [runs]' },
+    { command: 'innings_switch', description: 'Switch to next innings' },
+    { command: 'changehost', description: 'Transfer host permissions' },
+    { command: 'profile', description: 'View your stats' },
+    { command: 'help', description: 'Commands list' }
+  ]).catch(e => console.error("setMyCommands error (non-blocking):", e.message));
+} catch (e) {
+  console.error("Critical error in setMyCommands:", e.message);
+}
 
 bot.command('start', async (ctx) => {
   await ctx.reply("🏏 Welcome to HandCricket!\nUse /register to get 4000🪙 coins.");
