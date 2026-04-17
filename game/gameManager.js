@@ -8,7 +8,14 @@ function generateGameId() {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-function createGame(chatId, messageId, initiator, bet = 0) {
+function createGame(chatId, messageId, hostUser, bet = 0) {
+  // Check if GC already has a game
+  for (const g of games.values()) {
+    if (g.chatId === chatId) return { success: false, error: "A match is already active in this group!" };
+  }
+  // Check if user is in any game
+  if (userGameMap.has(hostUser.id)) return { success: false, error: "You are already in an active match!" };
+
   const gameId = generateGameId();
   const game = {
     id: gameId,
@@ -16,7 +23,7 @@ function createGame(chatId, messageId, initiator, bet = 0) {
     messageId: messageId, // the GC message to edit
     state: 'WAITING',
     bet: bet,
-    players: [initiator], // [{ id, first_name }]
+    players: [hostUser], // [{ id, first_name }]
     tossWinnerId: null,
     tossLoserId: null,
     batsmanId: null,
@@ -32,8 +39,12 @@ function createGame(chatId, messageId, initiator, bet = 0) {
     centuryAnnounced: false,
   };
   games.set(gameId, game);
-  userGameMap.set(initiator.id, gameId);
-  return game;
+  userGameMap.set(hostUser.id, gameId);
+  return { success: true, game };
+}
+
+function getAllGames() {
+    return games.values();
 }
 
 function getGame(gameId) {
@@ -209,4 +220,7 @@ function cleanupExpiredGames() {
 }
 setInterval(cleanupExpiredGames, 3600000);
 
-module.exports = { createGame, getGame, getUserGame, deleteGame, joinGame, handleToss, chooseBatBowl, submitPlay };
+module.exports = {
+  createGame, getGame, getUserGame, deleteGame, joinGame,
+  handleToss, chooseBatBowl, submitPlay, getAllGames
+};

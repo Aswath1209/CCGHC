@@ -10,6 +10,13 @@ function generateTourId() {
 }
 
 function createTour(chatId, hostUser) {
+  // Check if GC already has a game
+  for (const t of tours.values()) {
+    if (t.chatId === chatId) return { success: false, error: "A match is already active in this group!" };
+  }
+  // Check if user is in any game
+  if (userTourMap.has(hostUser.id)) return { success: false, error: "You are already in an active match!" };
+
   const tourId = generateTourId();
   const tour = {
     id: tourId,
@@ -64,7 +71,11 @@ function createTour(chatId, hostUser) {
   };
   tours.set(tourId, tour);
   userTourMap.set(hostUser.id, tourId);
-  return tour;
+  return { success: true, tour };
+}
+
+function getAllTours() {
+    return tours.values();
 }
 
 function getTour(tourId) {
@@ -410,5 +421,5 @@ function cleanupExpiredGames() {
 module.exports = {
   createTour, getTour, getUserTour, deleteTour, joinPool,
   assignPlayerCommand, startTour, handleToss, chooseBatBowl,
-  setBatsman, setBowler, submitPlay, voteHost, kickAFK
+  setBatsman, setBowler, submitPlay, voteHost, kickAFK, getAllTours
 };

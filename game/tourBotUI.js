@@ -16,7 +16,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     if (args[1]) bet = parseInt(args[1]) || 0;
     
     const hostObj = { id: ctx.from.id, first_name: ctx.from.first_name };
-    const tour = tourManager.createTour(ctx.chat.id, hostObj);
+    const res = tourManager.createTour(ctx.chat.id, hostObj);
+    if (!res.success) return ctx.reply("❌ " + res.error);
+    const tour = res.tour;
     tour.config.bet = bet;
     
     await renderTourLobby(ctx, tour);
@@ -214,8 +216,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
        }
        
        const batT = tour[tour.battingTeamId];
-       if (ctx.from.id === batT.strikerId) ctx.reply(`✅ You played: ${txt}`);
-       else ctx.reply(`✅ You bowled: ${tour.choices.bowlChoice}`);
+       if (ctx.from.id === batT.strikerId) ctx.reply(`✅ You played: ${res.batStr || txt}`);
+       else ctx.reply(`✅ You bowled: ${res.bowlStr || tour.choices.bowlChoice}`);
        
        if (res.waiting) return true;
        

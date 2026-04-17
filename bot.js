@@ -58,6 +58,7 @@ bot.api.setMyCommands([
   { command: 'profile', description: 'View your stats' },
   { command: 'daily', description: 'Claim daily reward' },
   { command: 'leaderboard', description: 'Top players' },
+  { command: 'endmatch', description: 'End active match (Admin only)' },
   { command: 'help', description: 'Commands list' }
 ]).catch(console.error);
 
@@ -139,7 +140,9 @@ bot.command('ccl', async (ctx) => {
     if (user.coins < bet) return ctx.reply(`You don't have enough coins to bet ${bet}🪙.`);
   }
 
-  const game = gameManager.createGame(ctx.chat.id, null, { id: ctx.from.id, first_name: ctx.from.first_name }, bet);
+  const res = gameManager.createGame(ctx.chat.id, null, { id: ctx.from.id, first_name: ctx.from.first_name }, bet);
+  if (!res.success) return ctx.reply("❌ " + res.error);
+  const game = res.game;
   
   const keyboard = new InlineKeyboard()
       .text("Join ✅", `ccl_join_${game.id}`).row()
@@ -151,6 +154,32 @@ bot.command('ccl', async (ctx) => {
     { reply_markup: keyboard }
   );
   game.messageId = sent.message_id;
+});
+
+bot.command('endmatch', async (ctx) => {
+  const userId = ctx.from.id;
+  const chatId = ctx.chat.id;
+  
+  // Check if there is a match in this chat
+  let activeGame = null;
+  let matches = [...gameManager.getAllGames()].concat([...tourManager.getAllTours()]);
+  activeGame = matches.find(m => m.chatId === chatId);
+  
+  if (!activeGame) return ctx.reply("❌ No active match found in this group.");
+  
+  // Check permissions: Admin or Host
+  const member = await ctx.getChatMember(userId);
+  const isAdmin = ['creator', 'administrator'].includes(member.status);
+  const isHost = activeGame.hostId === userId || (activeGame.players && activeGame.players[0].id === userId);
+  
+  if (!isAdmin && !isHost) return ctx.reply("❌ Only Group Admins or the Match Host can end the match.");
+  
+  const type = activeGame.players ? 'ccl' : 'tour';
+  const kb = new InlineKeyboard()
+    .text("✅ Confirm End", `endmatch_yes_${type}_${activeGame.id}`)
+    .text("❌ Cancel", `endmatch_no`);
+    
+  await ctx.reply(`⚠️ Are you sure you want to end the current match? This cannot be undone.`, { reply_markup: kb });
 });
 
 // Inline Callbacks for Group Chat
@@ -253,6 +282,19 @@ bot.on('callback_query:data', async (ctx) => {
     
     await sendDMInstructions(ctx, game, batP, bowlP);
   }
+  else if (data.startsWith('endmatch_')) {
+      const parts = data.split('_');
+      if (parts[1] === 'no') return await ctx.editMessageText("End match request cancelled.");
+      
+      const type = parts[2];
+      const gameId = parts[3];
+      
+      if (type === 'ccl') gameManager.deleteGame(gameId);
+      else tourManager.deleteTour(gameId);
+      
+      await ctx.editMessageText("🛑 Match has been forcefully ended by an administrator.");
+      ctx.answerCallbackQuery("Match ended.");
+  }
 });
 
 async function sendDMInstructions(ctx, game, batP, bowlP) {
@@ -281,15 +323,10 @@ bot.on('message:text', async (ctx) => {
     if (!game || game.state !== 'PLAYING') return; 
     
     const res = gameManager.submitPlay(game.id, userId, txt);
-    if (!res.success) {
-        if (res.error === 'Not in game') return;
-        return await ctx.reply("❌ " + res.error);
-    }
-    
     if (userId === game.batsmanId) {
-        await ctx.reply(`✅ You chose: ${txt}`);
+        await ctx.reply(`✅ You played: ${res.batStr || txt}`);
     } else {
-        await ctx.reply(`✅ You chose: ${game.bowlChoice}`); 
+        await ctx.reply(`✅ You bowled: ${res.bowlStr || game.bowlChoice}`); 
     }
     
     if (res.waiting) {
