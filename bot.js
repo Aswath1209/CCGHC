@@ -224,7 +224,8 @@ try {
     { command: 'batting', description: '/batting [index]' },
     { command: 'bowling', description: '/bowling [index]' },
     { command: 'scoreboard', description: 'View match status' },
-    { command: 'endmatch', description: 'Force end match (Admin)' },
+    { command: 'endmatch', description: 'End 1v1 match (Admin/Host)' },
+    { command: 'endtour', description: 'End Tour match (Admin/Host)' },
     { command: 'penalty', description: '/penalty [A/B] [runs]' },
     { command: 'bonus', description: '/bonus [A/B] [runs]' },
     { command: 'innings_switch', description: 'Switch to next innings' },
@@ -293,6 +294,8 @@ bot.command('help', async (ctx) => {
     "🔄 /daily - Claim 2000 coins\n" +
     "🏆 /leaderboard - Top players\n\n" +
     "<i>Admin Commands:</i>\n" +
+    "🛑 /endmatch - End 1v1 match\n" +
+    "🛑 /endtour - End tour match\n" +
     "➕ /add [id] [amount] - Give coins",
     { parse_mode: 'HTML' }
   );
@@ -317,7 +320,11 @@ bot.command('ccl', async (ctx) => {
   const res = gameManager.createGame(ctx.chat.id, null, { id: ctx.from.id, first_name: ctx.from.first_name }, bet);
   if (!res.success) return ctx.reply("❌ " + res.error);
 
-  const kb = new InlineKeyboard().text("Join Match 🏏", `ccl_join_${res.game.id}`);
+  const kb = new InlineKeyboard()
+    .text("Join Match 🏏", `ccl_join_${res.game.id}`)
+    .row()
+    .text("Cancel ❌", `ccl_cancel_${res.game.id}`);
+
   await ctx.reply(
     `🏏 <b>CCL Match Started!</b>\n` +
     `Host: ${ctx.from.first_name}\n` +
@@ -327,23 +334,49 @@ bot.command('ccl', async (ctx) => {
   );
 });
 
+async function isAdminOrHost(ctx, match) {
+    if (ctx.chat.type === 'private') return true;
+    if (match && match.hostId === ctx.from.id) return true;
+    
+    try {
+        const member = await ctx.api.getChatMember(ctx.chat.id, ctx.from.id);
+        return ['creator', 'administrator'].includes(member.status) || ctx.from.id.toString() === "6268846393";
+    } catch (e) {
+        console.error("Admin check failed:", e);
+        return false;
+    }
+}
+
 bot.command('endmatch', async (ctx) => {
-  // Check if user is host of a game in this chat or is admin
-  const isAdmin = ctx.from.id.toString() === "6268846393"; // Example admin ID from previous logs check
+  const match = [...gameManager.getAllGames()].find(m => m.chatId === ctx.chat.id);
   
-  let matches = [...gameManager.getAllGames()].concat([...tourManager.getAllTours()]);
-  const match = matches.find(m => m.chatId === ctx.chat.id);
+  if (!match) return ctx.reply("No active 1v1 match found in this chat.");
   
-  if (!match) return ctx.reply("No active match found in this chat.");
-  
-  if (match.hostId !== ctx.from.id && !isAdmin) {
+  if (!(await isAdminOrHost(ctx, match))) {
       return ctx.reply("Only the host or an admin can end the match.");
   }
 
-  if (match.teamA) tourManager.deleteTour(match.id);
-  else gameManager.deleteGame(match.id);
+  const kb = new InlineKeyboard()
+    .text("Yes, End Match ✅", `confirm_endmatch_yes_${match.id}`)
+    .text("No, Continue ❌", `confirm_endmatch_no`);
+
+  await ctx.reply("⚠️ <b>Clear Match?</b>\nAre you sure you want to end this 1v1 match?", { reply_markup: kb, parse_mode: 'HTML' });
+});
+
+bot.command('endtour', async (ctx) => {
+    const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+    
+    if (!tour) return ctx.reply("No active tour match found in this chat.");
+    
+    if (!(await isAdminOrHost(ctx, tour))) {
+        return ctx.reply("Only the host or an admin can end the tour.");
+    }
   
-  await ctx.reply("🛑 Match has been forcibly ended.");
+    const kb = new InlineKeyboard()
+      .text("Yes, End Tour ✅", `confirm_endtour_yes_${tour.id}`)
+      .text("No, Continue ❌", `confirm_endtour_no`);
+  
+    await ctx.reply("⚠️ <b>Clear Tour?</b>\nAre you sure you want to end this tournament match?", { reply_markup: kb, parse_mode: 'HTML' });
 });
 
 bot.command('tour', async (ctx) => {
@@ -840,18 +873,23 @@ bot.on('callback_query:data', async (ctx) => {
     
     await sendDMInstructions(ctx, game, batP, bowlP);
   }
-  else if (data.startsWith('endmatch_')) {
+  else if (data.startsWith('confirm_endmatch_')) {
       const parts = data.split('_');
-      if (parts[1] === 'no') return await ctx.editMessageText("End match request cancelled.");
+      if (parts[2] === 'no') return await ctx.editMessageText("End match request cancelled.");
       
-      const type = parts[2];
       const gameId = parts[3];
-      
-      if (type === 'ccl') gameManager.deleteGame(gameId);
-      else tourManager.deleteTour(gameId);
-      
-      await ctx.editMessageText("🛑 Match has been forcefully ended by an administrator.");
+      gameManager.deleteGame(gameId);
+      await ctx.editMessageText("🛑 1v1 Match has been forcefully ended.");
       ctx.answerCallbackQuery("Match ended.");
+  }
+  else if (data.startsWith('confirm_endtour_')) {
+      const parts = data.split('_');
+      if (parts[2] === 'no') return await ctx.editMessageText("End tour request cancelled.");
+      
+      const tourId = parts[3];
+      tourManager.deleteTour(tourId);
+      await ctx.editMessageText("🛑 Tour Match has been forcefully ended.");
+      ctx.answerCallbackQuery("Tour ended.");
   }
 });
 
