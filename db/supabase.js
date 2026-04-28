@@ -58,20 +58,28 @@ async function updateCoins(userId, amount) {
   return data;
 }
 
+const userLocks = new Map();
+
 async function claimDaily(userId) {
   if (!supabase) return { success: false, error: 'Database disabled' };
   
-  const user = await getUser(userId);
-  if (!user) return { success: false, error: 'User not found. Please /register first.' };
-
-  const now = new Date();
-  if (user.last_daily) {
-    const lastClaim = new Date(user.last_daily);
-    const diffHours = (now - lastClaim) / (1000 * 60 * 60);
-    if (diffHours < 24) {
-      return { success: false, error: 'Come back tomorrow!' };
-    }
+  while (userLocks.get(userId)) {
+      await new Promise(resolve => setTimeout(resolve, 50));
   }
+  userLocks.set(userId, true);
+  
+  try {
+      const user = await getUser(userId);
+      if (!user) return { success: false, error: 'User not found. Please /register first.' };
+
+      const now = new Date();
+      if (user.last_daily) {
+        const lastClaim = new Date(user.last_daily);
+        const diffHours = (now - lastClaim) / (1000 * 60 * 60);
+        if (diffHours < 24) {
+          return { success: false, error: 'Come back tomorrow!' };
+        }
+      }
 
   const newCoins = user.coins + DAILY_REWARD;
   const { data, error } = await supabase.from('cricket_users').update({ 
@@ -79,12 +87,15 @@ async function claimDaily(userId) {
     last_daily: now.toISOString() 
   }).eq('user_id', userId).select().single();
 
-  if (error) {
-    console.error("Daily claim error:", error);
-    return { success: false, error: error.message };
-  }
+      if (error) {
+        console.error("Daily claim error:", error);
+        return { success: false, error: error.message };
+      }
 
-  return { success: true, user: data };
+      return { success: true, user: data };
+  } finally {
+      userLocks.delete(userId);
+  }
 }
 
 async function recordMatchEnd(winnerId, loserId, betAmount) {

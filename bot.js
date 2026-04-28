@@ -313,6 +313,10 @@ bot.command('ccl', async (ctx) => {
   const args = ctx.message.text.split(' ');
   const bet = parseInt(args[1]) || 0;
   
+  if (bet < 0) {
+      return ctx.reply("⚠️ Bet amount cannot be negative!");
+  }
+  
   const user = await sb.getUser(ctx.from.id);
   if (!user) return ctx.reply("⚠️ You need to /register first!");
   if (user.coins < bet) return ctx.reply(`⚠️ Insufficient coins! You have ${user.coins}🪙`);
