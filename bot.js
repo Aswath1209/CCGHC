@@ -231,6 +231,7 @@ try {
     { command: 'innings_switch', description: 'Switch to next innings' },
     { command: 'changehost', description: 'Transfer host permissions' },
     { command: 'profile', description: 'View your stats' },
+    { command: 'rules', description: 'How to play CCL' },
     { command: 'help', description: 'Commands list' }
   ]).catch(e => console.error("setMyCommands error (non-blocking):", e.message));
 } catch (e) {
@@ -292,11 +293,34 @@ bot.command('help', async (ctx) => {
     "⚙️ /tourconfig - Configure Tour Match\n" +
     "👤 /profile - Your stats\n" +
     "🔄 /daily - Claim 2000 coins\n" +
-    "🏆 /leaderboard - Top players\n\n" +
+    "🏆 /leaderboard - Top players\n" +
+    "📜 /rules - CCL Game Rules\n\n" +
     "<i>Admin Commands:</i>\n" +
     "🛑 /endmatch - End 1v1 match\n" +
     "🛑 /endtour - End tour match\n" +
     "➕ /add [id] [amount] - Give coins",
+    { parse_mode: 'HTML' }
+  );
+});
+
+bot.command('rules', async (ctx) => {
+  await ctx.reply(
+    "🏏 <b>CCL Game Rules</b>\n\n" +
+    "It's a simple 1v1 Hand Cricket game! Here is how it works:\n\n" +
+    "<b>Basic Gameplay:</b>\n" +
+    "1️⃣ Use /ccl [bet] to start a match in a group.\n" +
+    "2️⃣ <b>Batsman</b> picks a number (0, 1, 2, 3, 4, 6).\n" +
+    "3️⃣ <b>Bowler</b> picks a delivery which maps to a number:\n" +
+    "   • <b>RS</b> = 0 (Regular Speed)\n" +
+    "   • <b>Bouncer</b> = 1\n" +
+    "   • <b>Yorker</b> = 2\n" +
+    "   • <b>Short</b> = 3\n" +
+    "   • <b>Slower</b> = 4\n" +
+    "   • <b>Knuckle</b> = 6\n\n" +
+    "⚠️ <b>Wicket:</b> If the Batsman's number matches the Bowler's delivery number, the Batsman is <b>OUT!</b>\n" +
+    "📉 <b>RS-0 Rule:</b> The 'RS' delivery specifically counts as 0 runs. If the batsman picks 0 and the bowler picks RS, it's a wicket.\n\n" +
+    "<b>Winning:</b>\n" +
+    "Both players get an innings to bat. Whoever scores more runs wins the match and the bet! 🏆",
     { parse_mode: 'HTML' }
   );
 });
