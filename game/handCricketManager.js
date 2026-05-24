@@ -1,5 +1,20 @@
 const lobbies = new Map();
-const userLobbyMap = new Map(); // userId -> messageId
+const userLobbyMap = new Map(); // userId -> compositeKey
+
+const LOBBY_EXPIRE_HOURS = 1;
+
+function cleanupExpiredLobbies() {
+    const now = Date.now();
+    for (const [key, lobby] of lobbies.entries()) {
+        if (now - lobby.createdAt > LOBBY_EXPIRE_HOURS * 3600000) {
+            if (lobby.players) {
+                lobby.players.forEach(p => userLobbyMap.delete(p.id));
+            }
+            lobbies.delete(key);
+        }
+    }
+}
+setInterval(cleanupExpiredLobbies, 3600000);
 
 class HandCricketManager {
     createLobby(chatId, host) {
@@ -31,20 +46,21 @@ class HandCricketManager {
 
     saveLobby(messageId, lobby) {
         lobby.messageId = messageId;
-        lobbies.set(messageId, lobby);
+        const key = `${lobby.chatId}_${messageId}`;
+        lobbies.set(key, lobby);
         if (lobby.players) {
-            lobby.players.forEach(p => userLobbyMap.set(p.id, messageId));
+            lobby.players.forEach(p => userLobbyMap.set(p.id, key));
         }
     }
 
-    getLobby(messageId) {
-        return lobbies.get(messageId);
+    getLobby(chatId, messageId) {
+        return lobbies.get(`${chatId}_${messageId}`);
     }
 
     getLobbyByUserId(userId) {
-        const messageId = userLobbyMap.get(userId);
-        if (!messageId) return null;
-        const lobby = lobbies.get(messageId);
+        const key = userLobbyMap.get(userId);
+        if (!key) return null;
+        const lobby = lobbies.get(key);
         if (!lobby) {
             userLobbyMap.delete(userId);
             return null;
@@ -52,26 +68,28 @@ class HandCricketManager {
         return lobby;
     }
 
-    joinLobby(messageId, user) {
-        const lobby = lobbies.get(messageId);
+    joinLobby(chatId, messageId, user) {
+        const key = `${chatId}_${messageId}`;
+        const lobby = lobbies.get(key);
         if (!lobby || lobby.players.length >= 2 || lobby.state !== 'LOBBY') return false;
         if (lobby.players.find(p => p.id === user.id)) return false;
         lobby.players.push(user);
         lobby.state = 'TOSS_CHOOSE_SIDE';
-        userLobbyMap.set(user.id, messageId);
+        userLobbyMap.set(user.id, key);
         return true;
     }
 
-    deleteLobby(messageId) {
-        const lobby = lobbies.get(messageId);
+    deleteLobby(chatId, messageId) {
+        const key = `${chatId}_${messageId}`;
+        const lobby = lobbies.get(key);
         if (lobby) {
             lobby.players.forEach(p => userLobbyMap.delete(p.id));
         }
-        lobbies.delete(messageId);
+        lobbies.delete(key);
     }
 
-    performTossChoice(messageId, choice) {
-        const lobby = lobbies.get(messageId);
+    performTossChoice(chatId, messageId, choice) {
+        const lobby = lobbies.get(`${chatId}_${messageId}`);
         if (!lobby || lobby.state !== 'TOSS_CHOOSE_SIDE') return null;
 
         const tossResult = Math.random() < 0.5 ? 'heads' : 'tails';
@@ -91,8 +109,8 @@ class HandCricketManager {
         return { winner, tossResult };
     }
 
-    selectRole(messageId, choice) {
-        const lobby = lobbies.get(messageId);
+    selectRole(chatId, messageId, choice) {
+        const lobby = lobbies.get(`${chatId}_${messageId}`);
         if (!lobby || lobby.state !== 'TOSS_CHOOSE_ROLE') return null;
 
         const winner = lobby.players.find(p => p.id === lobby.tossWinnerId);
@@ -113,8 +131,8 @@ class HandCricketManager {
         return lobby;
     }
 
-    submitMove(messageId, userId, num) {
-        const lobby = lobbies.get(messageId);
+    submitMove(chatId, messageId, userId, num) {
+        const lobby = lobbies.get(`${chatId}_${messageId}`);
         if (!lobby || (lobby.state !== 'PLAYING' && lobby.state !== 'SUPER_BALL')) return { error: "No active game." };
         if (userId !== lobby.batsmanId && userId !== lobby.bowlerId) return { error: "You are not in this game." };
         

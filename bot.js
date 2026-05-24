@@ -282,7 +282,7 @@ bot.command('quit', async (ctx) => {
     const userId = ctx.from.id;
     const hLobby = handCricketManager.getLobbyByUserId(userId);
     if (hLobby) {
-        handCricketManager.deleteLobby(hLobby.messageId);
+        handCricketManager.deleteLobby(hLobby.chatId, hLobby.messageId);
         await ctx.api.sendMessage(hLobby.chatId, `🛑 Match ended because <a href="tg://user?id=${userId}">${ctx.from.first_name}</a> quit the game.`, { parse_mode: 'HTML' });
         return ctx.reply("You quit the Hand Cricket match.");
     }
@@ -725,12 +725,12 @@ bot.on('callback_query:data', async (ctx) => {
   // --- Hand Cricket Callbacks ---
   if (data.startsWith('cric_')) {
       const messageId = ctx.callbackQuery.message.message_id;
-      const lobby = handCricketManager.getLobby(messageId);
+      const lobby = handCricketManager.getLobby(ctx.chat.id, messageId);
       if (!lobby) return ctx.answerCallbackQuery({ text: "Lobby expired.", show_alert: true });
 
       if (data === 'cric_join') {
           if (lobby.state !== 'LOBBY') return ctx.answerCallbackQuery("Game already started!");
-          const joined = handCricketManager.joinLobby(messageId, { id: ctx.from.id, first_name: ctx.from.first_name });
+          const joined = handCricketManager.joinLobby(ctx.chat.id, messageId, { id: ctx.from.id, first_name: ctx.from.first_name });
           if (joined) {
               ctx.answerCallbackQuery("Joined!");
               await sendCricketMsg(ctx, lobby);
@@ -741,7 +741,7 @@ bot.on('callback_query:data', async (ctx) => {
       else if (data.startsWith('cric_tosschoice_')) {
           if (ctx.from.id !== lobby.host.id) return ctx.answerCallbackQuery({ text: "Only the host can choose Heads/Tails!", show_alert: true });
           const choice = data.replace('cric_tosschoice_', '');
-          const result = handCricketManager.performTossChoice(messageId, choice);
+          const result = handCricketManager.performTossChoice(ctx.chat.id, messageId, choice);
           if (result) {
               ctx.answerCallbackQuery(`Toss flipped! Result: ${result.tossResult}`);
               await sendCricketMsg(ctx, lobby);
@@ -750,7 +750,7 @@ bot.on('callback_query:data', async (ctx) => {
       else if (data.startsWith('cric_rolechoice_')) {
           if (ctx.from.id !== lobby.tossWinnerId) return ctx.answerCallbackQuery({ text: "Only the toss winner can select role!", show_alert: true });
           const choice = data.replace('cric_rolechoice_', '');
-          const updatedLobby = handCricketManager.selectRole(messageId, choice);
+          const updatedLobby = handCricketManager.selectRole(ctx.chat.id, messageId, choice);
           if (updatedLobby) {
               ctx.answerCallbackQuery(`Elected to ${choice.toUpperCase()} first!`);
               await sendCricketMsg(ctx, updatedLobby);
@@ -758,13 +758,13 @@ bot.on('callback_query:data', async (ctx) => {
       }
       else if (data === 'cric_cancel') {
           if (ctx.from.id !== lobby.host.id) return ctx.answerCallbackQuery({ text: "Only the host can cancel!", show_alert: true });
-          handCricketManager.deleteLobby(messageId);
+          handCricketManager.deleteLobby(lobby.chatId, messageId);
           await ctx.editMessageText("❌ The Hand Cricket match was cancelled by the host.");
           ctx.answerCallbackQuery("Cancelled.");
       }
       else if (data.startsWith('cric_play_')) {
           const num = parseInt(data.replace('cric_play_', ''));
-          const result = handCricketManager.submitMove(messageId, ctx.from.id, num);
+          const result = handCricketManager.submitMove(ctx.chat.id, messageId, ctx.from.id, num);
           
           if (result.error) return ctx.answerCallbackQuery({ text: result.error, show_alert: true });
           
@@ -807,7 +807,7 @@ bot.on('callback_query:data', async (ctx) => {
                   if (lobby.winnerId && loserId) {
                       await sb.recordMatchEnd(lobby.winnerId, loserId, 0); 
                   }
-                  handCricketManager.deleteLobby(messageId);
+                  handCricketManager.deleteLobby(lobby.chatId, messageId);
               }
           }
       }
