@@ -2,6 +2,7 @@ const crypto = require('crypto');
 
 const tours = new Map();
 const userTourMap = new Map(); // userId -> tourId
+const chatTourMap = new Map(); // chatId -> tourId
 
 const TOUR_EXPIRE_HOURS = 2; // longer expire for tours
 
@@ -10,9 +11,7 @@ function generateTourId() {
 }
 
 function createTour(chatId, hostUser) {
-  for (const t of tours.values()) {
-    if (t.chatId === chatId) return { success: false, error: "A match is already active in this group!" };
-  }
+  if (chatTourMap.has(chatId)) return { success: false, error: "A match is already active in this group!" };
   if (userTourMap.has(hostUser.id)) return { success: false, error: "You are already in an active match!" };
 
   const tourId = generateTourId();
@@ -63,6 +62,7 @@ function createTour(chatId, hostUser) {
   };
   tours.set(tourId, tour);
   userTourMap.set(hostUser.id, tourId);
+  chatTourMap.set(chatId, tourId);
   return { success: true, tour };
 }
 
@@ -382,6 +382,7 @@ function deleteTour(tourId) {
     if (!tour) return;
     tour.teamA.players.forEach(p => userTourMap.delete(p.id));
     tour.teamB.players.forEach(p => userTourMap.delete(p.id));
+    chatTourMap.delete(tour.chatId);
     tours.delete(tourId);
 }
 

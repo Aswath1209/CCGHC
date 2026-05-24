@@ -1,6 +1,7 @@
 // In-memory store for active games and user->game mapping
 const games = new Map();
 const userGameMap = new Map(); // userId -> gameId
+const chatGameMap = new Map(); // chatId -> gameId
 
 const GAME_EXPIRE_HOURS = 1;
 
@@ -10,9 +11,7 @@ function generateGameId() {
 
 function createGame(chatId, messageId, hostUser, bet = 0) {
   // Check if GC already has a game
-  for (const g of games.values()) {
-    if (g.chatId === chatId) return { success: false, error: "A match is already active in this group!" };
-  }
+  if (chatGameMap.has(chatId)) return { success: false, error: "A match is already active in this group!" };
   // Check if user is in any game
   if (userGameMap.has(hostUser.id)) return { success: false, error: "You are already in an active match!" };
 
@@ -40,6 +39,7 @@ function createGame(chatId, messageId, hostUser, bet = 0) {
   };
   games.set(gameId, game);
   userGameMap.set(hostUser.id, gameId);
+  chatGameMap.set(chatId, gameId);
   return { success: true, game };
 }
 
@@ -63,6 +63,7 @@ function deleteGame(gameId) {
   const game = games.get(gameId);
   if (game) {
     game.players.forEach(p => userGameMap.delete(p.id));
+    chatGameMap.delete(game.chatId);
   }
   games.delete(gameId);
 }
@@ -214,6 +215,7 @@ function cleanupExpiredGames() {
   for (const [key, game] of games.entries()) {
     if (now - game.createdAt > GAME_EXPIRE_HOURS * 3600000) {
       game.players.forEach(p => userGameMap.delete(p.id));
+      chatGameMap.delete(game.chatId);
       games.delete(key);
     }
   }
