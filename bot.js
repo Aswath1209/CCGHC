@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Bot, session, InlineKeyboard } = require('grammy');
+const { Bot, session, InlineKeyboard, webhookCallback } = require('grammy');
 const gameManager = require('./game/gameManager');
 const tourManager = require('./game/tourManager');
 const sb = require('./db/supabase');
@@ -1114,42 +1114,70 @@ async function handleRoundResult(ctx, res) {
 
 const express = require('express');
 const app = express();
-app.get('/', (req, res) => res.send('Cricket Bot is safely running!'));
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Dummy web server running on port ${PORT}`);
-});
+app.use(express.json());
 
-async function startBotWithRetry() {
-  try {
-    console.log("Cricket Bot is starting polling...");
-    await bot.start({
-      onStart: (botInfo) => {
-        console.log(`Bot @${botInfo.username} started successfully!`);
+app.get('/', (req, res) => res.send('Cricket Bot is safely running!'));
+
+const PORT = process.env.PORT || 3001;
+const isRender = process.env.RENDER === "true";
+
+if (isRender) {
+  // Use Webhooks on Render to prevent 409 getUpdates conflicts
+  console.log("Running in Render environment. Configuring webhook...");
+  app.use('/webhook', webhookCallback(bot, "express"));
+  
+  app.listen(PORT, async () => {
+    console.log(`Web server listening on port ${PORT}`);
+    try {
+      const webhookUrl = `${process.env.RENDER_EXTERNAL_URL}/webhook`;
+      console.log(`Setting webhook to ${webhookUrl}...`);
+      await bot.api.setWebhook(webhookUrl);
+      console.log("Webhook set successfully!");
+    } catch (err) {
+      console.error("Failed to set webhook:", err);
+    }
+  });
+} else {
+  // Use Long Polling locally
+  console.log("Running in local environment. Configuring polling...");
+  
+  app.listen(PORT, () => {
+    console.log(`Dummy web server running on port ${PORT}`);
+  });
+
+  async function startBotWithRetry() {
+    try {
+      console.log("Cricket Bot is starting polling...");
+      await bot.start({
+        onStart: (botInfo) => {
+          console.log(`Bot @${botInfo.username} started successfully!`);
+        }
+      });
+    } catch (err) {
+      console.error("Error occurred during bot polling:", err);
+      const errMsg = err.description || err.message || "";
+      if (errMsg.includes("Conflict") || errMsg.includes("terminated by other getUpdates")) {
+        console.log("Conflict detected (another instance is running). Retrying in 10 seconds...");
+        setTimeout(startBotWithRetry, 10000);
+      } else {
+        console.log("Polling error. Retrying in 15 seconds...");
+        setTimeout(startBotWithRetry, 15000);
       }
-    });
-  } catch (err) {
-    console.error("Error occurred during bot polling:", err);
-    const errMsg = err.description || err.message || "";
-    if (errMsg.includes("Conflict") || errMsg.includes("terminated by other getUpdates")) {
-      console.log("Conflict detected (another instance is running). Retrying in 10 seconds...");
-      setTimeout(startBotWithRetry, 10000);
-    } else {
-      console.log("Polling error. Retrying in 15 seconds...");
-      setTimeout(startBotWithRetry, 15000);
     }
   }
-}
 
-startBotWithRetry();
+  startBotWithRetry();
+}
 
 console.log("Cricket Bot Final Code is now LIVE!");
 
 process.once("SIGINT", () => {
   console.log("SIGINT received, stopping bot...");
-  bot.stop();
+  if (!isRender) bot.stop();
+  process.exit(0);
 });
 process.once("SIGTERM", () => {
   console.log("SIGTERM received, stopping bot...");
-  bot.stop();
+  if (!isRender) bot.stop();
+  process.exit(0);
 });
