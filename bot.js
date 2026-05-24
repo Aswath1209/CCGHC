@@ -1118,13 +1118,30 @@ app.get('/', (req, res) => res.send('Cricket Bot is safely running!'));
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Dummy web server running on port ${PORT}`);
-  console.log("Cricket Bot is starting polling...");
 });
 
-bot.start().catch((err) => {
-  console.error("FATAL: Bot failed to start polling!", err);
-  process.exit(1);
-});
+async function startBotWithRetry() {
+  try {
+    console.log("Cricket Bot is starting polling...");
+    await bot.start({
+      onStart: (botInfo) => {
+        console.log(`Bot @${botInfo.username} started successfully!`);
+      }
+    });
+  } catch (err) {
+    console.error("Error occurred during bot polling:", err);
+    const errMsg = err.description || err.message || "";
+    if (errMsg.includes("Conflict") || errMsg.includes("terminated by other getUpdates")) {
+      console.log("Conflict detected (another instance is running). Retrying in 10 seconds...");
+      setTimeout(startBotWithRetry, 10000);
+    } else {
+      console.log("Polling error. Retrying in 15 seconds...");
+      setTimeout(startBotWithRetry, 15000);
+    }
+  }
+}
+
+startBotWithRetry();
 
 console.log("Cricket Bot Final Code is now LIVE!");
 
