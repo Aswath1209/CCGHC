@@ -273,7 +273,7 @@ bot.command('profile', async (ctx) => {
       if (!user) return ctx.reply("⚠️ You need to register first! Send /register");
       
       const careerStats = require('./db/careerStats');
-      const stats = careerStats.getStats(ctx.from.id);
+      const stats = await careerStats.getStats(ctx.from.id);
       
       const sr = stats.balls_faced > 0 ? ((stats.runs / stats.balls_faced) * 100).toFixed(2) : '0.00';
       const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';

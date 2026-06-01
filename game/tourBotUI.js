@@ -638,7 +638,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           // Record player career stats
           try {
               const careerStatsHelper = require('../db/careerStats');
-              careerStatsHelper.recordMatchStats(tour, potmId, winnerTeamId);
+              await careerStatsHelper.recordMatchStats(tour, potmId, winnerTeamId);
           } catch (e) {
               console.error("Failed to record career stats:", e);
           }
