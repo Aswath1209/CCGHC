@@ -15,6 +15,35 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+function drawOrnateBorder(ctx, x, y, w, h, radius) {
+  drawRoundedRect(ctx, x, y, w, h, radius);
+  ctx.stroke();
+
+  // Inner orange/red frame line
+  const offset = 8;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  drawRoundedRect(ctx, x + offset, y + offset, w - offset * 2, h - offset * 2, radius - 2);
+  ctx.stroke();
+  ctx.restore();
+
+  // Corner decorative dots
+  ctx.fillStyle = '#ef4444';
+  const corners = [
+    [x + offset, y + offset],
+    [x + w - offset, y + offset],
+    [x + offset, y + h - offset],
+    [x + w - offset, y + h - offset]
+  ];
+  corners.forEach(([cx, cy]) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
 async function generateScoreboardImage(tour, resultText, potmName) {
   try {
     const width = 1024;
@@ -29,51 +58,50 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       ctx.drawImage(bg, 0, 0, width, height);
     } catch (err) {
       console.error("Failed to load stadium background, using color fallback:", err);
-      ctx.fillStyle = '#0a0505';
+      ctx.fillStyle = '#050202';
       ctx.fillRect(0, 0, width, height);
     }
 
     // Apply a deep cinematic fiery radial vignette over the stadium background
     const vignette = ctx.createRadialGradient(width / 2, height / 2, 80, width / 2, height / 2, width / 2 + 200);
-    vignette.addColorStop(0, 'rgba(25, 6, 6, 0.40)');
-    vignette.addColorStop(0.65, 'rgba(8, 2, 2, 0.88)');
+    vignette.addColorStop(0, 'rgba(15, 5, 5, 0.3)');
+    vignette.addColorStop(0.7, 'rgba(8, 2, 2, 0.88)');
     vignette.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, width, height);
 
     // Card dimensions
-    const cardX = 80;
-    const cardY = 38;
-    const cardW = 864;
-    const cardH = 500;
+    const cardX = 60;
+    const cardY = 30;
+    const cardW = 904;
+    const cardH = 516;
 
-    // Dark carbon-fiber gradient background
+    // Velvet carbon black gradient background
     const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-    cardGrad.addColorStop(0, 'rgba(18, 12, 12, 0.92)');
-    cardGrad.addColorStop(1, 'rgba(8, 5, 5, 0.96)');
+    cardGrad.addColorStop(0, '#100a08');
+    cardGrad.addColorStop(1, '#050302');
     ctx.fillStyle = cardGrad;
-    drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
+    drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 24);
     ctx.fill();
 
     // High-intensity neon fire glow border
     ctx.save();
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
-    ctx.shadowColor = 'rgba(249, 115, 22, 0.8)';
-    ctx.shadowBlur = 20;
-    ctx.lineWidth = 4;
-    drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
-    ctx.stroke();
+    ctx.strokeStyle = '#f97316';
+    ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+    ctx.shadowBlur = 22;
+    ctx.lineWidth = 3.5;
+    drawOrnateBorder(ctx, cardX, cardY, cardW, cardH, 24);
     ctx.restore();
 
     // Draw Custom Tournament Name Title if provided
     if (tour.name) {
       ctx.save();
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 18px sans-serif';
+      ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
-      ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+      ctx.shadowColor = '#f97316';
       ctx.shadowBlur = 8;
-      ctx.fillText(tour.name.toUpperCase(), width / 2, 27);
+      ctx.fillText(tour.name.toUpperCase(), width / 2, 85);
       ctx.restore();
     }
 
@@ -118,292 +146,79 @@ async function generateScoreboardImage(tour, resultText, potmName) {
     const inn1Performers = getPerformers(team1, team2);
     const inn2Performers = getPerformers(team2, team1);
 
+    // Columns Layout
+    const col1X = 90;
+    const colW = 395;
+    const col2X = 539;
+    const tableY = 110;
+
     // ================= LEFT COLUMN: TEAM 1 =================
-    const col1X = 100;
-    const colW = 310;
-    const redGrad = ctx.createLinearGradient(col1X, 60, col1X, 105);
-    redGrad.addColorStop(0, '#dc2626');
-    redGrad.addColorStop(1, '#7f1d1d');
-    ctx.fillStyle = redGrad;
-    drawRoundedRect(ctx, col1X, 60, colW, 45, 6);
-    ctx.fill();
-
-    ctx.save();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur = 2;
-    ctx.fillText(team1.name.toUpperCase(), col1X + 12, 88);
-
-    ctx.textAlign = 'right';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillText(`${team1Score}/${team1.wickets || 0} (${team1Overs})`, col1X + colW - 12, 88);
-    ctx.restore();
-
-    // Team 1 Batting Performers
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('BATTING', col1X + 12, 135);
-
-    for (let i = 0; i < 3; i++) {
-        const y = 162 + i * 22;
-        const p = inn1Performers.batsmen[i] || { name: '-', runs: '', balls: '' };
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(p.name, col1X + 15, y);
-
-        if (p.runs !== '') {
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillText(p.runs, col1X + colW - 60, y);
-            ctx.fillStyle = '#9ca3af';
-            ctx.font = '12px sans-serif';
-            ctx.fillText(`(${p.balls})`, col1X + colW - 15, y);
-        }
-    }
-
-    // Team 1 Bowling Performers
-    ctx.fillStyle = '#f87171';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('BOWLING', col1X + 12, 255);
-
-    for (let i = 0; i < 3; i++) {
-        const y = 282 + i * 22;
-        const p = inn1Performers.bowlers[i] || { name: '-', wickets: '', runsConceded: '', ballsBowled: '' };
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(p.name, col1X + 15, y);
-
-        if (p.wickets !== '') {
-            const ovs = Math.floor(p.ballsBowled / 6) + '.' + (p.ballsBowled % 6);
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#f87171';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillText(`${p.wickets}-${p.runsConceded}`, col1X + colW - 60, y);
-            ctx.fillStyle = '#9ca3af';
-            ctx.font = '12px sans-serif';
-            ctx.fillText(`${ovs}`, col1X + colW - 15, y);
-        }
-    }
-
-    // Captain and Extras
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '13px sans-serif';
-    ctx.textAlign = 'left';
-    const c1 = team1.players.find(p => p.id === team1.captainId);
-    ctx.fillText(`Captain: ${c1 ? c1.first_name : '-'}`, col1X + 15, 385);
-    ctx.fillText(`Extras: ${team1.bonusRuns - team1.penaltyRuns}`, col1X + 15, 405);
-
+    renderTeamColumn(ctx, col1X, colW, team1, team1Score, team1Overs, "#991b1b", "#1a0505", tableY, inn1Performers.batsmen, inn1Performers.bowlers);
 
     // ================= RIGHT COLUMN: TEAM 2 =================
-    const col2X = 614;
-    const goldGrad = ctx.createLinearGradient(col2X, 60, col2X, 105);
-    goldGrad.addColorStop(0, '#fbbf24');
-    goldGrad.addColorStop(1, '#b45309');
-    ctx.fillStyle = goldGrad;
-    drawRoundedRect(ctx, col2X, 60, colW, 45, 6);
-    ctx.fill();
+    renderTeamColumn(ctx, col2X, colW, team2, team2Score, team2Overs, "#c2410c", "#1c0a02", tableY, inn2Performers.batsmen, inn2Performers.bowlers);
+
+    // ================= BOTTOM SUMMARY BADGE =================
+    const capX = 232;
+    const capW = 560;
+    const capY = 440;
+    const capH = 92;
 
     ctx.save();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur = 2;
-    ctx.fillText(team2.name.toUpperCase(), col2X + 12, 88);
+    const footerGrad = ctx.createLinearGradient(capX, capY, capX, capY + capH);
+    footerGrad.addColorStop(0, '#22110a');
+    footerGrad.addColorStop(1, '#0c0502');
+    ctx.fillStyle = footerGrad;
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = 'rgba(239, 68, 68, 0.7)';
+    ctx.shadowBlur = 12;
 
-    ctx.textAlign = 'right';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillText(`${team2Score}/${team2.wickets || 0} (${team2Overs})`, col2X + colW - 12, 88);
-    ctx.restore();
-
-    // Team 2 Batting Performers
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('BATTING', col2X + 12, 135);
-
-    for (let i = 0; i < 3; i++) {
-        const y = 162 + i * 22;
-        const p = inn2Performers.batsmen[i] || { name: '-', runs: '', balls: '' };
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(p.name, col2X + 15, y);
-
-        if (p.runs !== '') {
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillText(p.runs, col2X + colW - 60, y);
-            ctx.fillStyle = '#9ca3af';
-            ctx.font = '12px sans-serif';
-            ctx.fillText(`(${p.balls})`, col2X + colW - 15, y);
-        }
-    }
-
-    // Team 2 Bowling Performers
-    ctx.fillStyle = '#f87171';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('BOWLING', col2X + 12, 255);
-
-    for (let i = 0; i < 3; i++) {
-        const y = 282 + i * 22;
-        const p = inn2Performers.bowlers[i] || { name: '-', wickets: '', runsConceded: '', ballsBowled: '' };
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(p.name, col2X + 15, y);
-
-        if (p.wickets !== '') {
-            const ovs = Math.floor(p.ballsBowled / 6) + '.' + (p.ballsBowled % 6);
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#f87171';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillText(`${p.wickets}-${p.runsConceded}`, col2X + colW - 60, y);
-            ctx.fillStyle = '#9ca3af';
-            ctx.font = '12px sans-serif';
-            ctx.fillText(`${ovs}`, col2X + colW - 15, y);
-        }
-    }
-
-    // Captain and Extras
-    ctx.fillStyle = '#9ca3af';
-    ctx.font = '13px sans-serif';
-    ctx.textAlign = 'left';
-    const c2 = team2.players.find(p => p.id === team2.captainId);
-    ctx.fillText(`Captain: ${c2 ? c2.first_name : '-'}`, col2X + 15, 385);
-    ctx.fillText(`Extras: ${team2.bonusRuns - team2.penaltyRuns}`, col2X + 15, 405);
-
-
-    // ================= CENTER COLUMN: POTM GOLD SHOWCASE =================
-    const potmX = 430;
-    const potmW = 164;
-    const potmH = 360;
-
-    // Draw Gold Card Card Background
-    const potmBgGrad = ctx.createLinearGradient(potmX, 60, potmX, 60 + potmH);
-    potmBgGrad.addColorStop(0, '#1c120c');
-    potmBgGrad.addColorStop(1, '#0c0705');
-    ctx.fillStyle = potmBgGrad;
-    drawRoundedRect(ctx, potmX, 60, potmW, potmH, 12);
-    ctx.fill();
-
-    // Glowing Gold Border
-    ctx.save();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.shadowColor = '#d97706';
-    ctx.shadowBlur = 15;
-    ctx.lineWidth = 3.5;
-    drawRoundedRect(ctx, potmX, 60, potmW, potmH, 12);
-    ctx.stroke();
-    ctx.restore();
-
-    // POTM Mini Ribbon Header
-    const potmHeaderGrad = ctx.createLinearGradient(potmX + 10, 72, potmX + 10, 102);
-    potmHeaderGrad.addColorStop(0, '#d97706');
-    potmHeaderGrad.addColorStop(1, '#78350f');
-    ctx.fillStyle = potmHeaderGrad;
-    drawRoundedRect(ctx, potmX + 10, 72, potmW - 20, 30, 4);
-    ctx.fill();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('PLAYER OF THE MATCH', potmX + potmW / 2, 91);
-
-    // Draw a Beautiful Vector Star Icon
-    const cx = potmX + potmW / 2;
-    const cy = 160;
-    ctx.fillStyle = '#fbbf24';
-    ctx.save();
-    ctx.shadowColor = '#fbbf24';
-    ctx.shadowBlur = 10;
     ctx.beginPath();
-    const spikes = 5;
-    const outerRadius = 25;
-    const innerRadius = 10;
-    let rot = Math.PI / 2 * 3;
-    const step = Math.PI / spikes;
-    ctx.moveTo(cx, cy - outerRadius);
-    for (let i = 0; i < spikes; i++) {
-        let sx = cx + Math.cos(rot) * outerRadius;
-        let sy = cy + Math.sin(rot) * outerRadius;
-        ctx.lineTo(sx, sy);
-        rot += step;
-        sx = cx + Math.cos(rot) * innerRadius;
-        sy = cy + Math.sin(rot) * innerRadius;
-        ctx.lineTo(sx, sy);
-        rot += step;
-    }
-    ctx.lineTo(cx, cy - outerRadius);
+    const radius = 15;
+    ctx.moveTo(capX + radius, capY);
+    ctx.quadraticCurveTo(capX + capW / 2, capY - 6, capX + capW - radius, capY);
+    ctx.quadraticCurveTo(capX + capW, capY + capH / 2, capX + capW - radius, capY + capH);
+    ctx.quadraticCurveTo(capX + capW / 2, capY + capH + 6, capX + radius, capY + capH);
+    ctx.quadraticCurveTo(capX, capY + capH / 2, capX + radius, capY);
     ctx.closePath();
     ctx.fill();
-    ctx.restore();
-
-    // Name text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(potmName ? potmName.toUpperCase() : 'N/A', cx, 230);
-
-    // Display POTM stats inside Gold Card
-    const potmPlayer = [...team1.players, ...team2.players].find(p => p.first_name === potmName);
-    if (potmPlayer) {
-        ctx.fillStyle = '#fbbf24';
-        ctx.font = 'bold 13px sans-serif';
-        ctx.fillText('MATCH PERFORMANCE', cx, 270);
-
-        ctx.fillStyle = '#e5e7eb';
-        ctx.font = '14px sans-serif';
-        
-        let statsCount = 0;
-        if (potmPlayer.runs > 0 || potmPlayer.balls > 0) {
-            ctx.fillText(`${potmPlayer.runs || 0} Runs (${potmPlayer.balls || 0}b)`, cx, 300);
-            statsCount++;
-        }
-        if (potmPlayer.ballsBowled > 0) {
-            const ovs = Math.floor(potmPlayer.ballsBowled / 6) + '.' + (potmPlayer.ballsBowled % 6);
-            ctx.fillText(`${potmPlayer.wickets || 0} Wkts / ${potmPlayer.runsConceded || 0} Runs`, cx, 300 + statsCount * 22);
-            ctx.font = '12px sans-serif';
-            ctx.fillStyle = '#9ca3af';
-            ctx.fillText(`in ${ovs} Overs`, cx, 300 + statsCount * 22 + 15);
-        }
-    }
-
-
-    // ================= BOTTOM WINNER ANNOUNCEMENT BAR =================
-    const bottomBarGrad = ctx.createLinearGradient(100, 440, 100, 485);
-    bottomBarGrad.addColorStop(0, '#f97316');
-    bottomBarGrad.addColorStop(0.5, '#ef4444');
-    bottomBarGrad.addColorStop(1, '#991b1b');
-    ctx.fillStyle = bottomBarGrad;
-    drawRoundedRect(ctx, 100, 440, 824, 45, 6);
-    ctx.fill();
-
-    ctx.save();
-    ctx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
-    ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, 100, 440, 824, 45, 6);
     ctx.stroke();
     ctx.restore();
 
+    // POTM Stats calculation
+    let potmStatsStr = "";
+    if (potmName) {
+        const potmPlayer = [...team1.players, ...team2.players].find(p => p.first_name === potmName);
+        if (potmPlayer) {
+            let parts = [];
+            if (potmPlayer.runs > 0 || potmPlayer.balls > 0) {
+                parts.push(`${potmPlayer.runs || 0} Runs (${potmPlayer.balls || 0}b)`);
+            }
+            if (potmPlayer.ballsBowled > 0) {
+                const ovs = Math.floor(potmPlayer.ballsBowled / 6) + '.' + (potmPlayer.ballsBowled % 6);
+                parts.push(`${potmPlayer.wickets || 0} Wkts for ${potmPlayer.runsConceded || 0} Runs (${ovs} Ov)`);
+            }
+            potmStatsStr = parts.join("  |  ");
+        }
+    }
+
     ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
-    ctx.shadowColor = 'black';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetX = 1;
-    ctx.shadowOffsetY = 2;
-    ctx.fillText(resultText.toUpperCase(), 512, 469);
+    ctx.fillText(resultText.toUpperCase(), capX + capW / 2, capY + 32);
+    
+    if (potmName) {
+        ctx.fillStyle = '#f97316';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText(`🏆 ${potmName.toUpperCase()} (PLAYER OF THE MATCH)`, capX + capW / 2, capY + 58);
+        if (potmStatsStr) {
+            ctx.fillStyle = '#fca5a5';
+            ctx.font = '13px sans-serif';
+            ctx.fillText(potmStatsStr, capX + capW / 2, capY + 78);
+        }
+    }
     ctx.restore();
 
     // 8. Broadcaster Channel Logo Badge (circular overlay watermark top right)
@@ -418,6 +233,98 @@ async function generateScoreboardImage(tour, resultText, potmName) {
     console.error("Error generating TV scoreboard image:", err);
     return null;
   }
+}
+
+function renderTeamColumn(ctx, colX, colW, team, score, overs, startColor, endColor, tableY, batsmen, bowlers) {
+  // Curved header
+  ctx.save();
+  const hGrad = ctx.createLinearGradient(colX, tableY, colX, tableY + 38);
+  hGrad.addColorStop(0, startColor);
+  hGrad.addColorStop(1, endColor);
+  ctx.fillStyle = hGrad;
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  const radius = 8;
+  const width = colW;
+  const height = 38;
+  ctx.moveTo(colX + radius, tableY);
+  ctx.lineTo(colX + width - radius, tableY);
+  ctx.quadraticCurveTo(colX + width, tableY, colX + width, tableY + radius);
+  ctx.lineTo(colX + width, tableY + height);
+  ctx.lineTo(colX, tableY + height);
+  ctx.lineTo(colX, tableY + radius);
+  ctx.quadraticCurveTo(colX, tableY, colX + radius, tableY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 15px sans-serif';
+  ctx.fillText(team.name.toUpperCase(), colX + 12, tableY + 24);
+  ctx.textAlign = 'right';
+  ctx.fillText(`${score}/${team.wickets || 0} (${overs})`, colX + colW - 12, tableY + 24);
+  ctx.restore();
+
+  // Batting Title
+  ctx.fillStyle = '#f97316';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('BATTING', colX + 12, tableY + 62);
+
+  for (let i = 0; i < 3; i++) {
+    const y = tableY + 84 + i * 22;
+    const p = batsmen[i] || { name: '-', runs: '', balls: '' };
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = '14px sans-serif';
+    ctx.fillText(p.name, colX + 15, y);
+
+    if (p.runs !== '') {
+        ctx.save();
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#f97316';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(p.runs, colX + colW - 55, y);
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(`(${p.balls})`, colX + colW - 15, y);
+        ctx.restore();
+    }
+  }
+
+  // Bowling Title
+  ctx.fillStyle = '#f87171';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.fillText('BOWLING', colX + 12, tableY + 172);
+
+  for (let i = 0; i < 3; i++) {
+    const y = tableY + 194 + i * 22;
+    const p = bowlers[i] || { name: '-', wickets: '', runsConceded: '', ballsBowled: '' };
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = '14px sans-serif';
+    ctx.fillText(p.name, colX + 15, y);
+
+    if (p.wickets !== '') {
+        ctx.save();
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#f87171';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(`${p.wickets}-${p.runsConceded}`, colX + colW - 55, y);
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = '12px sans-serif';
+        const ovs = Math.floor(p.ballsBowled / 6) + '.' + (p.ballsBowled % 6);
+        ctx.fillText(`${ovs}`, colX + colW - 15, y);
+        ctx.restore();
+    }
+  }
+
+  // Footer / Extras
+  ctx.fillStyle = '#fca5a5';
+  ctx.font = '13px sans-serif';
+  const ext = (team.bonusRuns || 0) - (team.penaltyRuns || 0);
+  ctx.fillText(`Extras: ${ext}`, colX + 15, tableY + 315);
 }
 
 module.exports = {
