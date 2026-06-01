@@ -318,6 +318,23 @@ bot.command('quit', async (ctx) => {
         return ctx.reply("You quit the CCL match.");
     }
     
+    const tour = tourManager.getUserTour(userId);
+    if (tour) {
+        if (tour.hostId === userId) {
+            tourManager.deleteTour(tour.id);
+            await ctx.api.sendMessage(tour.chatId, `🛑 Tour Match ended because the host <a href="tg://user?id=${userId}">${ctx.from.first_name}</a> quit the game.`, { parse_mode: 'HTML' });
+            return ctx.reply("You quit the Tour match. Lobby deleted.");
+        } else {
+            const res = tourManager.removePlayer(tour.id, userId, userId);
+            if (res.success) {
+                await ctx.api.sendMessage(tour.chatId, `🚪 <a href="tg://user?id=${userId}">${ctx.from.first_name}</a> left the Tour match.`, { parse_mode: 'HTML' });
+                return ctx.reply("You left the Tour match.");
+            } else {
+                return ctx.reply("❌ " + res.error);
+            }
+        }
+    }
+    
     ctx.reply("You are not in any active match.");
 });
 

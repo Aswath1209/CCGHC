@@ -186,8 +186,9 @@ function removePlayer(tourId, requesterId, targetUserId) {
     const isHost = tour.hostId === requesterId;
     const isCapA = tour.teamA.captainId === requesterId;
     const isCapB = tour.teamB.captainId === requesterId;
-    if (!isHost && !isCapA && !isCapB) {
-        return { success: false, error: 'Only the host or captains can remove players.' };
+    const isSelf = requesterId === targetUserId;
+    if (!isHost && !isCapA && !isCapB && !isSelf) {
+        return { success: false, error: 'Only the host, captains, or the players themselves can remove players.' };
     }
 
     let teamKey = null;
@@ -571,6 +572,7 @@ function deleteTour(tourId) {
     if (!tour) return;
     tour.teamA.players.forEach(p => userTourMap.delete(p.id));
     tour.teamB.players.forEach(p => userTourMap.delete(p.id));
+    userTourMap.delete(tour.hostId);
     chatTourMap.delete(tour.chatId);
     tours.delete(tourId);
 }
