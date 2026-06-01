@@ -18,36 +18,41 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     const over = Math.floor(tour.balls / 6);
     const ball = tour.balls % 6;
 
-    let text = `🏆 <b>CCG Tour Match Scorecard</b> 🏆\n`;
-    text += `───────────────────\n`;
-    text += `🏏 <b>${batT.name}</b> (Batting):\n`;
-    text += `   👉 <b>${totalS}/${batT.wickets}</b> runs in <b>${over}.${ball}/${tour.config.overs}</b> ov\n\n`;
-    text += `🥎 <b>${bowlT.name}</b> (Bowling):\n`;
-    text += `   👉 <b>${bowlS}</b> runs\n`;
+    let text = `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `🏏 <b>${batT.name}</b> (Batting)\n`;
+    text += `🔹 <b>Score:</b> <code>${totalS}/${batT.wickets}</code> runs\n`;
+    text += `🔹 <b>Overs:</b> <code>${over}.${ball} / ${tour.config.overs}</code> ov\n\n`;
     
+    text += `🥎 <b>${bowlT.name}</b> (Bowling)\n`;
     if (tour.innings === 2) {
+        text += `🔹 <b>Score:</b> <code>${bowlS}</code> runs (Completed)\n`;
         const needed = (bowlS + 1) - totalS;
         const remaining = (tour.config.overs * 6) - tour.balls;
+        text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
         if (needed > 0 && remaining >= 0) {
-            text += `🎯 <b>Target:</b> ${bowlS + 1} | Need <b>${needed}</b> runs off <b>${remaining}</b> balls\n`;
+            text += `🎯 <b>Target:</b> <code>${bowlS + 1}</code> | Need <b>${needed}</b> off <b>${remaining}</b> balls\n`;
         } else {
-            text += `🎯 <b>Target:</b> ${bowlS + 1}\n`;
+            text += `🎯 <b>Target:</b> <code>${bowlS + 1}</code>\n`;
         }
+    } else {
+        text += `🔹 <b>Yet to Bat</b>\n`;
     }
-    text += `───────────────────\n`;
-    const strikerStats = striker ? ` (<b>${striker.runs || 0}</b> runs, <b>${striker.balls || 0}</b> balls)` : '';
-    const nonStrikerStats = nonStriker ? ` (<b>${nonStriker.runs || 0}</b> runs, <b>${nonStriker.balls || 0}</b> balls)` : '';
+    text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+    
+    const strikerStats = striker ? ` (<code>${striker.runs || 0}</code> runs, <code>${striker.balls || 0}</code> balls)` : '';
+    const nonStrikerStats = nonStriker ? ` (<code>${nonStriker.runs || 0}</code> runs, <code>${nonStriker.balls || 0}</code> balls)` : '';
     let bowlerStats = '';
     if (bowler) {
         const ov = Math.floor((bowler.ballsBowled || 0) / 6);
         const bl = (bowler.ballsBowled || 0) % 6;
-        bowlerStats = ` (<b>${bowler.wickets || 0}-${bowler.runsConceded || 0}</b> in <b>${ov}.${bl}</b> ov)`;
+        bowlerStats = ` (<code>${bowler.wickets || 0}-${bowler.runsConceded || 0}</code> in <code>${ov}.${bl}</code> ov)`;
     }
 
     text += `🏏 <b>Striker:</b> ${striker ? `<b>${striker.first_name}</b>${strikerStats}` : '<i>(Waiting...)</i>'}\n`;
     text += `🏏 <b>Non-Striker:</b> ${nonStriker ? `<b>${nonStriker.first_name}</b>${nonStrikerStats}` : '<i>(Waiting...)</i>'}\n`;
     text += `🥎 <b>Bowler:</b> ${bowler ? `<b>${bowler.first_name}</b>${bowlerStats}` : '<i>(Waiting...)</i>'}\n`;
-    text += `───────────────────`;
+    text += `━━━━━━━━━━━━━━━━━━━━━━`;
     return text;
   }
 
@@ -818,12 +823,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           
           ctx.answerCallbackQuery(`Set batsman: ${res.player.first_name}`);
 
+          const isInitialSetup = (tour.balls === 0 && (!batT.strikerId || !batT.nonStrikerId));
           const activeCount = batT.players.length - batT.outPlayers.length;
           
-          if (position === 'S' && activeCount > 1) {
+          if (isInitialSetup && position === 'S' && activeCount > 1) {
               const kb = new InlineKeyboard();
               batT.players.forEach(p => {
-                  if (p.id !== batT.strikerId) {
+                  if (p.id !== batT.strikerId && !batT.outPlayers.includes(p.id)) {
                       kb.text(p.first_name, `tour_selectbat_${tourId}_NS_${batT.players.indexOf(p) + 1}`).row();
                   }
               });
@@ -833,21 +839,56 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
                   { reply_markup: kb, parse_mode: 'HTML' }
               );
           } else {
-              tour.state = 'SELECT_BOWLER';
-              const bowlT = tour[tour.bowlingTeamId];
-              const kb = new InlineKeyboard();
-              bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tourId}_${bowlT.players.indexOf(p) + 1}`).row());
-              
-              const strikerName = batT.players.find(p => p.id === batT.strikerId)?.first_name;
-              const nonStrikerName = batT.players.find(p => p.id === batT.nonStrikerId)?.first_name || 'None (LMS)';
+              const isOverEnd = (tour.balls > 0 && tour.balls % 6 === 0);
+              if (tour.balls === 0 && !tour.activeBowlerId) {
+                  tour.state = 'SELECT_BOWLER';
+                  const bowlT = tour[tour.bowlingTeamId];
+                  const kb = new InlineKeyboard();
+                  bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tourId}_${bowlT.players.indexOf(p) + 1}`).row());
+                  
+                  const strikerName = batT.players.find(p => p.id === batT.strikerId)?.first_name;
+                  const nonStrikerName = batT.players.find(p => p.id === batT.nonStrikerId)?.first_name || 'None (LMS)';
 
-              await ctx.editMessageText(
-                  `🏏 <b>Batters Set!</b>\n` +
-                  `Striker: <b>${strikerName}</b>\n` +
-                  `Non-Striker: <b>${nonStrikerName}</b>\n\n` +
-                  `👉 Captain of ${bowlT.name}, select the <b>Opening Bowler</b>:`,
-                  { reply_markup: kb, parse_mode: 'HTML' }
-              );
+                  await ctx.editMessageText(
+                      `🏏 <b>Batters Set!</b>\n` +
+                      `Striker: <b>${strikerName}</b>\n` +
+                      `Non-Striker: <b>${nonStrikerName}</b>\n\n` +
+                      `👉 Captain of ${bowlT.name}, select the <b>Opening Bowler</b>:`,
+                      { reply_markup: kb, parse_mode: 'HTML' }
+                  );
+              } else if (isOverEnd) {
+                  tour.state = 'SELECT_BOWLER';
+                  const bowlT = tour[tour.bowlingTeamId];
+                  const kb = new InlineKeyboard();
+                  bowlT.players.forEach(p => {
+                      if (p.id !== tour.previousBowlerId || bowlT.players.length === 1) {
+                          kb.text(p.first_name, `tour_selectbowl_${tourId}_${bowlT.players.indexOf(p) + 1}`).row();
+                      }
+                  });
+                  
+                  if (batT.nonStrikerId) {
+                      const tmp = batT.strikerId;
+                      batT.strikerId = batT.nonStrikerId;
+                      batT.nonStrikerId = tmp;
+                  }
+                  
+                  await ctx.editMessageText(
+                      `🏏 <b>Batsman Selected!</b>\n` +
+                      `New Striker: <b>${res.player.first_name}</b>\n\n` +
+                      `🔚 <b>Over Over!</b>\n` +
+                      `👉 Captain of ${bowlT.name}, select a new bowler:`,
+                      { reply_markup: kb, parse_mode: 'HTML' }
+                  );
+              } else {
+                  tour.state = 'PLAYING';
+                  await ctx.editMessageText(
+                      `🏏 <b>Batsman Selected!</b>\n` +
+                      `New Striker: <b>${res.player.first_name}</b>\n\n` +
+                      `🟢 Play Resuming...`,
+                      { parse_mode: 'HTML' }
+                  );
+                  await tagActivePlayers(ctx, tour);
+              }
           }
           return;
       }

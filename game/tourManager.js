@@ -509,6 +509,10 @@ function submitPlay(tourId, userId, rawInput) {
         if (isWicket) {
             tour.state = 'WICKET_FALL';
             res.needsNewBatsman = true;
+            if (endOfOver) {
+                tour.previousBowlerId = tour.activeBowlerId;
+                tour.activeBowlerId = null;
+            }
         } else if (endOfOver) {
             tour.state = 'SELECT_BOWLER';
             res.needsNewBowler = true;

@@ -22,54 +22,76 @@ async function generateScoreboardImage(tour, resultText, potmName) {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
+    // 1. Draw blurred stadium backdrop
     const bgPath = '/home/home/ReactNative/Telegram/undercover-bot/assets/stadium_bg.png';
     try {
       const bg = await loadImage(bgPath);
       ctx.drawImage(bg, 0, 0, width, height);
     } catch (err) {
       console.error("Failed to load stadium background, using color fallback:", err);
-      ctx.fillStyle = '#0f172a';
+      ctx.fillStyle = '#0a0505';
       ctx.fillRect(0, 0, width, height);
     }
 
+    // Apply a deep cinematic fiery radial vignette over the stadium background
+    const vignette = ctx.createRadialGradient(width / 2, height / 2, 80, width / 2, height / 2, width / 2 + 200);
+    vignette.addColorStop(0, 'rgba(25, 6, 6, 0.45)');
+    vignette.addColorStop(0.65, 'rgba(8, 2, 2, 0.90)');
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Glowing Glassmorphic Card Container
     const cardX = 112;
     const cardY = 38;
     const cardW = 800;
     const cardH = 500;
 
+    // Dark carbon-fiber gradient background
     const cardGrad = ctx.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
-    cardGrad.addColorStop(0, 'rgba(10, 15, 26, 0.90)');
-    cardGrad.addColorStop(1, 'rgba(5, 7, 12, 0.95)');
+    cardGrad.addColorStop(0, 'rgba(18, 12, 12, 0.92)');
+    cardGrad.addColorStop(1, 'rgba(8, 5, 5, 0.96)');
     ctx.fillStyle = cardGrad;
     drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
     ctx.fill();
 
-    const borderGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH);
-    borderGrad.addColorStop(0, '#e2e8f0');
-    borderGrad.addColorStop(0.3, '#94a3b8');
-    borderGrad.addColorStop(0.5, '#ffffff');
-    borderGrad.addColorStop(0.7, '#475569');
-    borderGrad.addColorStop(1, '#cbd5e1');
-    ctx.strokeStyle = borderGrad;
+    // High-intensity neon fire glow border
+    ctx.save();
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)';
+    ctx.shadowColor = 'rgba(249, 115, 22, 0.8)';
+    ctx.shadowBlur = 20;
     ctx.lineWidth = 4;
+    drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
     ctx.stroke();
+    ctx.restore();
 
-    const metalGrad = ctx.createLinearGradient(130, 55, 130, 97);
-    metalGrad.addColorStop(0, '#f8fafc');
-    metalGrad.addColorStop(0.4, '#e2e8f0');
-    metalGrad.addColorStop(0.5, '#cbd5e1');
-    metalGrad.addColorStop(1, '#94a3b8');
-    ctx.fillStyle = metalGrad;
+    // 3. Top Title Bar (MATCH SUMMARY) - Premium Orange/Crimson gradient
+    const headerGrad = ctx.createLinearGradient(130, 55, 130, 97);
+    headerGrad.addColorStop(0, '#f97316');
+    headerGrad.addColorStop(0.5, '#ef4444');
+    headerGrad.addColorStop(1, '#991b1b');
+    
+    ctx.fillStyle = headerGrad;
     drawRoundedRect(ctx, 130, 55, 764, 42, 6);
     ctx.fill();
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1;
-    ctx.stroke();
 
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 22px sans-serif';
+    ctx.save();
+    ctx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ctx, 130, 55, 764, 42, 6);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 23px sans-serif';
     ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
     ctx.fillText('MATCH SUMMARY', 512, 84);
+    ctx.restore();
 
     const totalScore = (team) => Math.max(0, (team.score || 0) + (team.bonusRuns || 0) - (team.penaltyRuns || 0));
     
@@ -92,21 +114,27 @@ async function generateScoreboardImage(tour, resultText, potmName) {
     const team1Overs = getOversStr(tour.innings1Balls !== undefined ? tour.innings1Balls : (tour.innings === 1 ? tour.balls : tour.config.overs * 6));
     const team2Overs = getOversStr(tour.innings2Balls !== undefined ? tour.innings2Balls : (tour.innings === 2 ? tour.balls : 0));
 
-    const blueGrad = ctx.createLinearGradient(130, 107, 130, 143);
-    blueGrad.addColorStop(0, '#1d4ed8');
-    blueGrad.addColorStop(0.5, '#2563eb');
-    blueGrad.addColorStop(1, '#1e3a8a');
-    ctx.fillStyle = blueGrad;
+    // 4. Innings 1 Ribbon (Fiery Crimson Red Gradient)
+    const redGrad = ctx.createLinearGradient(130, 107, 130, 143);
+    redGrad.addColorStop(0, '#dc2626');
+    redGrad.addColorStop(0.5, '#ef4444');
+    redGrad.addColorStop(1, '#7f1d1d');
+    ctx.fillStyle = redGrad;
     drawRoundedRect(ctx, 130, 107, 764, 36, 4);
     ctx.fill();
 
+    ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'left';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 2;
     ctx.fillText(team1.name.toUpperCase(), 145, 131);
 
     ctx.textAlign = 'right';
+    ctx.font = 'bold 19px sans-serif';
     ctx.fillText(`${team1Overs} Overs  |  ${team1Score}/${team1.wickets || 0}`, 879, 131);
+    ctx.restore();
 
     const getPerformers = (batT, bowlT) => {
         const batsmen = batT.players
@@ -127,24 +155,26 @@ async function generateScoreboardImage(tour, resultText, potmName) {
 
     const inn1Performers = getPerformers(team1, team2);
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    // Innings 1 Divider Line
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(512, 150);
     ctx.lineTo(512, 265);
     ctx.stroke();
 
+    // Draw Innings 1 Batsmen (Left column)
     for (let i = 0; i < 4; i++) {
       const y = 168 + i * 23;
       const p = inn1Performers.batsmen[i] || { name: '-', runs: '', balls: '' };
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#f3f4f6';
       ctx.font = '15px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(p.name, 145, y);
 
       if (p.runs !== '') {
         ctx.textAlign = 'right';
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = '#fbbf24'; // Fiery Gold for runs
         ctx.font = 'bold 15px sans-serif';
         ctx.fillText(p.runs, 420, y);
         ctx.fillStyle = '#9ca3af';
@@ -153,10 +183,11 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       }
     }
 
+    // Draw Innings 1 Bowlers (Right column)
     for (let i = 0; i < 4; i++) {
       const y = 168 + i * 23;
       const p = inn1Performers.bowlers[i] || { name: '-', wickets: '', runsConceded: '', ballsBowled: '' };
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#f3f4f6';
       ctx.font = '15px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(p.name, 545, y);
@@ -164,7 +195,7 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       if (p.wickets !== '') {
         const overs = Math.floor(p.ballsBowled / 6) + '.' + (p.ballsBowled % 6);
         ctx.textAlign = 'right';
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = '#f87171'; // Fiery Orange-Red for bowling stats
         ctx.font = 'bold 15px sans-serif';
         ctx.fillText(`${p.wickets}-${p.runsConceded}`, 820, y);
         ctx.fillStyle = '#9ca3af';
@@ -173,40 +204,49 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       }
     }
 
-    const greenGrad = ctx.createLinearGradient(130, 275, 130, 311);
-    greenGrad.addColorStop(0, '#047857');
-    greenGrad.addColorStop(0.5, '#059669');
-    greenGrad.addColorStop(1, '#064e3b');
-    ctx.fillStyle = greenGrad;
+    // 5. Innings 2 Ribbon (Fiery Gold Amber Gradient)
+    const goldGrad = ctx.createLinearGradient(130, 275, 130, 311);
+    goldGrad.addColorStop(0, '#fbbf24');
+    goldGrad.addColorStop(0.5, '#f59e0b');
+    goldGrad.addColorStop(1, '#b45309');
+    ctx.fillStyle = goldGrad;
     drawRoundedRect(ctx, 130, 275, 764, 36, 4);
     ctx.fill();
 
+    ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'left';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 2;
     ctx.fillText(team2.name.toUpperCase(), 145, 299);
 
     ctx.textAlign = 'right';
+    ctx.font = 'bold 19px sans-serif';
     ctx.fillText(`${team2Overs} Overs  |  ${team2Score}/${team2.wickets || 0}`, 879, 299);
+    ctx.restore();
 
     const inn2Performers = getPerformers(team2, team1);
 
+    // Innings 2 Divider Line
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.2)';
     ctx.beginPath();
     ctx.moveTo(512, 318);
     ctx.lineTo(512, 433);
     ctx.stroke();
 
+    // Draw Innings 2 Batsmen (Left column)
     for (let i = 0; i < 4; i++) {
       const y = 336 + i * 23;
       const p = inn2Performers.batsmen[i] || { name: '-', runs: '', balls: '' };
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#f3f4f6';
       ctx.font = '15px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(p.name, 145, y);
 
       if (p.runs !== '') {
         ctx.textAlign = 'right';
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = '#fbbf24'; // Fiery Gold
         ctx.font = 'bold 15px sans-serif';
         ctx.fillText(p.runs, 420, y);
         ctx.fillStyle = '#9ca3af';
@@ -215,10 +255,11 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       }
     }
 
+    // Draw Innings 2 Bowlers (Right column)
     for (let i = 0; i < 4; i++) {
       const y = 336 + i * 23;
       const p = inn2Performers.bowlers[i] || { name: '-', wickets: '', runsConceded: '', ballsBowled: '' };
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#f3f4f6';
       ctx.font = '15px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(p.name, 545, y);
@@ -226,7 +267,7 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       if (p.wickets !== '') {
         const overs = Math.floor(p.ballsBowled / 6) + '.' + (p.ballsBowled % 6);
         ctx.textAlign = 'right';
-        ctx.fillStyle = '#38bdf8';
+        ctx.fillStyle = '#f87171'; // Fiery Red
         ctx.font = 'bold 15px sans-serif';
         ctx.fillText(`${p.wickets}-${p.runsConceded}`, 820, y);
         ctx.fillStyle = '#9ca3af';
@@ -235,20 +276,34 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       }
     }
 
-    ctx.fillStyle = metalGrad;
+    // 6. Bottom Winner Announcement Bar
+    ctx.fillStyle = headerGrad;
     drawRoundedRect(ctx, 130, 443, 764, 42, 6);
     ctx.fill();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ctx, 130, 443, 764, 42, 6);
     ctx.stroke();
+    ctx.restore();
 
     let footerLine = resultText.toUpperCase();
     if (potmName) {
-        footerLine += `   |   POTM: ${potmName.toUpperCase()}`;
+        footerLine += `   |   POTM - ${potmName.toUpperCase()}`;
     }
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 18px sans-serif';
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 17px sans-serif';
     ctx.textAlign = 'center';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 1;
     ctx.fillText(footerLine, 512, 471);
+    ctx.restore();
 
+    // 7. Broadcaster Channel Logo Badge (circular overlay)
     const logoPath = '/home/home/ReactNative/Telegram/undercover-bot/assets/logo.png';
     try {
       const logo = await loadImage(logoPath);
@@ -257,12 +312,11 @@ async function generateScoreboardImage(tour, resultText, potmName) {
       const radius = 30;
 
       const ringGrad = ctx.createLinearGradient(circleX - radius, circleY - radius, circleX + radius, circleY + radius);
-      ringGrad.addColorStop(0, '#f8fafc');
-      ringGrad.addColorStop(0.5, '#94a3b8');
-      ringGrad.addColorStop(1, '#475569');
+      ringGrad.addColorStop(0, '#f97316');
+      ringGrad.addColorStop(1, '#ef4444');
       ctx.fillStyle = ringGrad;
       ctx.beginPath();
-      ctx.arc(circleX, circleY, radius + 2, 0, Math.PI * 2);
+      ctx.arc(circleX, circleY, radius + 3, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.save();
