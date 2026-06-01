@@ -171,7 +171,6 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
   bot.command(['appointa_captain', 'appointb_captain', 'captain'], async (ctx) => {
       const tour = tourManager.getUserTour(ctx.from.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
-      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can appoint captains.");
       
       let targetUserId = null;
       let first_name = "";
@@ -202,6 +201,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       else if (tour.teamB.players.some(p => p.id === targetUserId)) teamKey = 'teamB';
       
       if (!teamKey) return ctx.reply("Player not found in any team.");
+      
+      const isHost = tour.hostId === ctx.from.id;
+      const isCaptain = tour[teamKey].captainId === ctx.from.id;
+      if (!isHost && !isCaptain) {
+          return ctx.reply("❌ Only the host or the current captain of this team can change the captain.");
+      }
       
       const success = tourManager.appointCaptain(tour.id, ctx.from.id, targetUserId, teamKey);
       if (success) {

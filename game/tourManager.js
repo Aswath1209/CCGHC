@@ -138,11 +138,12 @@ function joinTeam(tourId, user, teamKey) {
     return { success: true, tour };
 }
 
-function appointCaptain(tourId, hostId, targetUserId, teamKey) {
+function appointCaptain(tourId, callerId, targetUserId, teamKey) {
     const tour = tours.get(tourId);
-    if (!tour || tour.hostId !== hostId) return false;
+    if (!tour) return false;
 
     const team = tour[teamKey];
+    if (tour.hostId !== callerId && team.captainId !== callerId) return false;
     if (!team.players.some(p => p.id === targetUserId)) return false;
 
     // Move player to index 0
