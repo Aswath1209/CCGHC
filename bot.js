@@ -290,10 +290,12 @@ bot.command('profile', async (ctx) => {
         `🔹 Runs: <b>${stats.runs}</b>\n` +
         `🔹 Average: <b>${avg.toFixed(2)}</b>\n` +
         `🔹 Strike Rate: <b>${sr}</b>\n` +
+        `🔹 50s: <b>${stats.fifties || 0}</b>  |  100s: <b>${stats.centuries || 0}</b>\n` +
         `🔹 Fours (4s): <b>${stats.fours}</b>  |  Sixes (6s): <b>${stats.sixes}</b>\n\n` +
         `🥎 <b>Career Bowling:</b>\n` +
         `🔹 Wickets: <b>${stats.wickets}</b>\n` +
-        `🔹 Economy: <b>${econ}</b>`,
+        `🔹 Economy: <b>${econ}</b>\n` +
+        `🔹 3w: <b>${stats.threew || 0}</b>  |  5w: <b>${stats.fivew || 0}</b>`,
         { parse_mode: 'HTML' }
       );
   } catch (e) {

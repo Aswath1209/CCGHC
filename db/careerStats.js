@@ -48,7 +48,11 @@ async function getStats(userId) {
                     motm: data.motm || 0,
                     dismissals: data.dismissals || 0,
                     wins: data.wins || 0,
-                    losses: data.losses || 0
+                    losses: data.losses || 0,
+                    fifties: data.fifties || 0,
+                    centuries: data.centuries || 0,
+                    threew: data.threew || 0,
+                    fivew: data.fivew || 0
                 };
             }
         } catch (e) {
@@ -70,7 +74,11 @@ async function getStats(userId) {
             motm: 0,
             dismissals: 0,
             wins: 0,
-            losses: 0
+            losses: 0,
+            fifties: 0,
+            centuries: 0,
+            threew: 0,
+            fivew: 0
         };
     }
     const s = data[key];
@@ -85,7 +93,11 @@ async function getStats(userId) {
         motm: s.motm || 0,
         dismissals: s.dismissals || 0,
         wins: s.wins || 0,
-        losses: s.losses || 0
+        losses: s.losses || 0,
+        fifties: s.fifties || 0,
+        centuries: s.centuries || 0,
+        threew: s.threew || 0,
+        fivew: s.fivew || 0
     };
 }
 
@@ -110,7 +122,11 @@ async function incrementStats(userId, updates) {
                 motm: 0,
                 dismissals: 0,
                 wins: 0,
-                losses: 0
+                losses: 0,
+                fifties: 0,
+                centuries: 0,
+                threew: 0,
+                fivew: 0
             };
             
             const nextStats = {
@@ -124,7 +140,11 @@ async function incrementStats(userId, updates) {
                 motm: (current.motm || 0) + (updates.motm || 0),
                 dismissals: (current.dismissals || 0) + (updates.dismissals || 0),
                 wins: (current.wins || 0) + (updates.wins || 0),
-                losses: (current.losses || 0) + (updates.losses || 0)
+                losses: (current.losses || 0) + (updates.losses || 0),
+                fifties: (current.fifties || 0) + (updates.fifties || 0),
+                centuries: (current.centuries || 0) + (updates.centuries || 0),
+                threew: (current.threew || 0) + (updates.threew || 0),
+                fivew: (current.fivew || 0) + (updates.fivew || 0)
             };
             
             const { error: upsertErr } = await sb.supabase
@@ -158,7 +178,11 @@ async function incrementStats(userId, updates) {
             motm: 0,
             dismissals: 0,
             wins: 0,
-            losses: 0
+            losses: 0,
+            fifties: 0,
+            centuries: 0,
+            threew: 0,
+            fivew: 0
         };
     }
     const s = data[key];
@@ -173,6 +197,10 @@ async function incrementStats(userId, updates) {
     s.dismissals = (s.dismissals || 0) + (updates.dismissals || 0);
     s.wins = (s.wins || 0) + (updates.wins || 0);
     s.losses = (s.losses || 0) + (updates.losses || 0);
+    s.fifties = (s.fifties || 0) + (updates.fifties || 0);
+    s.centuries = (s.centuries || 0) + (updates.centuries || 0);
+    s.threew = (s.threew || 0) + (updates.threew || 0);
+    s.fivew = (s.fivew || 0) + (updates.fivew || 0);
     writeStats(data);
     return s;
 }
@@ -184,20 +212,26 @@ async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
             if (isNaN(Number(actualId))) continue;
 
             const isMotm = (motmPlayerId && (actualId === motmPlayerId || p.id === motmPlayerId));
+            const runsScored = p.runs || 0;
+            const wicketsTaken = p.wickets || 0;
 
             const updates = {
                 first_name: p.first_name,
-                runs: p.runs || 0,
+                runs: runsScored,
                 balls_faced: p.balls || 0,
                 fours: p.fours || 0,
                 sixes: p.sixes || 0,
-                wickets: p.wickets || 0,
+                wickets: wicketsTaken,
                 runs_conceded: p.runsConceded || 0,
                 balls_bowled: p.ballsBowled || 0,
                 dismissals: (isBattingTeam && outPlayers.includes(p.id)) ? 1 : 0,
                 motm: isMotm ? 1 : 0,
                 wins: (!isTie && isWinnerTeam) ? 1 : 0,
-                losses: (!isTie && !isWinnerTeam) ? 1 : 0
+                losses: (!isTie && !isWinnerTeam) ? 1 : 0,
+                fifties: (runsScored >= 50 && runsScored < 100) ? 1 : 0,
+                centuries: (runsScored >= 100) ? 1 : 0,
+                threew: (wicketsTaken >= 3 && wicketsTaken < 5) ? 1 : 0,
+                fivew: (wicketsTaken >= 5) ? 1 : 0
             };
 
             const participated = (updates.runs > 0 || updates.balls_faced > 0 || updates.balls_bowled > 0 || updates.wickets > 0);

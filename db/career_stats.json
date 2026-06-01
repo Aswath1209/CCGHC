@@ -10,7 +10,11 @@
     "motm": 1,
     "dismissals": 0,
     "wins": 1,
-    "losses": 0
+    "losses": 0,
+    "fifties": 0,
+    "centuries": 0,
+    "threew": 0,
+    "fivew": 0
   },
   "101": {
     "runs": 0,
@@ -23,7 +27,11 @@
     "motm": 0,
     "dismissals": 1,
     "wins": 0,
-    "losses": 1
+    "losses": 1,
+    "fifties": 0,
+    "centuries": 0,
+    "threew": 0,
+    "fivew": 0
   },
   "102": {
     "runs": 1,
@@ -36,7 +44,11 @@
     "motm": 0,
     "dismissals": 0,
     "wins": 1,
-    "losses": 0
+    "losses": 0,
+    "fifties": 0,
+    "centuries": 0,
+    "threew": 0,
+    "fivew": 0
   },
   "103": {
     "runs": 10,
@@ -49,7 +61,11 @@
     "motm": 0,
     "dismissals": 1,
     "wins": 0,
-    "losses": 1
+    "losses": 1,
+    "fifties": 0,
+    "centuries": 0,
+    "threew": 0,
+    "fivew": 0
   },
   "104": {
     "runs": 7,
@@ -62,6 +78,10 @@
     "motm": 0,
     "dismissals": 0,
     "wins": 1,
-    "losses": 0
+    "losses": 0,
+    "fifties": 0,
+    "centuries": 0,
+    "threew": 0,
+    "fivew": 0
   }
 }
