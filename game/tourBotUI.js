@@ -335,6 +335,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
               await ctx.reply(`🥎 Captain of ${bowlT.name}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
           } else if (tour.state === 'PLAYING') {
               await tagActivePlayers(ctx, tour);
+              const striker = batT.players.find(p => p.id === batT.strikerId);
+              const bowler = tour[tour.bowlingTeamId].players.find(p => p.id === tour.activeBowlerId);
+              if (striker) {
+                  try { await ctx.api.sendMessage(striker.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
+              }
+              if (bowler) {
+                  try { await ctx.api.sendMessage(bowler.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
+              }
           }
       } else {
           await ctx.reply(`❌ ${res.error}`);
@@ -360,6 +368,15 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           await ctx.reply(`✅ <b>${res.player.first_name}</b> is bowling!`, { parse_mode: 'HTML' });
           if (tour.state === 'PLAYING') {
               await tagActivePlayers(ctx, tour);
+              const batTeam = tour[tour.battingTeamId];
+              const striker = batTeam.players.find(p => p.id === batTeam.strikerId);
+              const bowler = bowlT.players.find(p => p.id === tour.activeBowlerId);
+              if (striker) {
+                  try { await ctx.api.sendMessage(striker.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
+              }
+              if (bowler) {
+                  try { await ctx.api.sendMessage(bowler.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
+              }
           }
       } else {
           await ctx.reply(`❌ ${res.error}`);
@@ -498,6 +515,18 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       await ctx.reply("⚠️ <b>Cancel Match?</b>\nAre you sure you want to end this Tour match?", { reply_markup: kb, parse_mode: 'HTML' });
   });
 
+  bot.command('tourresume', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("No active Tour match in this chat.");
+      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can resume the tour.");
+      
+      tour.processingBall = false;
+      tour.choices = { batChoice: null, bowlChoice: null, bowlNum: null };
+      
+      await ctx.reply("🔄 <b>Tour Match Resumed!</b>\nChoices reset. Active players, please submit your plays again.", { parse_mode: 'HTML' });
+      await tagActivePlayers(ctx, tour);
+  });
+
   bot.command('tourhelp', async (ctx) => {
       await ctx.reply(
           "📜 <b>Tour Mode Commands:</b>\n" +
@@ -510,7 +539,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           "7. /bowling [index] - Select/re-select bowler\n" +
           "8. /teams - View roster indices\n" +
           "9. /penalty [A/B] [runs] / /bonus [A/B] [runs]\n" +
-          "10. /endtour - Safely cancel the Tour match\n",
+          "10. /endtour - Safely cancel the Tour match\n" +
+          "11. /tourresume - Resume match if stuck (Host)\n",
           { parse_mode: 'HTML' }
       );
   });
@@ -1031,6 +1061,18 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           
           await ctx.editMessageText(renderScoreboard(tour), { parse_mode: 'HTML' });
           await tagActivePlayers(ctx, tour);
+
+          // Notify active players in DM to re-submit
+          const batTeam = tour[tour.battingTeamId];
+          const striker = batTeam.players.find(p => p.id === batTeam.strikerId);
+          const bowler = tour[tour.bowlingTeamId].players.find(p => p.id === tour.activeBowlerId);
+          
+          if (striker) {
+              try { await ctx.api.sendMessage(striker.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
+          }
+          if (bowler) {
+              try { await ctx.api.sendMessage(bowler.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
+          }
           return;
       }
 
