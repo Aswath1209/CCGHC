@@ -272,14 +272,28 @@ bot.command('profile', async (ctx) => {
       const user = await sb.getUser(ctx.from.id);
       if (!user) return ctx.reply("⚠️ You need to register first! Send /register");
       
+      const careerStats = require('./db/careerStats');
+      const stats = careerStats.getStats(ctx.from.id);
+      
+      const sr = stats.balls_faced > 0 ? ((stats.runs / stats.balls_faced) * 100).toFixed(2) : '0.00';
+      const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
+      const avg = stats.runs / Math.max(1, stats.dismissals);
+      
       await ctx.reply(
         `👤 <b>${user.first_name}'s Profile</b>\n\n` +
         `🆔 ID: <code>${user.user_id}</code>\n` +
         `💰 Purse: ${user.coins}🪙\n\n` +
-        `📊 <b>Performance:</b>\n` +
-        `✅ Wins: ${user.wins || 0}\n` +
-        `❌ Losses: ${user.losses || 0}\n` +
-        `📈 Matches Played: ${(user.wins || 0) + (user.losses || 0)}`,
+        `📊 <b>Tour Record:</b>\n` +
+        `🏆 MOTM Awards: <b>${stats.motm}</b>\n` +
+        `✅ Wins: <b>${stats.wins}</b>  |  ❌ Losses: <b>${stats.losses}</b>\n\n` +
+        `🏏 <b>Career Batting:</b>\n` +
+        `🔹 Runs: <b>${stats.runs}</b>\n` +
+        `🔹 Average: <b>${avg.toFixed(2)}</b>\n` +
+        `🔹 Strike Rate: <b>${sr}</b>\n` +
+        `🔹 Fours (4s): <b>${stats.fours}</b>  |  Sixes (6s): <b>${stats.sixes}</b>\n\n` +
+        `🥎 <b>Career Bowling:</b>\n` +
+        `🔹 Wickets: <b>${stats.wickets}</b>\n` +
+        `🔹 Economy: <b>${econ}</b>`,
         { parse_mode: 'HTML' }
       );
   } catch (e) {

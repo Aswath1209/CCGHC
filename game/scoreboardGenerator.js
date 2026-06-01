@@ -65,6 +65,18 @@ async function generateScoreboardImage(tour, resultText, potmName) {
     ctx.stroke();
     ctx.restore();
 
+    // Draw Custom Tournament Name Title if provided
+    if (tour.name) {
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+      ctx.shadowBlur = 8;
+      ctx.fillText(tour.name.toUpperCase(), width / 2, 27);
+      ctx.restore();
+    }
+
     // Setup first and second batting teams
     const totalScore = (team) => Math.max(0, (team.score || 0) + (team.bonusRuns || 0) - (team.penaltyRuns || 0));
     const team1Key = tour.firstBattingTeamId || 'teamA';

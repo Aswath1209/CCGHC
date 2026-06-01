@@ -18,7 +18,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     const over = Math.floor(tour.balls / 6);
     const ball = tour.balls % 6;
 
-    let text = `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\n`;
+    let text = tour.name ? `⚡ <b>${tour.name.toUpperCase()} SCOREBOARD</b> ⚡\n` : `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
     text += `🏏 <b>${batT.name}</b> (Batting)\n`;
     text += `🔹 <b>Score:</b> <code>${totalS}/${batT.wickets}</code> runs\n`;
@@ -58,7 +58,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
 
   // Lobby Card rendering
   function renderLobby(tour) {
-    let text = `🏏 <b>Tour Match Lobby</b> 🏏\n`;
+    let text = tour.name ? `🏆 <b>${tour.name.toUpperCase()} LOBBY</b> 🏆\n` : `🏏 <b>Tour Match Lobby</b> 🏏\n`;
     text += `───────────────────\n`;
     text += `⚙️ <b>Settings:</b>\n`;
     text += `👉 <b>Overs:</b> ${tour.config.overs}\n`;
@@ -148,7 +148,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
 
   bot.command('tour', async (ctx) => {
     if (ctx.chat.type === 'private') return ctx.reply("Tour matches can only be started in groups.");
-    const res = tourManager.createTour(ctx.chat.id, { id: ctx.from.id, first_name: ctx.from.first_name });
+    const tourName = ctx.message.text.split(' ').slice(1).join(' ').trim();
+    const res = tourManager.createTour(ctx.chat.id, { id: ctx.from.id, first_name: ctx.from.first_name }, tourName);
     if (!res.success) return ctx.reply("❌ " + res.error);
     
     await ctx.reply(renderLobby(res.tour), { reply_markup: getLobbyKeyboard(res.tour), parse_mode: 'HTML' });
@@ -573,10 +574,11 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           const secondBat = firstBat === 'teamA' ? 'teamB' : 'teamA';
           
           let resultText = "The match ended in a tie!";
+          let winnerTeamId = null;
           if (s1 !== s2) {
-              const winnerKey = s1 > s2 ? 'teamA' : 'teamB';
-              const winnerName = tour[winnerKey].name;
-              if (winnerKey === secondBat) {
+              winnerTeamId = s1 > s2 ? 'teamA' : 'teamB';
+              const winnerName = tour[winnerTeamId].name;
+              if (winnerTeamId === secondBat) {
                   const wicketsLeft = tour.config.wickets - tour[secondBat].wickets;
                   resultText = `${winnerName} won by ${wicketsLeft} wicket${wicketsLeft > 1 ? 's' : ''}`;
               } else {
@@ -586,6 +588,15 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           }
           
           const potmName = res.motm ? res.motm.first_name : null;
+          const potmId = res.motm ? res.motm.id : null;
+
+          // Record player career stats
+          try {
+              const careerStatsHelper = require('../db/careerStats');
+              careerStatsHelper.recordMatchStats(tour, potmId, winnerTeamId);
+          } catch (e) {
+              console.error("Failed to record career stats:", e);
+          }
           
           let msg = s1 === s2 ? "🤝 <b>The match is a tie!</b>" : `🏆 <b>${resultText}!</b> 🎉`;
           if (res.motm) msg += `\n🎖 <b>POTM:</b> ${res.motm.first_name}`;

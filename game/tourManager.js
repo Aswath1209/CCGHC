@@ -10,13 +10,14 @@ function generateTourId() {
   return Math.floor(10000 + Math.random() * 90000).toString();
 }
 
-function createTour(chatId, hostUser) {
+function createTour(chatId, hostUser, name = '') {
   if (chatTourMap.has(chatId)) return { success: false, error: "A match is already active in this group!" };
   if (userTourMap.has(hostUser.id)) return { success: false, error: "You are already in an active match!" };
 
   const tourId = generateTourId();
   const tour = {
     id: tourId,
+    name: name || '',
     chatId: chatId,
     hostId: hostUser.id,
     state: 'LOBBY', // Initial state is LOBBY
@@ -121,7 +122,9 @@ function joinTeam(tourId, user, teamKey) {
         balls: 0,
         wickets: 0,
         runsConceded: 0,
-        ballsBowled: 0
+        ballsBowled: 0,
+        fours: 0,
+        sixes: 0
     });
     userTourMap.set(user.id, tourId);
 
@@ -376,7 +379,9 @@ function rebatPlayer(tourId, hostId, teamChar, playerIndex) {
         balls: 0,
         wickets: 0,
         runsConceded: 0,
-        ballsBowled: 0
+        ballsBowled: 0,
+        fours: 0,
+        sixes: 0
     };
     team.players.push(rebatObj);
     return rebatObj;
@@ -431,9 +436,13 @@ function submitPlay(tourId, userId, rawInput) {
     if (striker) {
         if (striker.runs === undefined) striker.runs = 0;
         if (striker.balls === undefined) striker.balls = 0;
+        if (striker.fours === undefined) striker.fours = 0;
+        if (striker.sixes === undefined) striker.sixes = 0;
         striker.balls++;
         if (!isWicket) {
             striker.runs += batNum;
+            if (batNum === 4) striker.fours++;
+            if (batNum === 6) striker.sixes++;
         }
     }
     if (bowler) {
