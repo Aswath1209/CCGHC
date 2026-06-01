@@ -133,7 +133,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
         .url("Send Play 🎮", `https://t.me/${bot.botInfo.username}?start=tour`)
         .row()
         .text("Swap Striker 🔄", `tour_swap_striker_${tour.id}`)
-        .text("Swap Bowler 🔄", `tour_swap_bowler_${tour.id}`);
+        .text("Swap Bowler 🔄", `tour_swap_bowler_${tour.id}`)
+        .row()
+        .text("Configure ⚙️", `tour_configmenu_${tour.id}`);
     
     await ctx.api.sendMessage(tour.chatId, 
         `🔔 <b>Next Ball!</b>\n` +
@@ -153,6 +155,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     if (!res.success) return ctx.reply("❌ " + res.error);
     
     await ctx.reply(renderLobby(res.tour), { reply_markup: getLobbyKeyboard(res.tour), parse_mode: 'HTML' });
+  });
+
+  bot.command('tourconfig', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("No active Tour match found.");
+      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can configure match settings.");
+      
+      await ctx.reply(`⚙️ <b>Configure Tour Match Settings:</b>`, { reply_markup: getConfigureKeyboard(tour), parse_mode: 'HTML' });
   });
 
   bot.command('teamname', async (ctx) => {
@@ -685,10 +695,11 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
 
   // --- Callback Query handlers ---
   bot.on('callback_query:data', async (ctx, next) => {
-      const data = ctx.callbackQuery.data;
-      const userId = ctx.from.id;
+      try {
+          const data = ctx.callbackQuery.data;
+          const userId = ctx.from.id;
 
-      if (!data.startsWith('tour_')) return next();
+          if (!data.startsWith('tour_')) return next();
 
       if (data.startsWith('tour_join_')) {
           const parts = data.split('_');
@@ -745,7 +756,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           const tour = tourManager.getTour(tourId);
           if (!tour) return ctx.answerCallbackQuery();
           
-          await ctx.editMessageText(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
+          if (tour.state === 'LOBBY') {
+              await ctx.editMessageText(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
+          } else {
+              await ctx.editMessageText(renderScoreboard(tour), { parse_mode: 'HTML' });
+              await tagActivePlayers(ctx, tour);
+          }
           ctx.answerCallbackQuery();
           return;
       }
@@ -1026,6 +1042,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           return;
       }
       return next();
+      } catch (err) {
+          if (err.message && err.message.includes("message is not modified")) {
+              try { await ctx.answerCallbackQuery(); } catch(e) {}
+              return;
+          }
+          console.error("Error in callback query handler:", err);
+          try { await ctx.answerCallbackQuery({ text: "⚠️ An error occurred. Please try again." }); } catch(e) {}
+      }
   });
 
 };
