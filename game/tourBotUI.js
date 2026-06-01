@@ -567,10 +567,27 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       await ctx.api.sendMessage(tour.chatId, renderScoreboard(tour), { parse_mode: 'HTML' });
 
       if (res.matchEnded) {
-          const resultText = res.tie ? "The match ended in a tie!" : `${tour[res.winnerTeamId].name} won the match!`;
+          const s1 = (tour.teamA.score || 0) + (tour.teamA.bonusRuns || 0) - (tour.teamA.penaltyRuns || 0);
+          const s2 = (tour.teamB.score || 0) + (tour.teamB.bonusRuns || 0) - (tour.teamB.penaltyRuns || 0);
+          const firstBat = tour.firstBattingTeamId || 'teamA';
+          const secondBat = firstBat === 'teamA' ? 'teamB' : 'teamA';
+          
+          let resultText = "The match ended in a tie!";
+          if (s1 !== s2) {
+              const winnerKey = s1 > s2 ? 'teamA' : 'teamB';
+              const winnerName = tour[winnerKey].name;
+              if (winnerKey === secondBat) {
+                  const wicketsLeft = tour.config.wickets - tour[secondBat].wickets;
+                  resultText = `${winnerName} won by ${wicketsLeft} wicket${wicketsLeft > 1 ? 's' : ''}`;
+              } else {
+                  const runsMargin = Math.abs(s1 - s2);
+                  resultText = `${winnerName} won by ${runsMargin} run${runsMargin > 1 ? 's' : ''}`;
+              }
+          }
+          
           const potmName = res.motm ? res.motm.first_name : null;
           
-          let msg = res.tie ? "🤝 <b>The match is a tie!</b>" : `🏆 <b>${tour[res.winnerTeamId].name} WON the match!</b> 🎉`;
+          let msg = s1 === s2 ? "🤝 <b>The match is a tie!</b>" : `🏆 <b>${resultText}!</b> 🎉`;
           if (res.motm) msg += `\n🎖 <b>POTM:</b> ${res.motm.first_name}`;
           
           try {
