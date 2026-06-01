@@ -114,7 +114,15 @@ function joinTeam(tourId, user, teamKey) {
         return { success: false, error: 'Already in team.' };
     }
 
-    team.players.push(user);
+    team.players.push({
+        id: user.id,
+        first_name: user.first_name,
+        runs: 0,
+        balls: 0,
+        wickets: 0,
+        runsConceded: 0,
+        ballsBowled: 0
+    });
     userTourMap.set(user.id, tourId);
 
     // Auto-appoint captain if team had none
@@ -360,7 +368,16 @@ function rebatPlayer(tourId, hostId, teamChar, playerIndex) {
     const player = team.players[playerIndex - 1];
     if (!player) return null;
 
-    const rebatObj = { id: player.id + '_rebat_' + Date.now(), originalId: player.id, first_name: player.first_name + " (rebat)" };
+    const rebatObj = {
+        id: player.id + '_rebat_' + Date.now(),
+        originalId: player.id,
+        first_name: player.first_name + " (rebat)",
+        runs: 0,
+        balls: 0,
+        wickets: 0,
+        runsConceded: 0,
+        ballsBowled: 0
+    };
     team.players.push(rebatObj);
     return rebatObj;
 }
@@ -405,6 +422,32 @@ function submitPlay(tourId, userId, rawInput) {
     tour.balls++;
     
     const isWicket = batNum === bowlNum;
+    
+    // Update player stats
+    const striker = batTeam.players.find(p => p.id === batTeam.strikerId);
+    const bowlTeam = tour[tour.bowlingTeamId];
+    const bowler = bowlTeam.players.find(p => p.id === tour.activeBowlerId);
+
+    if (striker) {
+        if (striker.runs === undefined) striker.runs = 0;
+        if (striker.balls === undefined) striker.balls = 0;
+        striker.balls++;
+        if (!isWicket) {
+            striker.runs += batNum;
+        }
+    }
+    if (bowler) {
+        if (bowler.wickets === undefined) bowler.wickets = 0;
+        if (bowler.runsConceded === undefined) bowler.runsConceded = 0;
+        if (bowler.ballsBowled === undefined) bowler.ballsBowled = 0;
+        bowler.ballsBowled++;
+        if (isWicket) {
+            bowler.wickets++;
+        } else {
+            bowler.runsConceded += batNum;
+        }
+    }
+
     const endOfOver = tour.balls % 6 === 0;
     
     let res = {
@@ -449,9 +492,11 @@ function submitPlay(tourId, userId, rawInput) {
     if (targetPassed || oversFinished || allOut) {
         if (tour.innings === 1) {
             res.inningsEnded = true;
+            tour.innings1Balls = tour.balls;
             tour.state = 'INNINGS_BREAK';
         } else {
             res.matchEnded = true;
+            tour.innings2Balls = tour.balls;
             tour.state = 'COMPLETED';
             const s1 = totalScore(tour.teamA);
             const s2 = totalScore(tour.teamB);
@@ -476,11 +521,19 @@ function submitPlay(tourId, userId, rawInput) {
 }
 
 function calculateMOTM(tour) {
-    const s1 = totalScore(tour.teamA);
-    const s2 = totalScore(tour.teamB);
-    const winTeamId = s1 > s2 ? 'teamA' : 'teamB';
-    const players = tour[winTeamId].players;
-    return players[0]; 
+    let bestPlayer = null;
+    let maxPoints = -1;
+    
+    // Check both teams
+    const allPlayers = [...tour.teamA.players, ...tour.teamB.players];
+    for (const p of allPlayers) {
+        const points = (p.runs || 0) + (p.wickets || 0) * 20;
+        if (points > maxPoints) {
+            maxPoints = points;
+            bestPlayer = p;
+        }
+    }
+    return bestPlayer || tour.teamA.players[0];
 }
 
 function totalScore(team) {

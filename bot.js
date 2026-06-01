@@ -220,6 +220,7 @@ try {
     { command: 'ccl', description: 'Start a 1v1 CCL match' },
     { command: 'tour', description: 'Start a multiplayer Tour match' },
     { command: 'teams', description: 'Show team rosters' },
+    { command: 'score', description: 'Show full match scorecard' },
     { command: 'batting', description: '/batting [index] [S/NS]' },
     { command: 'bowling', description: '/bowling [index]' },
     { command: 'remove_player', description: 'Remove player from match' },
@@ -980,7 +981,17 @@ bot.on('message:text', async (ctx) => {
     if (userId === game.batsmanId) {
         await ctx.reply(`✅ You played: ${res.batStr || txt}`);
     } else {
-        await ctx.reply(`✅ You bowled: ${res.bowlStr || game.bowlChoice}`); 
+        const bowlVal = res.bowlStr || game.bowlChoice || txt;
+        const DELIVERY_NAMES = {
+            '0': 'RS', 'rs': 'RS',
+            '1': 'Bouncer', 'bouncer': 'Bouncer',
+            '2': 'Yorker', 'yorker': 'Yorker',
+            '3': 'Short', 'short': 'Short',
+            '4': 'Slower', 'slower': 'Slower',
+            '6': 'Knuckle', 'knuckle': 'Knuckle'
+        };
+        const displayName = DELIVERY_NAMES[bowlVal.toLowerCase()] || bowlVal;
+        await ctx.reply(`✅ You bowled: ${displayName}`); 
     }
     
     if (res.waiting) {

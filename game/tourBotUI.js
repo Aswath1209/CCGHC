@@ -1,5 +1,6 @@
-const { InlineKeyboard } = require('grammy');
+const { InlineKeyboard, InputFile } = require('grammy');
 const tourManager = require('./tourManager');
+const { generateScoreboardImage } = require('./scoreboardGenerator');
 
 module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
 
@@ -34,9 +35,18 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
         }
     }
     text += `───────────────────\n`;
-    text += `🏏 <b>Striker:</b> ${striker ? `<b>${striker.first_name}</b>` : '<i>(Waiting...)</i>'}\n`;
-    text += `🏏 <b>Non-Striker:</b> ${nonStriker ? `<b>${nonStriker.first_name}</b>` : '<i>(Waiting...)</i>'}\n`;
-    text += `🥎 <b>Bowler:</b> ${bowler ? `<b>${bowler.first_name}</b>` : '<i>(Waiting...)</i>'}\n`;
+    const strikerStats = striker ? ` (<b>${striker.runs || 0}</b> runs, <b>${striker.balls || 0}</b> balls)` : '';
+    const nonStrikerStats = nonStriker ? ` (<b>${nonStriker.runs || 0}</b> runs, <b>${nonStriker.balls || 0}</b> balls)` : '';
+    let bowlerStats = '';
+    if (bowler) {
+        const ov = Math.floor((bowler.ballsBowled || 0) / 6);
+        const bl = (bowler.ballsBowled || 0) % 6;
+        bowlerStats = ` (<b>${bowler.wickets || 0}-${bowler.runsConceded || 0}</b> in <b>${ov}.${bl}</b> ov)`;
+    }
+
+    text += `🏏 <b>Striker:</b> ${striker ? `<b>${striker.first_name}</b>${strikerStats}` : '<i>(Waiting...)</i>'}\n`;
+    text += `🏏 <b>Non-Striker:</b> ${nonStriker ? `<b>${nonStriker.first_name}</b>${nonStrikerStats}` : '<i>(Waiting...)</i>'}\n`;
+    text += `🥎 <b>Bowler:</b> ${bowler ? `<b>${bowler.first_name}</b>${bowlerStats}` : '<i>(Waiting...)</i>'}\n`;
     text += `───────────────────`;
     return text;
   }
@@ -357,6 +367,72 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       await ctx.reply(text, { parse_mode: 'HTML' });
   });
 
+  bot.command('score', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("No active tour found.");
+      
+      const totalScore = (team) => Math.max(0, (team.score || 0) + (team.bonusRuns || 0) - (team.penaltyRuns || 0));
+      
+      let text = `📊 <b>Current Match Scorecard</b> 📊\n`;
+      text += `───────────────────\n`;
+      
+      const team1Key = tour.firstBattingTeamId || 'teamA';
+      const team2Key = team1Key === 'teamA' ? 'teamB' : 'teamA';
+      const team1 = tour[team1Key];
+      const team2 = tour[team2Key];
+      
+      const team1Score = totalScore(team1);
+      const team2Score = totalScore(team2);
+      
+      const getOversStr = (balls) => {
+          const ov = Math.floor((balls || 0) / 6);
+          const bl = (balls || 0) % 6;
+          return `${ov}.${bl}`;
+      };
+      
+      const t1Overs = tour.innings1Balls !== undefined ? getOversStr(tour.innings1Balls) : (tour.innings === 1 ? getOversStr(tour.balls) : `${tour.config.overs}.0`);
+      const t2Overs = tour.innings2Balls !== undefined ? getOversStr(tour.innings2Balls) : (tour.innings === 2 ? getOversStr(tour.balls) : `0.0`);
+      
+      // Team 1 Batting
+      text += `🏏 <b>${team1.name}</b>: <b>${team1Score}/${team1.wickets || 0}</b> (${t1Overs} ov)\n`;
+      team1.players.forEach(p => {
+          if (p.balls > 0 || p.runs > 0) {
+              text += `   • ${p.first_name}: ${p.runs || 0} (${p.balls || 0}b)\n`;
+          }
+      });
+      // Team 1 Bowling
+      text += `🥎 Bowlers:\n`;
+      team2.players.forEach(p => {
+          if (p.ballsBowled > 0) {
+              const ov = Math.floor(p.ballsBowled / 6);
+              const bl = p.ballsBowled % 6;
+              text += `   • ${p.first_name}: ${p.wickets || 0}-${p.runsConceded || 0} (${ov}.${bl} ov)\n`;
+          }
+      });
+      
+      text += `───────────────────\n`;
+      
+      // Team 2 Batting
+      text += `🏏 <b>${team2.name}</b>: <b>${team2Score}/${team2.wickets || 0}</b> (${t2Overs} ov)\n`;
+      team2.players.forEach(p => {
+          if (p.balls > 0 || p.runs > 0) {
+              text += `   • ${p.first_name}: ${p.runs || 0} (${p.balls || 0}b)\n`;
+          }
+      });
+      // Team 2 Bowling
+      text += `🥎 Bowlers:\n`;
+      team1.players.forEach(p => {
+          if (p.ballsBowled > 0) {
+              const ov = Math.floor(p.ballsBowled / 6);
+              const bl = p.ballsBowled % 6;
+              text += `   • ${p.first_name}: ${p.wickets || 0}-${p.runsConceded || 0} (${ov}.${bl} ov)\n`;
+          }
+      });
+      
+      text += `───────────────────`;
+      await ctx.reply(text, { parse_mode: 'HTML' });
+  });
+
   bot.command('penalty', async (ctx) => {
       const tour = tourManager.getUserTour(ctx.from.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
@@ -429,7 +505,19 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     
     const batT = tour[tour.battingTeamId];
     if (ctx.from.id === batT.strikerId) ctx.reply(`✅ You played: ${res.batStr || txt}`);
-    else ctx.reply(`✅ You bowled: ${res.bowlStr || tour.choices.bowlChoice}`);
+    else {
+        const bowlVal = res.bowlStr || tour.choices.bowlChoice || txt;
+        const DELIVERY_NAMES = {
+            '0': 'RS', 'rs': 'RS',
+            '1': 'Bouncer', 'bouncer': 'Bouncer',
+            '2': 'Yorker', 'yorker': 'Yorker',
+            '3': 'Short', 'short': 'Short',
+            '4': 'Slower', 'slower': 'Slower',
+            '6': 'Knuckle', 'knuckle': 'Knuckle'
+        };
+        const displayName = DELIVERY_NAMES[bowlVal.toLowerCase()] || bowlVal;
+        ctx.reply(`✅ You bowled: ${displayName}`);
+    }
     
     if (res.waiting) {
         const striker = batT.players.find(p => p.id === batT.strikerId);
@@ -474,9 +562,27 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       await ctx.api.sendMessage(tour.chatId, renderScoreboard(tour), { parse_mode: 'HTML' });
 
       if (res.matchEnded) {
+          const resultText = res.tie ? "The match ended in a tie!" : `${tour[res.winnerTeamId].name} won the match!`;
+          const potmName = res.motm ? res.motm.first_name : null;
+          
           let msg = res.tie ? "🤝 <b>The match is a tie!</b>" : `🏆 <b>${tour[res.winnerTeamId].name} WON the match!</b> 🎉`;
-          if (res.motm) msg += `\n🎖 <b>MOTM:</b> ${res.motm.first_name}`;
-          await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
+          if (res.motm) msg += `\n🎖 <b>POTM:</b> ${res.motm.first_name}`;
+          
+          try {
+              const buffer = await generateScoreboardImage(tour, resultText, potmName);
+              if (buffer) {
+                  await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), {
+                      caption: msg,
+                      parse_mode: 'HTML'
+                  });
+              } else {
+                  await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
+              }
+          } catch (e) {
+              console.error("Failed to generate/send TV scorecard image:", e);
+              await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
+          }
+          
           tourManager.deleteTour(tour.id);
       } else if (res.inningsEnded) {
           tour.innings = 2;
@@ -679,6 +785,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
               tour.bowlingTeamId = isWinnerTeamA ? 'teamA' : 'teamB';
           }
           
+          tour.firstBattingTeamId = tour.battingTeamId;
           tour.state = 'SELECT_BATTERS';
           ctx.answerCallbackQuery("Role selected!");
 
