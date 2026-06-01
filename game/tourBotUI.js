@@ -313,8 +313,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const batT = tour[tour.battingTeamId];
-      if (ctx.from.id !== tour.hostId && ctx.from.id !== batT.captainId) {
-          return ctx.reply("Only the captain or host can change players.");
+      if (ctx.from.id !== tour.hostId) {
+          return ctx.reply("Only the host can change players.");
       }
       
       const args = ctx.message.text.split(' ');
@@ -346,8 +346,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const bowlT = tour[tour.bowlingTeamId];
-      if (ctx.from.id !== tour.hostId && ctx.from.id !== bowlT.captainId) {
-          return ctx.reply("Only the captain or host can change players.");
+      if (ctx.from.id !== tour.hostId) {
+          return ctx.reply("Only the host can change players.");
       }
       
       const args = ctx.message.text.split(' ');
@@ -687,6 +687,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       } else {
           await tagActivePlayers(ctx, tour);
       }
+      if (!res.matchEnded) {
+          tour.processingBall = false;
+      }
   }
 
   bot.tourTagActive = async (ctx, tour) => {
@@ -966,8 +969,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           if (!tour) return ctx.answerCallbackQuery();
           const batT = tour[tour.battingTeamId];
           
-          if (userId !== tour.hostId && userId !== batT.captainId) {
-              return ctx.answerCallbackQuery({ text: "Only host or batting captain can swap batters!", show_alert: true });
+          if (userId !== tour.hostId) {
+              return ctx.answerCallbackQuery({ text: "Only the host can swap batters!", show_alert: true });
           }
           
           const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId);
@@ -990,8 +993,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           if (!tour) return ctx.answerCallbackQuery();
           const bowlT = tour[tour.bowlingTeamId];
           
-          if (userId !== tour.hostId && userId !== bowlT.captainId) {
-              return ctx.answerCallbackQuery({ text: "Only host or bowling captain can swap bowler!", show_alert: true });
+          if (userId !== tour.hostId) {
+              return ctx.answerCallbackQuery({ text: "Only the host can swap bowlers!", show_alert: true });
           }
           
           const available = bowlT.players.filter(p => p.id !== tour.activeBowlerId && (p.id !== tour.previousBowlerId || bowlT.players.length === 1));
