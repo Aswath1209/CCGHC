@@ -1,8 +1,9 @@
+const { InlineKeyboard } = require('grammy');
 const tourManager = require('./tourManager');
 
 module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
-  
-  // Renders the highly aligned scoreboard
+
+  // Renders the aligned scorecard
   function renderScoreboard(tour) {
     const batT = tour[tour.battingTeamId];
     const bowlT = tour[tour.bowlingTeamId];
@@ -16,22 +17,96 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     const over = Math.floor(tour.balls / 6);
     const ball = tour.balls % 6;
 
-    let text = `📊 <b>Match Scorecard</b>\n`;
-    text += `<pre>`;
-    text += `${batT === tour.teamA ? 'Team A' : 'Team B'} (Bat): ${totalS}/${batT.wickets}\n`;
-    text += `${bowlT === tour.teamA ? 'Team A' : 'Team B'} (Bowl): ${bowlS}\n`;
-    text += `Overs: ${over}.${ball}/${tour.config.overs}\n`;
-    if (tour.innings === 2) text += `Target: ${bowlS + 1}\n`;
-    text += `------------------\n`;
-    text += `🏏 Striker: ${striker ? striker.first_name : '---'}\n`;
-    text += `🏏 Non-Str: ${nonStriker ? nonStriker.first_name : '---'}\n`;
-    text += `🧤 Bowler : ${bowler ? bowler.first_name : '---'}\n`;
-    text += `</pre>`;
+    let text = `🏆 <b>CCG Tour Match Scorecard</b> 🏆\n`;
+    text += `───────────────────\n`;
+    text += `🏏 <b>${batT.name}</b> (Batting):\n`;
+    text += `   👉 <b>${totalS}/${batT.wickets}</b> runs in <b>${over}.${ball}/${tour.config.overs}</b> ov\n\n`;
+    text += `🥎 <b>${bowlT.name}</b> (Bowling):\n`;
+    text += `   👉 <b>${bowlS}</b> runs\n`;
     
+    if (tour.innings === 2) {
+        const needed = (bowlS + 1) - totalS;
+        const remaining = (tour.config.overs * 6) - tour.balls;
+        if (needed > 0 && remaining >= 0) {
+            text += `🎯 <b>Target:</b> ${bowlS + 1} | Need <b>${needed}</b> runs off <b>${remaining}</b> balls\n`;
+        } else {
+            text += `🎯 <b>Target:</b> ${bowlS + 1}\n`;
+        }
+    }
+    text += `───────────────────\n`;
+    text += `🏏 <b>Striker:</b> ${striker ? `<b>${striker.first_name}</b>` : '<i>(Waiting...)</i>'}\n`;
+    text += `🏏 <b>Non-Striker:</b> ${nonStriker ? `<b>${nonStriker.first_name}</b>` : '<i>(Waiting...)</i>'}\n`;
+    text += `🥎 <b>Bowler:</b> ${bowler ? `<b>${bowler.first_name}</b>` : '<i>(Waiting...)</i>'}\n`;
+    text += `───────────────────`;
     return text;
   }
 
-  // Tag players in GC with a button to redirect to DM
+  // Lobby Card rendering
+  function renderLobby(tour) {
+    let text = `🏏 <b>Tour Match Lobby</b> 🏏\n`;
+    text += `───────────────────\n`;
+    text += `⚙️ <b>Settings:</b>\n`;
+    text += `👉 <b>Overs:</b> ${tour.config.overs}\n`;
+    text += `👉 <b>Wickets:</b> ${tour.config.wickets}\n`;
+    text += `👉 <b>Bet:</b> ${tour.config.bet}🪙\n`;
+    text += `───────────────────\n`;
+    
+    text += `🔴 <b>${tour.teamA.name}</b>:\n`;
+    if (tour.teamA.players.length === 0) {
+        text += `   <i>(No players yet)</i>\n`;
+    } else {
+        tour.teamA.players.forEach((p, idx) => {
+            const isCap = p.id === tour.teamA.captainId ? " 👑" : "";
+            text += `   ${idx + 1}. ${p.first_name}${isCap}\n`;
+        });
+    }
+    
+    text += `\n🔵 <b>${tour.teamB.name}</b>:\n`;
+    if (tour.teamB.players.length === 0) {
+        text += `   <i>(No players yet)</i>\n`;
+    } else {
+        tour.teamB.players.forEach((p, idx) => {
+            const isCap = p.id === tour.teamB.captainId ? " 👑" : "";
+            text += `   ${idx + 1}. ${p.first_name}${isCap}\n`;
+        });
+    }
+    text += `───────────────────\n`;
+    text += `Host: <a href="tg://user?id=${tour.hostId}">Host</a>\n\n`;
+    text += `<i>Join either team below! Captains can rename their team using /teamname.</i>`;
+    return text;
+  }
+
+  // Lobby Keyboards
+  function getLobbyKeyboard(tour) {
+    return new InlineKeyboard()
+        .text("Join Team A 🔴", `tour_join_${tour.id}_teamA`)
+        .text("Join Team B 🔵", `tour_join_${tour.id}_teamB`)
+        .row()
+        .text("Configure ⚙️", `tour_configmenu_${tour.id}`)
+        .row()
+        .text("Start Match 🚀", `tour_start_${tour.id}`)
+        .text("Cancel Tour ❌", `tour_cancel_${tour.id}`);
+  }
+
+  // Settings Configuration Keyboard
+  function getConfigureKeyboard(tour) {
+    return new InlineKeyboard()
+        .text("Overs: -1 📉", `tour_config_${tour.id}_overs_minus`)
+        .text(`Overs: ${tour.config.overs}`, `tour_config_${tour.id}_noop`)
+        .text("Overs: +1 📈", `tour_config_${tour.id}_overs_plus`)
+        .row()
+        .text("Wickets: -1 📉", `tour_config_${tour.id}_wickets_minus`)
+        .text(`Wkts: ${tour.config.wickets}`, `tour_config_${tour.id}_noop`)
+        .text("Wickets: +1 📈", `tour_config_${tour.id}_wickets_plus`)
+        .row()
+        .text("Bet: -500 🪙", `tour_config_${tour.id}_bet_minus`)
+        .text(`Bet: ${tour.config.bet}`, `tour_config_${tour.id}_noop`)
+        .text("Bet: +500 🪙", `tour_config_${tour.id}_bet_plus`)
+        .row()
+        .text("Back 🔙", `tour_configback_${tour.id}`);
+  }
+
+  // Tag players in GC with a button redirecting to DMs and overrides
   async function tagActivePlayers(ctx, tour) {
     const batTeam = tour[tour.battingTeamId];
     const striker = batTeam.players.find(p => p.id === batTeam.strikerId);
@@ -40,16 +115,310 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     if (!striker || !bowler) return;
 
     const kb = new InlineKeyboard()
-        .url("Send Play 🎮", `https://t.me/${bot.botInfo.username}`);
+        .url("Send Play 🎮", `https://t.me/${bot.botInfo.username}?start=tour`)
+        .row()
+        .text("Swap Striker 🔄", `tour_swap_striker_${tour.id}`)
+        .text("Swap Bowler 🔄", `tour_swap_bowler_${tour.id}`);
     
     await ctx.api.sendMessage(tour.chatId, 
         `🔔 <b>Next Ball!</b>\n` +
-        `👤 Batter: <a href="tg://user?id=${striker.id}">${striker.first_name}</a>\n` +
-        `👤 Bowler: <a href="tg://user?id=${bowler.id}">${bowler.first_name}</a>\n\n` +
-        `<i>Click below to send your play!</i>`, 
+        `🏏 Striker: <a href="tg://user?id=${striker.id}">${striker.first_name}</a>\n` +
+        `🥎 Bowler: <a href="tg://user?id=${bowler.id}">${bowler.first_name}</a>\n\n` +
+        `<i>Click below to submit your play in DMs!</i>`, 
         { reply_markup: kb, parse_mode: 'HTML' }
     );
   }
+
+  // --- Bot Commands Definitions ---
+
+  bot.command('tour', async (ctx) => {
+    if (ctx.chat.type === 'private') return ctx.reply("Tour matches can only be started in groups.");
+    const res = tourManager.createTour(ctx.chat.id, { id: ctx.from.id, first_name: ctx.from.first_name });
+    if (!res.success) return ctx.reply("❌ " + res.error);
+    
+    await ctx.reply(renderLobby(res.tour), { reply_markup: getLobbyKeyboard(res.tour), parse_mode: 'HTML' });
+  });
+
+  bot.command('teamname', async (ctx) => {
+      const txt = ctx.message.text.split(' ').slice(1).join(' ');
+      if (!txt) return ctx.reply("Usage: /teamname [New Team Name]");
+      
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      
+      const res = tourManager.renameTeam(tour.id, ctx.from.id, txt);
+      if (!res.success) return ctx.reply("❌ " + res.error);
+      
+      await ctx.reply(`✅ Team renamed to: <b>${res.teamName}</b>`, { parse_mode: 'HTML' });
+  });
+
+  bot.command(['appointa_captain', 'appointb_captain', 'captain'], async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can appoint captains.");
+      
+      let targetUserId = null;
+      let first_name = "";
+      if (ctx.message.reply_to_message) {
+          targetUserId = ctx.message.reply_to_message.from.id;
+          first_name = ctx.message.reply_to_message.from.first_name;
+      } else {
+          const args = ctx.message.text.split(' ');
+          const teamChar = args[1]?.toUpperCase();
+          const index = parseInt(args[2]);
+          if (teamChar && !isNaN(index)) {
+              const teamKey = teamChar === 'A' ? 'teamA' : 'teamB';
+              const team = tour[teamKey];
+              const player = team.players[index - 1];
+              if (player) {
+                  targetUserId = player.id;
+                  first_name = player.first_name;
+              }
+          }
+      }
+      
+      if (!targetUserId) {
+          return ctx.reply("Usage: Reply to a player with this command, or use `/captain [A/B] [index]`");
+      }
+      
+      let teamKey = null;
+      if (tour.teamA.players.some(p => p.id === targetUserId)) teamKey = 'teamA';
+      else if (tour.teamB.players.some(p => p.id === targetUserId)) teamKey = 'teamB';
+      
+      if (!teamKey) return ctx.reply("Player not found in any team.");
+      
+      const success = tourManager.appointCaptain(tour.id, ctx.from.id, targetUserId, teamKey);
+      if (success) {
+          await ctx.reply(`👑 <b>${first_name}</b> is now the captain of <b>${tour[teamKey].name}</b>!`, { parse_mode: 'HTML' });
+      } else {
+          await ctx.reply("❌ Failed to appoint captain.");
+      }
+  });
+
+  bot.command(['adda', 'addb'], async (ctx) => {
+      const isTeamA = ctx.message.text.toLowerCase().includes('adda');
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      
+      // Permission: host or captain
+      const isHost = tour.hostId === ctx.from.id;
+      const isCapA = tour.teamA.captainId === ctx.from.id;
+      const isCapB = tour.teamB.captainId === ctx.from.id;
+      
+      if (!isHost && !isCapA && !isCapB) {
+          return ctx.reply("Only the host or captains can add players.");
+      }
+      
+      let targetUser = null;
+      if (ctx.message.reply_to_message) {
+          targetUser = ctx.message.reply_to_message.from;
+      }
+      
+      if (!targetUser) return ctx.reply("Please reply to the user's message you want to add.");
+      
+      const teamKey = isTeamA ? 'teamA' : 'teamB';
+      const res = tourManager.joinTeam(tour.id, { id: targetUser.id, first_name: targetUser.first_name }, teamKey);
+      
+      if (res.success) {
+          await ctx.reply(`✅ Added <b>${targetUser.first_name}</b> to <b>${tour[teamKey].name}</b>!`, { parse_mode: 'HTML' });
+      } else {
+          await ctx.reply(`❌ ${res.error}`);
+      }
+  });
+
+  bot.command('remove_player', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      
+      let targetUserId = null;
+      let first_name = "";
+      
+      if (ctx.message.reply_to_message) {
+          targetUserId = ctx.message.reply_to_message.from.id;
+          first_name = ctx.message.reply_to_message.from.first_name;
+      } else {
+          const args = ctx.message.text.split(' ');
+          const teamChar = args[1]?.toUpperCase();
+          const index = parseInt(args[2]);
+          if (teamChar && !isNaN(index)) {
+              const teamKey = teamChar === 'A' ? 'teamA' : 'teamB';
+              const team = tour[teamKey];
+              const player = team.players[index - 1];
+              if (player) {
+                  targetUserId = player.id;
+                  first_name = player.first_name;
+              }
+          }
+      }
+      
+      if (!targetUserId) {
+          return ctx.reply("Usage: Reply to a player with this command, or use `/remove_player [A/B] [index]`");
+      }
+      
+      const res = tourManager.removePlayer(tour.id, ctx.from.id, targetUserId);
+      if (res.success) {
+          await ctx.reply(`🚪 <b>${first_name}</b> was removed from the match.`, { parse_mode: 'HTML' });
+          if (res.clearedActive) {
+              await ctx.reply("⚠️ Active batsman/bowler was removed. Captains, please select replacement.");
+              if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL') {
+                  const batT = tour[tour.battingTeamId];
+                  const kb = new InlineKeyboard();
+                  batT.players.filter(p => !batT.outPlayers.includes(p.id)).forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${batT.players.indexOf(p) + 1}`).row());
+                  await ctx.reply(`🏏 Captain of ${batT.name}, select your Striker:`, { reply_markup: kb, parse_mode: 'HTML' });
+              } else if (tour.state === 'SELECT_BOWLER') {
+                  const bowlT = tour[tour.bowlingTeamId];
+                  const kb = new InlineKeyboard();
+                  bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row());
+                  await ctx.reply(`🥎 Captain of ${bowlT.name}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+              }
+          }
+      } else {
+          await ctx.reply(`❌ ${res.error}`);
+      }
+  });
+
+  bot.command('batting', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      
+      const batT = tour[tour.battingTeamId];
+      if (ctx.from.id !== tour.hostId && ctx.from.id !== batT.captainId) {
+          return ctx.reply("Only the captain or host can change players.");
+      }
+      
+      const args = ctx.message.text.split(' ');
+      const index = parseInt(args[1]);
+      const posArg = args[2]?.toUpperCase(); 
+      
+      if (isNaN(index)) return ctx.reply("Usage: /batting [index] [S/NS]");
+      
+      const position = posArg === 'NS' ? 'NS' : 'S';
+      
+      const res = tourManager.setBatsman(tour.id, ctx.from.id, index, position);
+      if (res.success) {
+          await ctx.reply(`✅ <b>${res.player.first_name}</b> is now playing as <b>${position === 'S' ? 'Striker' : 'Non-Striker'}</b>!`, { parse_mode: 'HTML' });
+          if (tour.state === 'SELECT_BOWLER') {
+              const bowlT = tour[tour.bowlingTeamId];
+              const kb = new InlineKeyboard();
+              bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row());
+              await ctx.reply(`🥎 Captain of ${bowlT.name}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+          } else if (tour.state === 'PLAYING') {
+              await tagActivePlayers(ctx, tour);
+          }
+      } else {
+          await ctx.reply(`❌ ${res.error}`);
+      }
+  });
+
+  bot.command('bowling', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      
+      const bowlT = tour[tour.bowlingTeamId];
+      if (ctx.from.id !== tour.hostId && ctx.from.id !== bowlT.captainId) {
+          return ctx.reply("Only the captain or host can change players.");
+      }
+      
+      const args = ctx.message.text.split(' ');
+      const index = parseInt(args[1]);
+      
+      if (isNaN(index)) return ctx.reply("Usage: /bowling [index]");
+      
+      const res = tourManager.setBowler(tour.id, ctx.from.id, index);
+      if (res.success) {
+          await ctx.reply(`✅ <b>${res.player.first_name}</b> is bowling!`, { parse_mode: 'HTML' });
+          if (tour.state === 'PLAYING') {
+              await tagActivePlayers(ctx, tour);
+          }
+      } else {
+          await ctx.reply(`❌ ${res.error}`);
+      }
+  });
+
+  bot.command('teams', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("No active tour found.");
+      
+      let text = `👥 <b>Roster for ${tour.teamA.name}:</b>\n`;
+      tour.teamA.players.forEach((p, i) => {
+          const cap = p.id === tour.teamA.captainId ? " (C)" : "";
+          const active = (p.id === tour.teamA.strikerId ? " (Striker)" : "") || (p.id === tour.teamA.nonStrikerId ? " (Non-Striker)" : "");
+          const out = tour.teamA.outPlayers.includes(p.id) ? " (Out)" : "";
+          text += `${i + 1}. ${p.first_name}${cap}${active}${out}\n`;
+      });
+      
+      text += `\n👥 <b>Roster for ${tour.teamB.name}:</b>\n`;
+      tour.teamB.players.forEach((p, i) => {
+          const cap = p.id === tour.teamB.captainId ? " (C)" : "";
+          const active = (p.id === tour.activeBowlerId ? " (Bowler)" : "");
+          text += `${i + 1}. ${p.first_name}${cap}${active}\n`;
+      });
+      
+      await ctx.reply(text, { parse_mode: 'HTML' });
+  });
+
+  bot.command('penalty', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can issue penalties.");
+      
+      const args = ctx.message.text.split(' ');
+      const teamChar = args[1];
+      const runs = parseInt(args[2]);
+      if (!teamChar || isNaN(runs)) return ctx.reply("Usage: /penalty [A/B] [runs]");
+      
+      const res = tourManager.adjustRuns(tour.id, ctx.from.id, teamChar, runs, true);
+      if (res) {
+          await ctx.reply(`🚫 <b>Penalty!</b> ${res.teamName} penalized by ${runs} runs.`, { parse_mode: 'HTML' });
+      }
+  });
+
+  bot.command('bonus', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can award bonuses.");
+      
+      const args = ctx.message.text.split(' ');
+      const teamChar = args[1];
+      const runs = parseInt(args[2]);
+      if (!teamChar || isNaN(runs)) return ctx.reply("Usage: /bonus [A/B] [runs]");
+      
+      const res = tourManager.adjustRuns(tour.id, ctx.from.id, teamChar, runs, false);
+      if (res) {
+          await ctx.reply(`✨ <b>Bonus!</b> ${res.teamName} awarded ${runs} runs.`, { parse_mode: 'HTML' });
+      }
+  });
+
+  bot.command('endtour', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("No active Tour match in this chat.");
+      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can end the tour.");
+      
+      const kb = new InlineKeyboard()
+          .text("Yes, End Match ✅", `confirm_endtour_yes_${tour.id}`)
+          .text("No, Continue ❌", `confirm_endtour_no`);
+          
+      await ctx.reply("⚠️ <b>Cancel Match?</b>\nAre you sure you want to end this Tour match?", { reply_markup: kb, parse_mode: 'HTML' });
+  });
+
+  bot.command('tourhelp', async (ctx) => {
+      await ctx.reply(
+          "📜 <b>Tour Mode Commands:</b>\n" +
+          "1. /tour - Start interactive Tour lobby\n" +
+          "2. /teamname [Name] - Rename your team (Captains)\n" +
+          "3. /captain [A/B] [index] - Appoint captain (Host)\n" +
+          "4. /adda / /addb - (Reply to user) Add player to team mid-game\n" +
+          "5. /remove_player - (Reply or [A/B] [index]) Kick player\n" +
+          "6. /batting [index] [S/NS] - Select/re-select batter\n" +
+          "7. /bowling [index] - Select/re-select bowler\n" +
+          "8. /teams - View roster indices\n" +
+          "9. /penalty [A/B] [runs] / /bonus [A/B] [runs]\n" +
+          "10. /endtour - Safely cancel the Tour match\n",
+          { parse_mode: 'HTML' }
+      );
+  });
+
+  // --- DM Hook routing logic ---
 
   bot.tourTextHook = async (ctx, tour, txt) => {
     const res = tourManager.submitPlay(tour.id, ctx.from.id, txt);
@@ -62,7 +431,19 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     if (ctx.from.id === batT.strikerId) ctx.reply(`✅ You played: ${res.batStr || txt}`);
     else ctx.reply(`✅ You bowled: ${res.bowlStr || tour.choices.bowlChoice}`);
     
-    if (res.waiting) return true;
+    if (res.waiting) {
+        const striker = batT.players.find(p => p.id === batT.strikerId);
+        const bowler = tour[tour.bowlingTeamId].players.find(p => p.id === tour.activeBowlerId);
+        const waitingForBowler = tour.choices.batChoice !== null && tour.choices.bowlChoice === null;
+        const waitingForBatter = tour.choices.bowlChoice !== null && tour.choices.batChoice === null;
+        
+        if (waitingForBowler && ctx.from.id === striker.id) {
+            try { await ctx.api.sendMessage(bowler.id, "⚾ Please submit your delivery (RS, Bouncer, Yorker, Short, Slower, Knuckle) in DM!"); } catch(e){}
+        } else if (waitingForBatter && ctx.from.id === bowler.id) {
+            try { await ctx.api.sendMessage(striker.id, "🏏 Please submit your shot (0, 1, 2, 3, 4, 6) in DM!"); } catch(e){}
+        }
+        return true;
+    }
     
     await handleTourResult(ctx, res);
     return true; 
@@ -79,7 +460,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
       
       await ctx.api.sendMessage(tour.chatId, `⚾ <b>Over ${over+1} | Ball ${ballInOver}</b>`, { parse_mode: 'HTML' });
-      await sleep(1500); // Back to shorter delays as it's team match
+      await sleep(1500); 
       await ctx.api.sendMessage(tour.chatId, `👉 ${bowler.first_name} bowls a <b>${bowlStr}</b>!`, { parse_mode: 'HTML' });
       await sleep(1500);
       
@@ -98,17 +479,46 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
           tourManager.deleteTour(tour.id);
       } else if (res.inningsEnded) {
-          await ctx.api.sendMessage(tour.chatId, `🏁 <b>Innings Over!</b>\nTarget: ${tourManager.totalScore(batT) + 1}\n\nHost/Captain, use /innings_switch to proceed.`, { parse_mode: 'HTML' });
+          tour.innings = 2;
+          tour.balls = 0;
+          const temp = tour.battingTeamId;
+          tour.battingTeamId = tour.bowlingTeamId;
+          tour.bowlingTeamId = temp;
+          
+          tour.teamA.strikerId = null;
+          tour.teamA.nonStrikerId = null;
+          tour.teamB.strikerId = null;
+          tour.teamB.nonStrikerId = null;
+          tour.activeBowlerId = null;
+          tour.previousBowlerId = null;
+          
+          tour.state = 'SELECT_BATTERS';
+          
+          const newBatT = tour[tour.battingTeamId];
+          const newBowlT = tour[tour.bowlingTeamId];
+          const target = tourManager.totalScore(newBowlT) + 1;
+
+          await ctx.api.sendMessage(tour.chatId, 
+              `🏁 <b>First Innings Over!</b>\nTarget for <b>${newBatT.name}</b>: <b>${target} runs</b>`, 
+              { parse_mode: 'HTML' }
+          );
+          
+          const kb = new InlineKeyboard();
+          newBatT.players.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${newBatT.players.indexOf(p) + 1}`).row());
+          
+          await ctx.api.sendMessage(tour.chatId, 
+              `🏏 <b>${newBatT.name}</b> Captain, select your <b>first opening batter (Striker)</b>:`, 
+              { reply_markup: kb, parse_mode: 'HTML' }
+          );
       } else if (res.needsNewBatsman) {
           const batT = tour[tour.battingTeamId];
           const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId && p.id !== batT.nonStrikerId);
           
           if (available.length > 0) {
               const kb = new InlineKeyboard();
-              available.forEach(p => kb.text(p.first_name, `tour_pickS_${tour.id}_${batT.players.indexOf(p) + 1}`).row());
+              available.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${batT.players.indexOf(p) + 1}`).row());
               await ctx.api.sendMessage(tour.chatId, `☝️ <b>Wicket!</b>\nCaptain, select new batsman:`, { reply_markup: kb, parse_mode: 'HTML' });
           } else {
-              // LMS handled by engine, but if no one to pick then just tag active
               await tagActivePlayers(ctx, tour);
           }
       } else if (res.needsNewBowler) {
@@ -116,12 +526,11 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           const kb = new InlineKeyboard();
           bowlT.players.forEach(p => {
               if (p.id !== tour.previousBowlerId || bowlT.players.length === 1) {
-                  kb.text(p.first_name, `tour_pickB_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row();
+                  kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row();
               }
           });
           await ctx.api.sendMessage(tour.chatId, `🔚 <b>Over Over!</b>\nCaptain, select new bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
       } else {
-          // Ball by ball follow up
           await tagActivePlayers(ctx, tour);
       }
   }
@@ -129,4 +538,313 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
   bot.tourTagActive = async (ctx, tour) => {
       await tagActivePlayers(ctx, tour);
   };
+
+  // --- Callback Query handlers ---
+  bot.on('callback_query:data', async (ctx, next) => {
+      const data = ctx.callbackQuery.data;
+      const userId = ctx.from.id;
+
+      if (!data.startsWith('tour_')) return next();
+
+      if (data.startsWith('tour_join_')) {
+          const parts = data.split('_');
+          const tourId = parts[2];
+          const teamKey = parts[3];
+          const res = tourManager.joinTeam(tourId, { id: userId, first_name: ctx.from.first_name }, teamKey);
+          if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+          
+          if (res.left) ctx.answerCallbackQuery("Left the team!");
+          else ctx.answerCallbackQuery("Joined!");
+          
+          await ctx.editMessageText(renderLobby(res.tour), { reply_markup: getLobbyKeyboard(res.tour), parse_mode: 'HTML' });
+          return;
+      }
+
+      if (data.startsWith('tour_configmenu_')) {
+          const tourId = data.split('_')[2];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          if (tour.hostId !== userId) return ctx.answerCallbackQuery({ text: "Only the host can configure match settings.", show_alert: true });
+          
+          await ctx.editMessageText(`⚙️ <b>Configure Tour Match Settings:</b>`, { reply_markup: getConfigureKeyboard(tour), parse_mode: 'HTML' });
+          ctx.answerCallbackQuery();
+          return;
+      }
+
+      if (data.startsWith('tour_config_')) {
+          const parts = data.split('_');
+          const tourId = parts[2];
+          const setting = parts[3];
+          const action = parts[4];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          if (tour.hostId !== userId) return ctx.answerCallbackQuery({ text: "Only the host can configure match settings.", show_alert: true });
+          
+          if (setting === 'overs') {
+              if (action === 'plus') tour.config.overs = Math.min(20, tour.config.overs + 1);
+              if (action === 'minus') tour.config.overs = Math.max(1, tour.config.overs - 1);
+          } else if (setting === 'wickets') {
+              if (action === 'plus') tour.config.wickets = Math.min(10, tour.config.wickets + 1);
+              if (action === 'minus') tour.config.wickets = Math.max(1, tour.config.wickets - 1);
+          } else if (setting === 'bet') {
+              if (action === 'plus') tour.config.bet += 500;
+              if (action === 'minus') tour.config.bet = Math.max(0, tour.config.bet - 500);
+          }
+          
+          await ctx.editMessageReplyMarkup({ reply_markup: getConfigureKeyboard(tour) });
+          ctx.answerCallbackQuery();
+          return;
+      }
+
+      if (data.startsWith('tour_configback_')) {
+          const tourId = data.split('_')[2];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          
+          await ctx.editMessageText(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
+          ctx.answerCallbackQuery();
+          return;
+      }
+
+      if (data.startsWith('tour_start_')) {
+          const tourId = data.split('_')[2];
+          const res = tourManager.startTour(tourId, userId);
+          if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+          
+          ctx.answerCallbackQuery("Match Starting!");
+          
+          const tour = res.tour;
+          const capA = tour.teamA.players.find(p => p.id === tour.teamA.captainId) || tour.teamA.players[0];
+          
+          const kb = new InlineKeyboard().text("Heads 🪙", `tour_tosschoice_${tourId}_heads`).text("Tails 🪙", `tour_tosschoice_${tourId}_tails`);
+          await ctx.editMessageText(
+              `🪙 <b>Toss Phase</b> 🪙\n\n` +
+              `👉 Captain of <b>${tour.teamA.name}</b> (<a href="tg://user?id=${capA.id}">${capA.first_name}</a>), choose Heads or Tails:`,
+              { reply_markup: kb, parse_mode: 'HTML' }
+          );
+          return;
+      }
+
+      if (data.startsWith('tour_cancel_')) {
+          const tourId = data.split('_')[2];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          if (tour.hostId !== userId) return ctx.answerCallbackQuery({ text: "Only the host can cancel the lobby.", show_alert: true });
+          
+          tourManager.deleteTour(tourId);
+          await ctx.editMessageText("❌ The Tour Match lobby has been cancelled by the host.");
+          ctx.answerCallbackQuery("Lobby cancelled.");
+          return;
+      }
+
+      if (data.startsWith('tour_tosschoice_')) {
+          const parts = data.split('_');
+          const tourId = parts[2];
+          const choice = parts[3];
+          const tour = tourManager.getTour(tourId);
+          if (!tour || tour.state !== 'TOSS') return ctx.answerCallbackQuery();
+          if (userId !== tour.teamA.captainId) return ctx.answerCallbackQuery({ text: "Only Team A Captain can choose heads/tails!", show_alert: true });
+          
+          const tossResult = tourManager.handleToss(tourId, userId, choice);
+          if (!tossResult) return ctx.answerCallbackQuery();
+          
+          ctx.answerCallbackQuery(`flipped: ${tossResult.tossResult}!`);
+          const winner = tour[tossResult.winnerTeam === 'A' ? 'teamA' : 'teamB'];
+          const cap = winner.players.find(p => p.id === winner.captainId);
+          
+          const kb = new InlineKeyboard().text("Bat First 🏏", `tour_rolechoice_${tourId}_bat`).text("Bowl First 🥎", `tour_rolechoice_${tourId}_bowl`);
+          await ctx.editMessageText(
+              `🪙 Coin landed on: <b>${tossResult.tossResult.toUpperCase()}</b>\n` +
+              `🏆 Toss won by <b>${winner.name}</b>!\n\n` +
+              `👉 Captain <a href="tg://user?id=${cap.id}">${cap.first_name}</a>, elect to Bat or Bowl first:`,
+              { reply_markup: kb, parse_mode: 'HTML' }
+          );
+          return;
+      }
+
+      if (data.startsWith('tour_rolechoice_')) {
+          const parts = data.split('_');
+          const tourId = parts[2];
+          const role = parts[3];
+          const tour = tourManager.getTour(tourId);
+          if (!tour || tour.state !== 'CHOOSE') return ctx.answerCallbackQuery();
+          if (userId !== tour.tossWinnerId) return ctx.answerCallbackQuery({ text: "Only the toss winner can select!", show_alert: true });
+          
+          const isWinnerTeamA = tour.teamA.captainId === userId;
+          if (role === 'bat') {
+              tour.battingTeamId = isWinnerTeamA ? 'teamA' : 'teamB';
+              tour.bowlingTeamId = isWinnerTeamA ? 'teamB' : 'teamA';
+          } else {
+              tour.battingTeamId = isWinnerTeamA ? 'teamB' : 'teamA';
+              tour.bowlingTeamId = isWinnerTeamA ? 'teamA' : 'teamB';
+          }
+          
+          tour.state = 'SELECT_BATTERS';
+          ctx.answerCallbackQuery("Role selected!");
+
+          const batT = tour[tour.battingTeamId];
+          const kb = new InlineKeyboard();
+          batT.players.forEach(p => kb.text(p.first_name, `tour_selectbat_${tourId}_S_${batT.players.indexOf(p) + 1}`).row());
+          
+          await ctx.editMessageText(
+              `🚀 <b>Roles Decided!</b>\n` +
+              `🏏 Batting: <b>${tour[tour.battingTeamId].name}</b>\n` +
+              `🥎 Bowling: <b>${tour[tour.bowlingTeamId].name}</b>\n\n` +
+              `👉 Captain of ${tour[tour.battingTeamId].name}, select your <b>first opening batter (Striker)</b>:`,
+              { reply_markup: kb, parse_mode: 'HTML' }
+          );
+          return;
+      }
+
+      if (data.startsWith('tour_selectbat_')) {
+          const parts = data.split('_');
+          const tourId = parts[2];
+          const position = parts[3]; 
+          const index = parseInt(parts[4]);
+          
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          
+          const batT = tour[tour.battingTeamId];
+          const res = tourManager.setBatsman(tourId, userId, index, position);
+          if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+          
+          ctx.answerCallbackQuery(`Set batsman: ${res.player.first_name}`);
+
+          const activeCount = batT.players.length - batT.outPlayers.length;
+          
+          if (position === 'S' && activeCount > 1) {
+              const kb = new InlineKeyboard();
+              batT.players.forEach(p => {
+                  if (p.id !== batT.strikerId) {
+                      kb.text(p.first_name, `tour_selectbat_${tourId}_NS_${batT.players.indexOf(p) + 1}`).row();
+                  }
+              });
+              await ctx.editMessageText(
+                  `🏏 Selected Striker: <b>${res.player.first_name}</b>\n\n` +
+                  `👉 Captain of ${batT.name}, select your <b>second opening batter (Non-Striker)</b>:`,
+                  { reply_markup: kb, parse_mode: 'HTML' }
+              );
+          } else {
+              tour.state = 'SELECT_BOWLER';
+              const bowlT = tour[tour.bowlingTeamId];
+              const kb = new InlineKeyboard();
+              bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tourId}_${bowlT.players.indexOf(p) + 1}`).row());
+              
+              const strikerName = batT.players.find(p => p.id === batT.strikerId)?.first_name;
+              const nonStrikerName = batT.players.find(p => p.id === batT.nonStrikerId)?.first_name || 'None (LMS)';
+
+              await ctx.editMessageText(
+                  `🏏 <b>Batters Set!</b>\n` +
+                  `Striker: <b>${strikerName}</b>\n` +
+                  `Non-Striker: <b>${nonStrikerName}</b>\n\n` +
+                  `👉 Captain of ${bowlT.name}, select the <b>Opening Bowler</b>:`,
+                  { reply_markup: kb, parse_mode: 'HTML' }
+              );
+          }
+          return;
+      }
+
+      if (data.startsWith('tour_selectbowl_')) {
+          const parts = data.split('_');
+          const tourId = parts[2];
+          const index = parseInt(parts[4] || parts[3]);
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          
+          const res = tourManager.setBowler(tourId, userId, index);
+          if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+          
+          ctx.answerCallbackQuery(`Set Bowler: ${res.player.first_name}`);
+          
+          await ctx.editMessageText(renderScoreboard(tour), { parse_mode: 'HTML' });
+          await tagActivePlayers(ctx, tour);
+          return;
+      }
+
+      // --- Reselection Swap Handles ---
+      if (data.startsWith('tour_swap_striker_')) {
+          const tourId = data.split('_')[3];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          const batT = tour[tour.battingTeamId];
+          
+          if (userId !== tour.hostId && userId !== batT.captainId) {
+              return ctx.answerCallbackQuery({ text: "Only host or batting captain can swap batters!", show_alert: true });
+          }
+          
+          const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId);
+          if (available.length === 0) {
+              return ctx.answerCallbackQuery({ text: "No other players available to swap!", show_alert: true });
+          }
+          
+          const kb = new InlineKeyboard();
+          available.forEach(p => kb.text(p.first_name, `tour_swapselect_${tourId}_S_${batT.players.indexOf(p) + 1}`).row());
+          kb.text("Cancel Cancel 🔙", `tour_swapcancel_${tourId}`);
+          
+          await ctx.editMessageText(`🔄 <b>Select new Striker:</b>`, { reply_markup: kb, parse_mode: 'HTML' });
+          ctx.answerCallbackQuery();
+          return;
+      }
+
+      if (data.startsWith('tour_swap_bowler_')) {
+          const tourId = data.split('_')[3];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          const bowlT = tour[tour.bowlingTeamId];
+          
+          if (userId !== tour.hostId && userId !== bowlT.captainId) {
+              return ctx.answerCallbackQuery({ text: "Only host or bowling captain can swap bowler!", show_alert: true });
+          }
+          
+          const available = bowlT.players.filter(p => p.id !== tour.activeBowlerId && (p.id !== tour.previousBowlerId || bowlT.players.length === 1));
+          if (available.length === 0) {
+              return ctx.answerCallbackQuery({ text: "No other bowler available to swap!", show_alert: true });
+          }
+          
+          const kb = new InlineKeyboard();
+          available.forEach(p => kb.text(p.first_name, `tour_swapselect_${tourId}_B_${bowlT.players.indexOf(p) + 1}`).row());
+          kb.text("Cancel Cancel 🔙", `tour_swapcancel_${tourId}`);
+          
+          await ctx.editMessageText(`🔄 <b>Select new Bowler:</b>`, { reply_markup: kb, parse_mode: 'HTML' });
+          ctx.answerCallbackQuery();
+          return;
+      }
+
+      if (data.startsWith('tour_swapselect_')) {
+          const parts = data.split('_');
+          const tourId = parts[2];
+          const role = parts[3]; 
+          const index = parseInt(parts[4]);
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          
+          if (role === 'S') {
+              const res = tourManager.setBatsman(tourId, userId, index, 'S');
+              if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+              ctx.answerCallbackQuery(`Striker changed to ${res.player.first_name}`);
+          } else {
+              const res = tourManager.setBowler(tourId, userId, index);
+              if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+              ctx.answerCallbackQuery(`Bowler changed to ${res.player.first_name}`);
+          }
+          
+          await ctx.editMessageText(renderScoreboard(tour), { parse_mode: 'HTML' });
+          await tagActivePlayers(ctx, tour);
+          return;
+      }
+
+      if (data.startsWith('tour_swapcancel_')) {
+          const tourId = data.split('_')[2];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          
+          await ctx.editMessageText(renderScoreboard(tour), { parse_mode: 'HTML' });
+          await tagActivePlayers(ctx, tour);
+          ctx.answerCallbackQuery();
+          return;
+      }
+      return next();
+  });
+
 };

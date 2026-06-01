@@ -218,26 +218,17 @@ try {
     { command: 'start', description: 'Welcome message' },
     { command: 'register', description: 'Create account & get coins' },
     { command: 'ccl', description: 'Start a 1v1 CCL match' },
-    { command: 'tour', description: 'Initiate a Team Tour' },
-    { command: 'create_team', description: 'Start Team A joining window' },
-    { command: 'join_teama', description: 'Join Team A' },
-    { command: 'join_teamb', description: 'Join Team B' },
-    { command: 'appointa_captain', description: 'Appoint Team A Captain' },
-    { command: 'appointb_captain', description: 'Appoint Team B Captain' },
-    { command: 'setovers', description: 'Set match overs' },
+    { command: 'tour', description: 'Start a multiplayer Tour match' },
     { command: 'teams', description: 'Show team rosters' },
-    { command: 'batting', description: '/batting [index]' },
+    { command: 'batting', description: '/batting [index] [S/NS]' },
     { command: 'bowling', description: '/bowling [index]' },
-    { command: 'scoreboard', description: 'View match status' },
-    { command: 'endmatch', description: 'End 1v1 match (Admin/Host)' },
-    { command: 'endtour', description: 'End Tour match (Admin/Host)' },
-    { command: 'penalty', description: '/penalty [A/B] [runs]' },
-    { command: 'bonus', description: '/bonus [A/B] [runs]' },
-    { command: 'innings_switch', description: 'Switch to next innings' },
-    { command: 'changehost', description: 'Transfer host permissions' },
+    { command: 'remove_player', description: 'Remove player from match' },
+    { command: 'adda', description: 'Add player to Team A' },
+    { command: 'addb', description: 'Add player to Team B' },
+    { command: 'teamname', description: 'Rename your team' },
+    { command: 'endtour', description: 'Forcibly end Tour match' },
+    { command: 'tourhelp', description: 'Show Tour guide' },
     { command: 'profile', description: 'View your stats' },
-    { command: 'rules', description: 'How to play CCL' },
-    { command: 'cricket', description: 'Start 1v1 Hand Cricket' },
     { command: 'help', description: 'Commands list' }
   ]).catch(e => console.error("setMyCommands error (non-blocking):", e.message));
 } catch (e) {
@@ -245,6 +236,24 @@ try {
 }
 
 bot.command('start', async (ctx) => {
+  const arg = ctx.message.text.split(' ')[1];
+  if (arg === 'tour') {
+      const tour = tourManager.getUserTour(ctx.from.id);
+      if (tour && tour.state === 'PLAYING') {
+          const batTeam = tour[tour.battingTeamId];
+          const isStriker = ctx.from.id === batTeam.strikerId;
+          const isBowler = ctx.from.id === tour.activeBowlerId;
+          
+          if (isStriker) {
+              return ctx.reply("🏏 You are Batting! Send your shot number as text (0, 1, 2, 3, 4, 6).");
+          } else if (isBowler) {
+              return ctx.reply("⚾ You are Bowling! Send your delivery as text (RS, Bouncer, Yorker, Short, Slower, Knuckle).");
+          } else {
+              return ctx.reply("You are not currently the active striker or bowler in the Tour match.");
+          }
+      }
+      return ctx.reply("You are not currently in an active Tour match play phase.");
+  }
   await ctx.reply("🏏 Welcome to HandCricket!\nUse /register to get 4000🪙 coins.");
 });
 
@@ -443,28 +452,7 @@ bot.command('endmatch', async (ctx) => {
   await ctx.reply("⚠️ <b>Clear Match?</b>\nAre you sure you want to end this 1v1 match?", { reply_markup: kb, parse_mode: 'HTML' });
 });
 
-bot.command(['tour', 'create_team', 'join_teama', 'join_teamb', 'appointa_captain', 'appointb_captain', 'setovers', 'teams', 'batting', 'bowling', 'adda', 'addb', 'remove_player', 'penalty', 'bonus', 'innings_switch', 'rebata', 'rebatb', 'changehost', 'endtour', 'tourconfig'], async (ctx) => {
-  await ctx.reply("🚧 <b>Tour Mode Under Construction</b> 🚧\n\nThis feature is currently being updated to provide a better experience. Please stay tuned! 🏏", { parse_mode: 'HTML' });
-});
-
-bot.command('tourhelp', async (ctx) => {
-  await ctx.reply(
-    "📜 <b>Tour Mode Guide:</b>\n" +
-    "1. /tour - Start Tour\n" +
-    "2. /create_team - Start 60s join windows\n" +
-    "3. /join_teama / /join_teamb - Join teams\n" +
-    "4. /appointa_captain / /appointb_captain - (Reply to msg) Set Caps\n" +
-    "5. /setovers - Set match length\n" +
-    "6. /teams - View roster indices\n" +
-    "7. /batting [index] - Select Striker/Non-Striker\n" +
-    "8. /bowling [index] - Select Bowler\n" +
-    "9. /penalty [A/B] [runs] / /bonus [A/B] [runs]\n" +
-    "10. /rebata/b [index] - Assign rebatting\n" +
-    "11. /changehost - Vote for new host\n\n" +
-    "<i>Instructions loop in GC to guide you!</i>",
-    { parse_mode: 'HTML' }
-  );
-});
+// Tour commands are implemented interactively in tourBotUI.js
 
 bot.on('callback_query:data', async (ctx) => {
   const data = ctx.callbackQuery.data;
