@@ -653,5 +653,5 @@ module.exports = {
   createTour, getTour, getUserTour, deleteTour, joinTeam,
   appointCaptain, renameTeam, removePlayer, startTour, handleToss,
   setBatsman, setBowler, submitPlay, adjustRuns, rebatPlayer,
-  triggerLMS, totalScore, getAllTours
+  triggerLMS, totalScore, getAllTours, getBasePlayerId
 };

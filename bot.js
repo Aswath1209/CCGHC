@@ -242,8 +242,8 @@ bot.command('start', async (ctx) => {
       const tour = tourManager.getUserTour(ctx.from.id);
       if (tour && tour.state === 'PLAYING') {
           const batTeam = tour[tour.battingTeamId];
-          const isStriker = ctx.from.id === batTeam.strikerId;
-          const isBowler = ctx.from.id === tour.activeBowlerId;
+          const isStriker = ctx.from.id.toString() === tourManager.getBasePlayerId(batTeam.strikerId);
+          const isBowler = ctx.from.id.toString() === tourManager.getBasePlayerId(tour.activeBowlerId);
           
           if (isStriker) {
               return ctx.reply("🏏 You are Batting! Send your shot number as text (0, 1, 2, 3, 4, 6).");
