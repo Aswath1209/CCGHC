@@ -661,14 +661,16 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
   // --- DM Hook routing logic ---
 
   bot.tourTextHook = async (ctx, tour, txt) => {
+    const batT = tour[tour.battingTeamId];
+    const isStriker = batT && ctx.from.id.toString() === getBasePlayerId(batT.strikerId);
+
     const res = tourManager.submitPlay(tour.id, ctx.from.id, txt);
     if (!res.success) {
         if (res.error === 'Not currently playing.') return false;
         return ctx.reply("❌ " + res.error);
     }
     
-    const batT = tour[tour.battingTeamId];
-    if (ctx.from.id.toString() === getBasePlayerId(batT.strikerId)) ctx.reply(`✅ You played: ${res.batStr || txt}`);
+    if (isStriker) ctx.reply(`✅ You played: ${res.batStr || txt}`);
     else {
         const bowlVal = res.bowlStr || tour.choices.bowlChoice || txt;
         const DELIVERY_NAMES = {

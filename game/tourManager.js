@@ -446,10 +446,7 @@ function submitPlay(tourId, userId, rawInput) {
     const tour = tours.get(tourId);
     if (!tour || tour.state !== 'PLAYING') return { success: false, error: 'Not currently playing.' };
     
-    if (tour.choices.batChoice === null && tour.choices.bowlChoice === null) {
-        tour.processingBall = false;
-    }
-    
+
     if (tour.processingBall) return { success: false, error: 'Please wait for the current ball animation to finish.' };
     
     const batTeam = tour[tour.battingTeamId];
