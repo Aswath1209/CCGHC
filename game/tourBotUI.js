@@ -8,6 +8,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
   function renderScoreboard(tour) {
     const batT = tour[tour.battingTeamId];
     const bowlT = tour[tour.bowlingTeamId];
+    if (!batT || !bowlT) {
+        return `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\nMatch starting soon...`;
+    }
     const totalS = tourManager.totalScore(batT);
     const bowlS = tourManager.totalScore(bowlT);
 
@@ -128,8 +131,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
   // Tag players in GC with a button redirecting to DMs and overrides
   async function tagActivePlayers(ctx, tour) {
     const batTeam = tour[tour.battingTeamId];
+    if (!batTeam) return;
+    const bowlTeam = tour[tour.bowlingTeamId];
+    if (!bowlTeam) return;
+
     const striker = batTeam.players.find(p => p.id === batTeam.strikerId);
-    const bowler = tour[tour.bowlingTeamId].players.find(p => p.id === tour.activeBowlerId);
+    const bowler = bowlTeam.players.find(p => p.id === tour.activeBowlerId);
 
     if (!striker || !bowler) return;
 
@@ -437,8 +444,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       if (res) {
           const cleanName = res.first_name.replace(/\s*\(rebat\)/gi, '');
           await ctx.reply(`🔄 <b>${cleanName} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
-          await ctx.reply(renderScoreboard(tour), { parse_mode: 'HTML' });
-          await tagActivePlayers(ctx, tour);
+          if (tour.state === 'LOBBY') {
+              await ctx.reply(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
+          } else {
+              await ctx.reply(renderScoreboard(tour), { parse_mode: 'HTML' });
+              if (tour.state === 'PLAYING') {
+                  await tagActivePlayers(ctx, tour);
+              }
+          }
       } else {
           await ctx.reply("❌ Failed to register rebat. Make sure player index is correct.");
       }
