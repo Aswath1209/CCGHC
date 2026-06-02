@@ -4,6 +4,17 @@ const { generateScoreboardImage } = require('./scoreboardGenerator');
 
 module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
 
+  async function isGCAdmin(ctx) {
+      if (ctx.chat.type === 'private') return true;
+      try {
+          const member = await ctx.api.getChatMember(ctx.chat.id, ctx.from.id);
+          return ['creator', 'administrator'].includes(member.status) || ctx.from.id.toString() === "6268846393";
+      } catch (e) {
+          console.error("GC Admin check failed:", e);
+          return false;
+      }
+  }
+
   // Renders the aligned scorecard
   function renderScoreboard(tour) {
     const batT = tour[tour.battingTeamId];
@@ -477,6 +488,25 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       });
       
       await ctx.reply(text, { parse_mode: 'HTML' });
+  });
+
+  bot.command('canceltour', async (ctx) => {
+      if (ctx.chat.type === 'private') {
+          return ctx.reply("Tour matches can only be canceled in groups.");
+      }
+      
+      const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("No active Tour match found in this chat.");
+      
+      if (!(await isGCAdmin(ctx))) {
+          return ctx.reply("❌ Only an administrator of this group can cancel the Tour match.");
+      }
+      
+      const kb = new InlineKeyboard()
+          .text("Sure, Cancel ✅", `tour_cancel_yes_${tour.id}`)
+          .text("No, Keep ❌", `tour_cancel_no_${tour.id}`);
+          
+      await ctx.reply("⚠️ <b>Cancel Tour Match?</b>\nAre you sure you want to cancel the active Tour match?", { reply_markup: kb, parse_mode: 'HTML' });
   });
 
   bot.command('score', async (ctx) => {
@@ -1083,6 +1113,35 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
               );
               await tagActivePlayers(ctx, tour);
           }
+          return;
+      }
+
+      if (data.startsWith('tour_cancel_yes_')) {
+          const tourId = data.split('_')[3];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          
+          if (!(await isGCAdmin(ctx))) {
+              return ctx.answerCallbackQuery({ text: "❌ Only group administrators can confirm cancellation.", show_alert: true });
+          }
+          
+          tourManager.deleteTour(tourId);
+          ctx.answerCallbackQuery("Tour match canceled!");
+          await ctx.editMessageText("❌ <b>The Tour match has been canceled by an administrator.</b>", { parse_mode: 'HTML' });
+          return;
+      }
+      
+      if (data.startsWith('tour_cancel_no_')) {
+          const tourId = data.split('_')[3];
+          const tour = tourManager.getTour(tourId);
+          if (!tour) return ctx.answerCallbackQuery();
+          
+          if (!(await isGCAdmin(ctx))) {
+              return ctx.answerCallbackQuery({ text: "❌ Only group administrators can cancel this confirmation.", show_alert: true });
+          }
+          
+          ctx.answerCallbackQuery("Cancellation aborted.");
+          await ctx.editMessageText("🟢 <b>Cancellation aborted. The match will continue!</b>", { parse_mode: 'HTML' });
           return;
       }
 
