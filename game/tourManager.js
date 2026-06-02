@@ -298,16 +298,24 @@ function setBatsman(tourId, userId, playerIndex, position) {
 
     if (team.outPlayers.includes(player.id)) return { success: false, error: 'Player is already out.' };
 
-    if (position === 'S') {
-        if (player.id === team.nonStrikerId) {
-            team.nonStrikerId = team.strikerId;
-        }
-        team.strikerId = player.id;
-    } else {
-        if (player.id === team.strikerId) {
-            team.strikerId = team.nonStrikerId;
-        }
+    if (tour.balls > 0 && tour.balls % 6 === 0 && team.strikerId === null && team.nonStrikerId !== null) {
+        // Wicket fell on the last ball of the over.
+        // The batsman who was non-striker becomes the striker for the next over.
+        // The new batsman enters as the non-striker.
+        team.strikerId = team.nonStrikerId;
         team.nonStrikerId = player.id;
+    } else {
+        if (position === 'S') {
+            if (player.id === team.nonStrikerId) {
+                team.nonStrikerId = team.strikerId;
+            }
+            team.strikerId = player.id;
+        } else {
+            if (player.id === team.strikerId) {
+                team.strikerId = team.nonStrikerId;
+            }
+            team.nonStrikerId = player.id;
+        }
     }
 
     // Reset choices for this ball since active batsman changed
@@ -387,6 +395,42 @@ function rebatPlayer(tourId, hostId, teamChar, playerIndex) {
     };
     team.players.push(rebatObj);
     return rebatObj;
+}
+
+function triggerLMS(tourId, userId) {
+    const tour = tours.get(tourId);
+    if (!tour) return { success: false, error: 'Match not found.' };
+    
+    const team = tour[tour.battingTeamId];
+    if (tour.hostId !== userId && team.captainId !== userId) {
+        return { success: false, error: 'Only the host or team captain can enable LMS.' };
+    }
+    
+    if (tour.state !== 'WICKET_FALL' && tour.state !== 'SELECT_BATTERS') {
+        return { success: false, error: 'Cannot enable LMS in the current match state.' };
+    }
+    
+    // If striker is null (after wicket), make the remaining non-striker the striker
+    if (!team.strikerId && team.nonStrikerId) {
+        team.strikerId = team.nonStrikerId;
+        team.nonStrikerId = null;
+    }
+    
+    if (!team.strikerId) {
+        return { success: false, error: 'No batsman is currently set. Please select at least one batsman first.' };
+    }
+    
+    // Transition state
+    const isOverEnd = (tour.balls > 0 && tour.balls % 6 === 0);
+    if (tour.balls === 0 && !tour.activeBowlerId) {
+        tour.state = 'SELECT_BOWLER';
+    } else if (isOverEnd) {
+        tour.state = 'SELECT_BOWLER';
+    } else {
+        tour.state = 'PLAYING';
+    }
+    
+    return { success: true, tour };
 }
 
 function submitPlay(tourId, userId, rawInput) {
@@ -593,5 +637,5 @@ module.exports = {
   createTour, getTour, getUserTour, deleteTour, joinTeam,
   appointCaptain, renameTeam, removePlayer, startTour, handleToss,
   setBatsman, setBowler, submitPlay, adjustRuns, rebatPlayer,
-  totalScore, getAllTours
+  triggerLMS, totalScore, getAllTours
 };

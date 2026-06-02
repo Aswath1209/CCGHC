@@ -1,5 +1,163 @@
 const path = require('path');
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+
+// Load system fonts for fallback support (e.g. emoji and star characters)
+try {
+  GlobalFonts.loadSystemFonts();
+} catch (e) {
+  console.error("Failed to load system fonts:", e);
+}
+
+
+function normalizeStyledText(str) {
+  if (!str) return '';
+  return [...str].map(char => {
+    const cp = char.codePointAt(0);
+    if (!cp) return char;
+    
+    // Mathematical Bold Capital (1D400 - 1D419) -> A-Z (65 - 90)
+    if (cp >= 0x1d400 && cp <= 0x1d419) return String.fromCharCode(cp - 0x1d400 + 65);
+    // Mathematical Bold Lowercase (1D41A - 1D433) -> a-z (97 - 122)
+    if (cp >= 0x1d41a && cp <= 0x1d433) return String.fromCharCode(cp - 0x1d41a + 97);
+    
+    // Mathematical Italic Capital (1D434 - 1D44D) -> A-Z (65 - 90)
+    if (cp >= 0x1d434 && cp <= 0x1d44d) return String.fromCharCode(cp - 0x1d434 + 65);
+    // Mathematical Italic Lowercase (1D44E - 1D467) -> a-z (97 - 122)
+    if (cp >= 0x1d44e && cp <= 0x1d467) return String.fromCharCode(cp - 0x1d44e + 97);
+    
+    // Mathematical Bold Italic Capital (1D468 - 1D481)
+    if (cp >= 0x1d468 && cp <= 0x1d481) return String.fromCharCode(cp - 0x1d468 + 65);
+    // Mathematical Bold Italic Lowercase (1D482 - 1D49B)
+    if (cp >= 0x1d482 && cp <= 0x1d49b) return String.fromCharCode(cp - 0x1d482 + 97);
+    
+    // Mathematical Script Capital (1D49c - 1D4b5)
+    if (cp >= 0x1d49c && cp <= 0x1d4b5) return String.fromCharCode(cp - 0x1d49c + 65);
+    // Mathematical Script Lowercase (1D4b6 - 1D4cf)
+    if (cp >= 0x1d4b6 && cp <= 0x1d4cf) return String.fromCharCode(cp - 0x1d4b6 + 97);
+    
+    // Mathematical Script Bold Capital (1D4d0 - 1D4e9)
+    if (cp >= 0x1d4d0 && cp <= 0x1d4e9) return String.fromCharCode(cp - 0x1d4d0 + 65);
+    // Mathematical Script Bold Lowercase (1D4ea - 1D503)
+    if (cp >= 0x1d4ea && cp <= 0x1d503) return String.fromCharCode(cp - 0x1d4ea + 97);
+    
+    // Mathematical Fraktur Capital (1D504 - 1D51d)
+    if (cp >= 0x1d504 && cp <= 0x1d51d) return String.fromCharCode(cp - 0x1d504 + 65);
+    // Mathematical Fraktur Lowercase (1D51e - 1D537)
+    if (cp >= 0x1d51e && cp <= 0x1d537) return String.fromCharCode(cp - 0x1d51e + 97);
+    
+    // Mathematical Fraktur Bold Capital (1D56c - 1D585)
+    if (cp >= 0x1d56c && cp <= 0x1d585) return String.fromCharCode(cp - 0x1d56c + 65);
+    // Mathematical Fraktur Bold Lowercase (1D586 - 1D59f)
+    if (cp >= 0x1d586 && cp <= 0x1d59f) return String.fromCharCode(cp - 0x1d586 + 97);
+    
+    // Mathematical Double-Struck Capital (1D538 - 1D551)
+    if (cp >= 0x1d538 && cp <= 0x1d551) return String.fromCharCode(cp - 0x1d538 + 65);
+    // Mathematical Double-Struck Lowercase (1D552 - 1D56b)
+    if (cp >= 0x1d552 && cp <= 0x1d56b) return String.fromCharCode(cp - 0x1d552 + 97);
+    
+    // Mathematical Sans-Serif Capital (1D5a0 - 1D5b9)
+    if (cp >= 0x1d5a0 && cp <= 0x1d5b9) return String.fromCharCode(cp - 0x1d5a0 + 65);
+    // Mathematical Sans-Serif Lowercase (1D5ba - 1D5d3)
+    if (cp >= 0x1d5ba && cp <= 0x1d5d3) return String.fromCharCode(cp - 0x1d5ba + 97);
+    
+    // Mathematical Sans-Serif Bold Capital (1D5d4 - 1D5ed)
+    if (cp >= 0x1d5d4 && cp <= 0x1d5ed) return String.fromCharCode(cp - 0x1d5d4 + 65);
+    // Mathematical Sans-Serif Bold Lowercase (1D5ee - 1D607)
+    if (cp >= 0x1d5ee && cp <= 0x1d607) return String.fromCharCode(cp - 0x1d5ee + 97);
+    
+    // Mathematical Sans-Serif Italic Capital (1D608 - 0x1D621)
+    if (cp >= 0x1d608 && cp <= 0x1d621) return String.fromCharCode(cp - 0x1d608 + 65);
+    // Mathematical Sans-Serif Italic Lowercase (1D622 - 0x1D63b)
+    if (cp >= 0x1d622 && cp <= 0x1d63b) return String.fromCharCode(cp - 0x1d622 + 97);
+    
+    // Mathematical Sans-Serif Bold Italic Capital (1D63c - 0x1D655)
+    if (cp >= 0x1d63c && cp <= 0x1d655) return String.fromCharCode(cp - 0x1d63c + 65);
+    // Mathematical Sans-Serif Bold Italic Lowercase (1D656 - 0x1D66f)
+    if (cp >= 0x1d656 && cp <= 0x1d66f) return String.fromCharCode(cp - 0x1d656 + 97);
+    
+    // Mathematical Monospace Capital (1D670 - 1D689)
+    if (cp >= 0x1d670 && cp <= 0x1d689) return String.fromCharCode(cp - 0x1d670 + 65);
+    // Mathematical Monospace Lowercase (1D68a - 1D6a3)
+    if (cp >= 0x1d68a && cp <= 0x1d6a3) return String.fromCharCode(cp - 0x1d68a + 97);
+
+    // Mathematical Bold Numbers (1D7CE - 1D7D7) -> 0-9 (48 - 57)
+    if (cp >= 0x1d7ce && cp <= 0x1d7d7) return String.fromCharCode(cp - 0x1d7ce + 48);
+    // Double-struck Numbers (1D7D8 - 1D7E1) -> 0-9
+    if (cp >= 0x1d7d8 && cp <= 0x1d7e1) return String.fromCharCode(cp - 0x1d7d8 + 48);
+    // Sans-serif Bold Numbers (1D7E2 - 1D7EB) -> 0-9
+    if (cp >= 0x1d7e2 && cp <= 0x1d7eb) return String.fromCharCode(cp - 0x1d7e2 + 48);
+    // Sans-serif Double-struck Numbers (1D7EC - 1D7F5) -> 0-9
+    if (cp >= 0x1d7ec && cp <= 0x1d7f5) return String.fromCharCode(cp - 0x1d7ec + 48);
+    // Monospace Numbers (1D7F6 - 1D7FF) -> 0-9
+    if (cp >= 0x1d7f6 && cp <= 0x1d7ff) return String.fromCharCode(cp - 0x1d7f6 + 48);
+
+    return char;
+  }).join('');
+}
+
+function drawTextWithEmojis(ctx, text, x, y, fontSpec, emojiFontFamily = 'Noto Color Emoji') {
+  if (text === undefined || text === null) return;
+  const str = String(text);
+  
+  // Parse the fontSpec to extract font size and style, and replace/force font family
+  // e.g. "bold 15px sans-serif" -> sizeAndStyle = "bold 15px", family = "sans-serif"
+  const fontParts = fontSpec.split(/\s+/);
+  const familyIndex = fontParts.findIndex(part => part.includes('sans-serif') || part.includes('Arial') || part.includes('DejaVu'));
+  
+  let sizeAndStyle = '14px';
+  let primaryFamily = 'DejaVu Sans';
+  
+  if (familyIndex !== -1) {
+    sizeAndStyle = fontParts.slice(0, familyIndex).join(' ');
+    primaryFamily = 'DejaVu Sans'; // Force DejaVu Sans for reliability on Linux
+  } else {
+    sizeAndStyle = fontParts.slice(0, -1).join(' ');
+    primaryFamily = 'DejaVu Sans';
+  }
+  
+  const primaryFont = `${sizeAndStyle} "${primaryFamily}"`;
+  const emojiFont = `${sizeAndStyle} "${emojiFontFamily}"`;
+  
+  const segments = str.split(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/gu);
+  const activeSegments = segments.filter(seg => seg !== '');
+  
+  const details = activeSegments.map(seg => {
+    const isEmoji = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/u.test(seg);
+    ctx.save();
+    ctx.font = isEmoji ? emojiFont : primaryFont;
+    const metrics = ctx.measureText(seg);
+    ctx.restore();
+    return {
+      text: seg,
+      isEmoji,
+      width: metrics.width
+    };
+  });
+  
+  const totalWidth = details.reduce((sum, d) => sum + d.width, 0);
+  
+  let currentX = x;
+  const align = ctx.textAlign || 'left';
+  if (align === 'center') {
+    currentX = x - totalWidth / 2;
+  } else if (align === 'right') {
+    currentX = x - totalWidth;
+  }
+  
+  const originalAlign = ctx.textAlign;
+  ctx.textAlign = 'left';
+  
+  for (const d of details) {
+    ctx.save();
+    ctx.font = d.isEmoji ? emojiFont : primaryFont;
+    ctx.fillText(d.text, currentX, y);
+    ctx.restore();
+    currentX += d.width;
+  }
+  
+  ctx.textAlign = originalAlign;
+}
+
 
 function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.beginPath();
@@ -97,11 +255,10 @@ async function generateScoreboardImage(tour, resultText, potmName) {
     if (tour.name) {
       ctx.save();
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
       ctx.shadowColor = '#f97316';
       ctx.shadowBlur = 8;
-      ctx.fillText(tour.name.toUpperCase(), width / 2, 85);
+      drawTextWithEmojis(ctx, normalizeStyledText(tour.name).toUpperCase(), width / 2, 85, 'bold 20px sans-serif');
       ctx.restore();
     }
 
@@ -128,12 +285,26 @@ async function generateScoreboardImage(tour, resultText, potmName) {
 
     const getPerformers = (batT, bowlT) => {
         const batsmen = batT.players
-            .map(p => ({ name: p.first_name, runs: p.runs || 0, balls: p.balls || 0 }))
+            .map(p => {
+                const isOut = batT.outPlayers && batT.outPlayers.some(id => id && id.toString() === p.id.toString());
+                const cleanFirstName = p.first_name.replace(/\s*\(rebat\)/gi, '');
+                const normalizedName = normalizeStyledText(cleanFirstName);
+                const name = normalizedName + (isOut ? '' : '*');
+                return { name, runs: p.runs || 0, balls: p.balls || 0 };
+            })
             .filter(p => p.balls > 0 || p.runs > 0)
             .sort((a, b) => b.runs - a.runs);
             
         const bowlers = bowlT.players
-            .map(p => ({ name: p.first_name, wickets: p.wickets || 0, runsConceded: p.runsConceded || 0, ballsBowled: p.ballsBowled || 0 }))
+            .map(p => {
+                const cleanFirstName = p.first_name.replace(/\s*\(rebat\)/gi, '');
+                return {
+                    name: normalizeStyledText(cleanFirstName),
+                    wickets: p.wickets || 0,
+                    runsConceded: p.runsConceded || 0,
+                    ballsBowled: p.ballsBowled || 0
+                };
+            })
             .filter(p => p.ballsBowled > 0)
             .sort((a, b) => {
                 if (b.wickets !== a.wickets) return b.wickets - a.wickets;
@@ -189,7 +360,8 @@ async function generateScoreboardImage(tour, resultText, potmName) {
     // POTM Stats calculation
     let potmStatsStr = "";
     if (potmName) {
-        const potmPlayer = [...team1.players, ...team2.players].find(p => p.first_name === potmName);
+        const normPotm = normalizeStyledText(potmName);
+        const potmPlayer = [...team1.players, ...team2.players].find(p => normalizeStyledText(p.first_name) === normPotm);
         if (potmPlayer) {
             let parts = [];
             if (potmPlayer.runs > 0 || potmPlayer.balls > 0) {
@@ -205,18 +377,16 @@ async function generateScoreboardImage(tour, resultText, potmName) {
 
     ctx.save();
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(resultText.toUpperCase(), capX + capW / 2, capY + 32);
+    drawTextWithEmojis(ctx, resultText.toUpperCase(), capX + capW / 2, capY + 32, 'bold 18px sans-serif');
     
     if (potmName) {
         ctx.fillStyle = '#f97316';
-        ctx.font = 'bold 15px sans-serif';
-        ctx.fillText(`🏆 ${potmName.toUpperCase()} (PLAYER OF THE MATCH)`, capX + capW / 2, capY + 58);
+        const normPotm = normalizeStyledText(potmName);
+        drawTextWithEmojis(ctx, `★ ${normPotm.toUpperCase()} (PLAYER OF THE MATCH)`, capX + capW / 2, capY + 58, 'bold 15px sans-serif');
         if (potmStatsStr) {
             ctx.fillStyle = '#fca5a5';
-            ctx.font = '13px sans-serif';
-            ctx.fillText(potmStatsStr, capX + capW / 2, capY + 78);
+            drawTextWithEmojis(ctx, potmStatsStr, capX + capW / 2, capY + 78, '13px sans-serif');
         }
     }
     ctx.restore();
@@ -263,70 +433,61 @@ function renderTeamColumn(ctx, colX, colW, team, score, overs, startColor, endCo
 
   ctx.save();
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 15px sans-serif';
-  ctx.fillText(team.name.toUpperCase(), colX + 12, tableY + 24);
+  drawTextWithEmojis(ctx, normalizeStyledText(team.name).toUpperCase(), colX + 12, tableY + 24, 'bold 15px sans-serif');
   ctx.textAlign = 'right';
-  ctx.fillText(`${score}/${team.wickets || 0} (${overs})`, colX + colW - 12, tableY + 24);
+  drawTextWithEmojis(ctx, `${score}/${team.wickets || 0} (${overs})`, colX + colW - 12, tableY + 24, 'bold 15px sans-serif');
   ctx.restore();
 
   // Batting Title
   ctx.fillStyle = '#f97316';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('BATTING', colX + 12, tableY + 62);
+  drawTextWithEmojis(ctx, 'BATTING', colX + 12, tableY + 62, 'bold 12px sans-serif');
 
   for (let i = 0; i < 3; i++) {
     const y = tableY + 84 + i * 22;
     const p = batsmen[i] || { name: '-', runs: '', balls: '' };
     ctx.fillStyle = '#fca5a5';
-    ctx.font = '14px sans-serif';
-    ctx.fillText(p.name, colX + 15, y);
+    drawTextWithEmojis(ctx, p.name, colX + 15, y, '14px sans-serif');
 
     if (p.runs !== '') {
         ctx.save();
         ctx.textAlign = 'right';
         ctx.fillStyle = '#f97316';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(p.runs, colX + colW - 55, y);
+        drawTextWithEmojis(ctx, p.runs, colX + colW - 55, y, 'bold 14px sans-serif');
         ctx.fillStyle = '#fca5a5';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(`(${p.balls})`, colX + colW - 15, y);
+        drawTextWithEmojis(ctx, `(${p.balls})`, colX + colW - 15, y, '12px sans-serif');
         ctx.restore();
     }
   }
 
   // Bowling Title
   ctx.fillStyle = '#f87171';
-  ctx.font = 'bold 12px sans-serif';
-  ctx.fillText('BOWLING', colX + 12, tableY + 172);
+  drawTextWithEmojis(ctx, 'BOWLING', colX + 12, tableY + 172, 'bold 12px sans-serif');
 
   for (let i = 0; i < 3; i++) {
     const y = tableY + 194 + i * 22;
     const p = bowlers[i] || { name: '-', wickets: '', runsConceded: '', ballsBowled: '' };
     ctx.fillStyle = '#fca5a5';
-    ctx.font = '14px sans-serif';
-    ctx.fillText(p.name, colX + 15, y);
+    drawTextWithEmojis(ctx, p.name, colX + 15, y, '14px sans-serif');
 
     if (p.wickets !== '') {
         ctx.save();
         ctx.textAlign = 'right';
         ctx.fillStyle = '#f87171';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(`${p.wickets}-${p.runsConceded}`, colX + colW - 55, y);
+        drawTextWithEmojis(ctx, `${p.wickets}-${p.runsConceded}`, colX + colW - 55, y, 'bold 14px sans-serif');
         ctx.fillStyle = '#fca5a5';
-        ctx.font = '12px sans-serif';
         const ovs = Math.floor(p.ballsBowled / 6) + '.' + (p.ballsBowled % 6);
-        ctx.fillText(`${ovs}`, colX + colW - 15, y);
+        drawTextWithEmojis(ctx, `${ovs}`, colX + colW - 15, y, '12px sans-serif');
         ctx.restore();
     }
   }
 
   // Footer / Extras
   ctx.fillStyle = '#fca5a5';
-  ctx.font = '13px sans-serif';
   const ext = (team.bonusRuns || 0) - (team.penaltyRuns || 0);
-  ctx.fillText(`Extras: ${ext}`, colX + 15, tableY + 315);
+  drawTextWithEmojis(ctx, `Extras: ${ext}`, colX + 15, tableY + 315, '13px sans-serif');
 }
 
 module.exports = {
-  generateScoreboardImage
+  generateScoreboardImage,
+  normalizeStyledText
 };

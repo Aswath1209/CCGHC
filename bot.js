@@ -277,7 +277,7 @@ bot.command('profile', async (ctx) => {
       
       const sr = stats.balls_faced > 0 ? ((stats.runs / stats.balls_faced) * 100).toFixed(2) : '0.00';
       const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
-      const avg = stats.runs / Math.max(1, stats.dismissals);
+      const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs.toFixed(2)}*` : '0.00');
       
       await ctx.reply(
         `👤 <b>${user.first_name}'s Profile</b>\n\n` +
@@ -288,7 +288,7 @@ bot.command('profile', async (ctx) => {
         `✅ Wins: <b>${stats.wins}</b>  |  ❌ Losses: <b>${stats.losses}</b>\n\n` +
         `🏏 <b>Career Batting:</b>\n` +
         `🔹 Runs: <b>${stats.runs}</b>\n` +
-        `🔹 Average: <b>${avg.toFixed(2)}</b>\n` +
+        `🔹 Average: <b>${avgStr}</b>\n` +
         `🔹 Strike Rate: <b>${sr}</b>\n` +
         `🔹 50s: <b>${stats.fifties || 0}</b>  |  100s: <b>${stats.centuries || 0}</b>\n` +
         `🔹 Fours (4s): <b>${stats.fours}</b>  |  Sixes (6s): <b>${stats.sixes}</b>\n\n` +
@@ -1011,7 +1011,7 @@ bot.on('message:text', async (ctx) => {
         return await ctx.reply("❌ " + res.error);
     }
 
-    if (userId === game.batsmanId) {
+    if (userId.toString() === game.batsmanId?.toString()) {
         await ctx.reply(`✅ You played: ${res.batStr || txt}`);
     } else {
         const bowlVal = res.bowlStr || game.bowlChoice || txt;
@@ -1023,7 +1023,7 @@ bot.on('message:text', async (ctx) => {
             '4': 'Slower', 'slower': 'Slower',
             '6': 'Knuckle', 'knuckle': 'Knuckle'
         };
-        const displayName = DELIVERY_NAMES[bowlVal.toLowerCase()] || bowlVal;
+        const displayName = DELIVERY_NAMES[String(bowlVal).toLowerCase()] || bowlVal;
         await ctx.reply(`✅ You bowled: ${displayName}`); 
     }
     

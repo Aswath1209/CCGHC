@@ -208,6 +208,9 @@ async function incrementStats(userId, updates) {
 async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
     const processPlayerList = async (players, outPlayers, isBattingTeam, isWinnerTeam, isTie) => {
         for (const p of players) {
+            if (p.originalId || p.id.toString().includes('_rebat_')) {
+                continue;
+            }
             const actualId = p.originalId || p.id;
             if (isNaN(Number(actualId))) continue;
 
@@ -224,7 +227,7 @@ async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
                 wickets: wicketsTaken,
                 runs_conceded: p.runsConceded || 0,
                 balls_bowled: p.ballsBowled || 0,
-                dismissals: (isBattingTeam && outPlayers.includes(p.id)) ? 1 : 0,
+                dismissals: outPlayers.some(id => id && id.toString() === p.id.toString()) ? 1 : 0,
                 motm: isMotm ? 1 : 0,
                 wins: (!isTie && isWinnerTeam) ? 1 : 0,
                 losses: (!isTie && !isWinnerTeam) ? 1 : 0,
