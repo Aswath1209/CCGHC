@@ -582,7 +582,7 @@ function submitPlay(tourId, userId, rawInput) {
             if (s1 > s2) res.winnerTeamId = 'teamA';
             else if (s2 > s1) res.winnerTeamId = 'teamB';
             else res.tie = true;
-            res.motm = calculateMOTM(tour);
+            res.motm = calculateMOTM(tour, res.winnerTeamId);
         }
     } else {
         if (isWicket) {
@@ -603,12 +603,20 @@ function submitPlay(tourId, userId, rawInput) {
     return { success: true, ...res };
 }
 
-function calculateMOTM(tour) {
+function calculateMOTM(tour, winnerTeamId) {
     let bestPlayer = null;
     let maxPoints = -1;
     
-    // Check both teams
-    const allPlayers = [...tour.teamA.players, ...tour.teamB.players];
+    const eligibleTeams = [];
+    if (winnerTeamId === 'teamA') {
+        eligibleTeams.push(tour.teamA);
+    } else if (winnerTeamId === 'teamB') {
+        eligibleTeams.push(tour.teamB);
+    } else {
+        eligibleTeams.push(tour.teamA, tour.teamB);
+    }
+    
+    const allPlayers = eligibleTeams.flatMap(t => t.players);
     for (const p of allPlayers) {
         const points = (p.runs || 0) + (p.wickets || 0) * 20;
         if (points > maxPoints) {
@@ -616,7 +624,12 @@ function calculateMOTM(tour) {
             bestPlayer = p;
         }
     }
-    return bestPlayer || tour.teamA.players[0];
+    
+    if (!bestPlayer) {
+        const fallbackTeam = tour[winnerTeamId] || tour.teamA;
+        bestPlayer = fallbackTeam.players[0];
+    }
+    return bestPlayer;
 }
 
 function totalScore(team) {
