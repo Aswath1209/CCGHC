@@ -15,6 +15,15 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       }
   }
 
+  function getBasePlayerId(id) {
+      if (!id) return null;
+      const str = id.toString();
+      if (str.includes('_rebat_')) {
+          return str.split('_rebat_')[0];
+      }
+      return str;
+  }
+
   // Renders the aligned scorecard
   function renderScoreboard(tour) {
     const batT = tour[tour.battingTeamId];
@@ -659,7 +668,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     }
     
     const batT = tour[tour.battingTeamId];
-    if (ctx.from.id.toString() === batT.strikerId?.toString()) ctx.reply(`✅ You played: ${res.batStr || txt}`);
+    if (ctx.from.id.toString() === getBasePlayerId(batT.strikerId)) ctx.reply(`✅ You played: ${res.batStr || txt}`);
     else {
         const bowlVal = res.bowlStr || tour.choices.bowlChoice || txt;
         const DELIVERY_NAMES = {
@@ -680,10 +689,10 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
         const waitingForBowler = tour.choices.batChoice !== null && tour.choices.bowlChoice === null;
         const waitingForBatter = tour.choices.bowlChoice !== null && tour.choices.batChoice === null;
         
-        if (waitingForBowler && ctx.from.id === striker.id) {
-            try { await ctx.api.sendMessage(bowler.id, "⚾ Please submit your delivery (RS, Bouncer, Yorker, Short, Slower, Knuckle) in DM!"); } catch(e){}
-        } else if (waitingForBatter && ctx.from.id === bowler.id) {
-            try { await ctx.api.sendMessage(striker.id, "🏏 Please submit your shot (0, 1, 2, 3, 4, 6) in DM!"); } catch(e){}
+        if (waitingForBowler && ctx.from.id.toString() === getBasePlayerId(striker.id)) {
+            try { await ctx.api.sendMessage(Number(getBasePlayerId(bowler.id)), "⚾ Please submit your delivery (RS, Bouncer, Yorker, Short, Slower, Knuckle) in DM!"); } catch(e){}
+        } else if (waitingForBatter && ctx.from.id.toString() === getBasePlayerId(bowler.id)) {
+            try { await ctx.api.sendMessage(Number(getBasePlayerId(striker.id)), "🏏 Please submit your shot (0, 1, 2, 3, 4, 6) in DM!"); } catch(e){}
         }
         return true;
     }

@@ -10,6 +10,15 @@ function generateTourId() {
   return Math.floor(10000 + Math.random() * 90000).toString();
 }
 
+function getBasePlayerId(id) {
+    if (!id) return null;
+    const str = id.toString();
+    if (str.includes('_rebat_')) {
+        return str.split('_rebat_')[0];
+    }
+    return str;
+}
+
 function createTour(chatId, hostUser, name = '') {
   if (chatTourMap.has(chatId)) return { success: false, error: "A match is already active in this group!" };
   if (userTourMap.has(hostUser.id)) return { success: false, error: "You are already in an active match!" };
@@ -445,8 +454,8 @@ function submitPlay(tourId, userId, rawInput) {
     
     const batTeam = tour[tour.battingTeamId];
     
-    const isStriker = userId === batTeam.strikerId;
-    const isBowler = userId === tour.activeBowlerId;
+    const isStriker = userId.toString() === getBasePlayerId(batTeam.strikerId);
+    const isBowler = userId.toString() === getBasePlayerId(tour.activeBowlerId);
     
     if (!isStriker && !isBowler) return { success: false, error: 'You are not the active striker or bowler.' };
     
@@ -550,7 +559,8 @@ function submitPlay(tourId, userId, rawInput) {
 
     const targetPassed = tour.innings === 2 && currentBatTeamScore > bowlingTeamScore;
     const oversFinished = tour.balls >= tour.config.overs * 6;
-    const allOut = batTeam.wickets >= batTeam.players.length;
+    const maxWickets = tour.config.wickets || 10;
+    const allOut = batTeam.wickets >= batTeam.players.length || batTeam.wickets >= maxWickets;
     
     if (targetPassed || oversFinished || allOut) {
         if (tour.innings === 1) {
