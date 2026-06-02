@@ -127,7 +127,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
         .text("Configure ⚙️", `tour_configmenu_${tour.id}`)
         .row()
         .text("Start Match 🚀", `tour_start_${tour.id}`)
-        .text("Cancel Tour ❌", `tour_cancel_${tour.id}`);
+        .text("Cancel Tour ❌", `tour_cancellobby_${tour.id}`);
   }
 
   // Settings Configuration Keyboard
@@ -934,7 +934,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           return;
       }
 
-      if (data.startsWith('tour_cancel_')) {
+      if (data.startsWith('tour_cancellobby_')) {
           const tourId = data.split('_')[2];
           const tour = tourManager.getTour(tourId);
           if (!tour) return ctx.answerCallbackQuery();
