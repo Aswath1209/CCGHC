@@ -454,7 +454,16 @@ function submitPlay(tourId, userId, rawInput) {
     const isStriker = userId.toString() === getBasePlayerId(batTeam.strikerId);
     const isBowler = userId.toString() === getBasePlayerId(tour.activeBowlerId);
     
-    if (!isStriker && !isBowler) return { success: false, error: 'You are not the active striker or bowler.' };
+    if (!isStriker && !isBowler) {
+        const debugInfo = `You are not the active striker or bowler.\n` +
+                          `Debug details:\n` +
+                          `- Sender ID: ${userId} (${typeof userId})\n` +
+                          `- Striker ID: ${batTeam.strikerId} (${typeof batTeam.strikerId})\n` +
+                          `- Base Striker ID: ${getBasePlayerId(batTeam.strikerId)}\n` +
+                          `- Active Bowler ID: ${tour.activeBowlerId} (${typeof tour.activeBowlerId})\n` +
+                          `- Base Bowler ID: ${getBasePlayerId(tour.activeBowlerId)}`;
+        return { success: false, error: debugInfo };
+    }
     
     const BATSMAN_OPTIONS = new Set(['0','1','2','3','4','6']);
     const BOWLER_MAP = { 'rs':'0', 'bouncer':'1', 'yorker':'2', 'short':'3', 'slower':'4', 'knuckle':'6' };
