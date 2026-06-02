@@ -72,9 +72,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
         bowlerStats = ` (<code>${bowler.wickets || 0}-${bowler.runsConceded || 0}</code> in <code>${ov}.${bl}</code> ov)`;
     }
 
-    const cleanStriker = striker ? striker.first_name.replace(/\s*\(rebat\)/gi, '') : '';
-    const cleanNonStriker = nonStriker ? nonStriker.first_name.replace(/\s*\(rebat\)/gi, '') : '';
-    const cleanBowler = bowler ? bowler.first_name.replace(/\s*\(rebat\)/gi, '') : '';
+    const cleanStriker = striker ? striker.first_name : '';
+    const cleanNonStriker = nonStriker ? nonStriker.first_name : '';
+    const cleanBowler = bowler ? bowler.first_name : '';
 
     text += `🏏 <b>Striker:</b> ${striker ? `<b>${cleanStriker}</b>${strikerStats}` : '<i>(Waiting...)</i>'}\n`;
     text += `🏏 <b>Non-Striker:</b> ${nonStriker ? `<b>${cleanNonStriker}</b>${nonStrikerStats}` : '<i>(Waiting...)</i>'}\n`;
@@ -170,8 +170,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
     
     await ctx.api.sendMessage(tour.chatId, 
         `🔔 <b>Next Ball!</b>\n` +
-        `🏏 Striker: <a href="tg://user?id=${striker.id}">${striker.first_name}</a>\n` +
-        `🥎 Bowler: <a href="tg://user?id=${bowler.id}">${bowler.first_name}</a>\n\n` +
+        `🏏 Striker: <a href="tg://user?id=${getBasePlayerId(striker.id)}">${striker.first_name}</a>\n` +
+        `🥎 Bowler: <a href="tg://user?id=${getBasePlayerId(bowler.id)}">${bowler.first_name}</a>\n\n` +
         `<i>Click below to submit your play in DMs!</i>`, 
         { reply_markup: kb, parse_mode: 'HTML' }
     );
@@ -422,7 +422,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
       if (res.success) {
           const batT = tour[tour.battingTeamId];
           const striker = batT.players.find(p => p.id === batT.strikerId);
-          const strikerName = striker ? striker.first_name.replace(/\s*\(rebat\)/gi, '') : 'None';
+          const strikerName = striker ? striker.first_name : 'None';
           await ctx.reply(`✅ <b>LMS Enabled!</b> Striker is now <b>${strikerName}</b>.`, { parse_mode: 'HTML' });
           if (tour.state === 'SELECT_BOWLER') {
               const bowlT = tour[tour.bowlingTeamId];
@@ -1098,7 +1098,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
           
           const batT = tour[tour.battingTeamId];
           const striker = batT.players.find(p => p.id === batT.strikerId);
-          const strikerName = striker ? striker.first_name.replace(/\s*\(rebat\)/gi, '') : 'None';
+          const strikerName = striker ? striker.first_name : 'None';
           
           if (tour.state === 'SELECT_BOWLER') {
               const bowlT = tour[tour.bowlingTeamId];

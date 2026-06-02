@@ -287,7 +287,7 @@ async function generateScoreboardImage(tour, resultText, potmName) {
         const batsmen = batT.players
             .map(p => {
                 const isOut = batT.outPlayers && batT.outPlayers.some(id => id && id.toString() === p.id.toString());
-                const cleanFirstName = p.first_name.replace(/\s*\(rebat\)/gi, '');
+                const cleanFirstName = p.first_name;
                 const normalizedName = normalizeStyledText(cleanFirstName);
                 const name = normalizedName + (isOut ? '' : '*');
                 return { name, runs: p.runs || 0, balls: p.balls || 0 };
@@ -297,7 +297,7 @@ async function generateScoreboardImage(tour, resultText, potmName) {
             
         const bowlers = bowlT.players
             .map(p => {
-                const cleanFirstName = p.first_name.replace(/\s*\(rebat\)/gi, '');
+                const cleanFirstName = p.first_name;
                 return {
                     name: normalizeStyledText(cleanFirstName),
                     wickets: p.wickets || 0,
