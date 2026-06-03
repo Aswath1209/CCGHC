@@ -948,7 +948,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const kb = new InlineKeyboard().text("Heads 🪙", `tour_tosschoice_${tourId}_heads`).text("Tails 🪙", `tour_tosschoice_${tourId}_tails`);
           await ctx.editMessageText(
               `🪙 <b>Toss Phase</b> 🪙\n\n` +
-              `👉 Captain of <b>${tour.teamA.name}</b> (<a href="tg://user?id=${capA.id}">${capA.first_name}</a>), choose Heads or Tails:`,
+              `👉 Captain of <b>${escapeHtml(tour.teamA.name)}</b> (<a href="tg://user?id=${capA.id}">${escapeHtml(capA.first_name)}</a>), choose Heads or Tails:`,
               { reply_markup: kb, parse_mode: 'HTML' }
           );
           return;
@@ -984,8 +984,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const kb = new InlineKeyboard().text("Bat First 🏏", `tour_rolechoice_${tourId}_bat`).text("Bowl First 🥎", `tour_rolechoice_${tourId}_bowl`);
           await ctx.editMessageText(
               `🪙 Coin landed on: <b>${tossResult.tossResult.toUpperCase()}</b>\n` +
-              `🏆 Toss won by <b>${winner.name}</b>!\n\n` +
-              `👉 Captain <a href="tg://user?id=${cap.id}">${cap.first_name}</a>, elect to Bat or Bowl first:`,
+              `🏆 Toss won by <b>${escapeHtml(winner.name)}</b>!\n\n` +
+              `👉 Captain <a href="tg://user?id=${cap.id}">${escapeHtml(cap.first_name)}</a>, elect to Bat or Bowl first:`,
               { reply_markup: kb, parse_mode: 'HTML' }
           );
           return;
@@ -1018,9 +1018,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           
           await ctx.editMessageText(
               `🚀 <b>Roles Decided!</b>\n` +
-              `🏏 Batting: <b>${tour[tour.battingTeamId].name}</b>\n` +
-              `🥎 Bowling: <b>${tour[tour.bowlingTeamId].name}</b>\n\n` +
-              `👉 Captain of ${tour[tour.battingTeamId].name}, select your <b>first opening batter (Striker)</b>:`,
+              `🏏 Batting: <b>${escapeHtml(tour[tour.battingTeamId].name)}</b>\n` +
+              `🥎 Bowling: <b>${escapeHtml(tour[tour.bowlingTeamId].name)}</b>\n\n` +
+              `👉 Captain of ${escapeHtml(tour[tour.battingTeamId].name)}, select your <b>first opening batter (Striker)</b>:`,
               { reply_markup: kb, parse_mode: 'HTML' }
           );
           return;
@@ -1053,8 +1053,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               });
               kb.text("LMS (Play 1 Batter) 🏏", `tour_lms_${tourId}`).row();
               await ctx.editMessageText(
-                  `🏏 Selected Striker: <b>${res.player.first_name}</b>\n\n` +
-                  `👉 Captain of ${batT.name}, select your <b>second opening batter (Non-Striker)</b> or choose LMS:`,
+                  `🏏 Selected Striker: <b>${escapeHtml(res.player.first_name)}</b>\n\n` +
+                  `👉 Captain of ${escapeHtml(batT.name)}, select your <b>second opening batter (Non-Striker)</b> or choose LMS:`,
                   { reply_markup: kb, parse_mode: 'HTML' }
               );
           } else {
@@ -1070,9 +1070,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
                   await ctx.editMessageText(
                       `🏏 <b>Batters Set!</b>\n` +
-                      `Striker: <b>${strikerName}</b>\n` +
-                      `Non-Striker: <b>${nonStrikerName}</b>\n\n` +
-                      `👉 Captain of ${bowlT.name}, select the <b>Opening Bowler</b>:`,
+                      `Striker: <b>${escapeHtml(strikerName)}</b>\n` +
+                      `Non-Striker: <b>${escapeHtml(nonStrikerName)}</b>\n\n` +
+                      `👉 Captain of ${escapeHtml(bowlT.name)}, select the <b>Opening Bowler</b>:`,
                       { reply_markup: kb, parse_mode: 'HTML' }
                   );
               } else if (isOverEnd) {
@@ -1087,16 +1087,16 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   
                   await ctx.editMessageText(
                       `🏏 <b>Batsman Selected!</b>\n` +
-                      `New Striker: <b>${res.player.first_name}</b>\n\n` +
+                      `New Striker: <b>${escapeHtml(res.player.first_name)}</b>\n\n` +
                       `🔚 <b>Over Over!</b>\n` +
-                      `👉 Captain of ${bowlT.name}, select a new bowler:`,
+                      `👉 Captain of ${escapeHtml(bowlT.name)}, select a new bowler:`,
                       { reply_markup: kb, parse_mode: 'HTML' }
                   );
               } else {
                   tour.state = 'PLAYING';
                   await ctx.editMessageText(
                       `🏏 <b>Batsman Selected!</b>\n` +
-                      `New Striker: <b>${res.player.first_name}</b>\n\n` +
+                      `New Striker: <b>${escapeHtml(res.player.first_name)}</b>\n\n` +
                       `🟢 Play Resuming...`,
                       { parse_mode: 'HTML' }
                   );
@@ -1131,14 +1131,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               
               await ctx.editMessageText(
                   `🏏 <b>LMS Enabled!</b>\n` +
-                  `Striker: <b>${strikerName}</b>\n\n` +
-                  `👉 Captain of ${bowlT.name}, select bowler:`,
+                  `Striker: <b>${escapeHtml(strikerName)}</b>\n\n` +
+                  `👉 Captain of ${escapeHtml(bowlT.name)}, select bowler:`,
                   { reply_markup: kb, parse_mode: 'HTML' }
               );
           } else {
               await ctx.editMessageText(
                   `🏏 <b>LMS Enabled!</b>\n` +
-                  `Striker: <b>${strikerName}</b>\n\n` +
+                  `Striker: <b>${escapeHtml(strikerName)}</b>\n\n` +
                   `🟢 Play Resuming...`,
                   { parse_mode: 'HTML' }
               );
