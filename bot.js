@@ -1088,49 +1088,29 @@ async function handleRoundResult(ctx, res) {
   const cleanBatsman = escapeHtml(batsmanP?.first_name || 'Batsman');
   const cleanBowler = escapeHtml(bowlerP?.first_name || 'Bowler');
 
-  const eventKey = isWicket ? "out" : batStr;
-  const commentaryList = COMMENTARY[eventKey] || [];
-  const commText = commentaryList.length > 0 ? commentaryList[Math.floor(Math.random() * commentaryList.length)] : "";
+  await ctx.api.sendMessage(chatId, `Over ${over + 1}`);
+  await ctx.api.sendMessage(chatId, `Ball ${ballInOver}`);
+  await sleep(4000);
+  
+  await ctx.api.sendMessage(chatId, `${cleanBowler} bowls a ${bowlStr} delivery!`);
+  await sleep(4000);
 
-  let ballText = `🥎 <b>Over ${over + 1} | Ball ${ballInOver}</b>\n`;
-  ballText += `👉 <b>${cleanBowler}</b> bowls a <b>${bowlStr}</b> delivery!\n`;
   if (isWicket) {
-      ballText += `☝️ <b>OUT!</b> ${cleanBatsman} has been dismissed!\n`;
+      await sendEventUpdate(ctx, chatId, "out");
   } else {
-      const runsStr = batNum === 1 ? '1 run' : `${batNum} runs`;
-      ballText += `💥 <b>${cleanBatsman}</b> plays for <b>${runsStr}</b>!\n`;
+      await sendEventUpdate(ctx, chatId, batStr);
   }
-
-  if (commText) {
-      ballText += `\n💬 <i>${commText}</i>\n`;
-  }
-
-  ballText += `\n`;
-
+  await sleep(1000);
+  
+  // Display correct score (if innings just ended, show score1)
   if (res.inningsEnded) {
       const newBatP = game.players.find(p => p.id === game.batsmanId);
       const cleanNewBat = escapeHtml(newBatP?.first_name || 'Batsman');
-      ballText += `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: <b>${game.score1}</b>\nTarget for ${cleanNewBat}: <b>${game.score1 + 1}</b>`;
+      await ctx.api.sendMessage(chatId, `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: ${game.score1}\nTarget for ${cleanNewBat}: ${game.score1 + 1}`, { parse_mode: 'HTML' });
   } else {
       const currentScore = game.innings === 1 ? game.score1 : game.score2;
       const targetText = game.target ? ` (Target: ${game.target})` : (game.innings === 2 ? ` (Target: ${game.score1 + 1})` : "");
-      ballText += `📊 <b>Scorecard:</b> <code>${currentScore}/${game.innings === 1 ? 0 : 0}</code>${targetText}`;
-  }
-
-  const gifList = CCL_GIFS[eventKey] || [];
-  const gifUrl = (GIF_EVENTS.includes(eventKey) && gifList.length > 0) ? gifList[Math.floor(Math.random() * gifList.length)] : null;
-
-  try {
-      if (gifUrl) {
-          await ctx.api.sendAnimation(chatId, gifUrl, { caption: ballText, parse_mode: 'HTML' });
-      } else {
-          await ctx.api.sendMessage(chatId, ballText, { parse_mode: 'HTML' });
-      }
-  } catch (e) {
-      console.log("Failed to send ball result, falling back to text:", e.message);
-      try {
-          await ctx.api.sendMessage(chatId, ballText, { parse_mode: 'HTML' });
-      } catch (err) {}
+      await ctx.api.sendMessage(chatId, `📊 Scorecard: ${currentScore}/${game.innings === 1 ? 0 : 0} ${targetText}`);
   }
 
   // Pacing delay to keep it readable but fast

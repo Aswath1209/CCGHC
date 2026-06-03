@@ -725,42 +725,20 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
 
           const cleanBowlerName = escapeHtml(bowler?.first_name || 'Bowler');
-          const cleanStrikerName = escapeHtml(striker?.first_name || 'Batsman');
           
-          const eventKey = isWicket ? "out" : batStr;
-          const commentaryList = COMMENTARY[eventKey] || [];
-          const commText = commentaryList.length > 0 ? commentaryList[Math.floor(Math.random() * commentaryList.length)] : "";
-
-          let ballText = `🥎 <b>Over ${over + 1} | Ball ${ballInOver}</b>\n`;
-          ballText += `👉 <b>${cleanBowlerName}</b> bowls a <b>${bowlStr}</b> delivery!\n`;
+          await ctx.api.sendMessage(tour.chatId, `⚾ <b>Over ${over+1} | Ball ${ballInOver}</b>`, { parse_mode: 'HTML' });
+          await sleep(1500); 
+          await ctx.api.sendMessage(tour.chatId, `👉 ${cleanBowlerName} bowls a <b>${bowlStr}</b>!`, { parse_mode: 'HTML' });
+          await sleep(1500);
+          
           if (isWicket) {
-              ballText += `☝️ <b>OUT!</b> ${cleanStrikerName} has been dismissed!\n`;
+              await sendEventUpdate(ctx, tour.chatId, "out");
           } else {
-              const runsStr = parseInt(batStr) === 1 ? '1 run' : `${batStr} runs`;
-              ballText += `💥 <b>${cleanStrikerName}</b> plays for <b>${runsStr}</b>!\n`;
+              await sendEventUpdate(ctx, tour.chatId, batStr);
           }
-
-          if (commText) {
-              ballText += `\n💬 <i>${commText}</i>\n`;
-          }
-
-          ballText += `\n` + renderScoreboard(tour);
-
-          const gifList = CCL_GIFS[eventKey] || [];
-          const gifUrl = (GIF_EVENTS.includes(eventKey) && gifList.length > 0) ? gifList[Math.floor(Math.random() * gifList.length)] : null;
-
-          try {
-              if (gifUrl) {
-                  await ctx.api.sendAnimation(tour.chatId, gifUrl, { caption: ballText, parse_mode: 'HTML' });
-              } else {
-                  await ctx.api.sendMessage(tour.chatId, ballText, { parse_mode: 'HTML' });
-              }
-          } catch (e) {
-              console.error("Failed to send tour ball result, falling back to text:", e.message);
-              try {
-                  await ctx.api.sendMessage(tour.chatId, ballText, { parse_mode: 'HTML' });
-              } catch (err) {}
-          }
+          await sleep(1000);
+          
+          await ctx.api.sendMessage(tour.chatId, renderScoreboard(tour), { parse_mode: 'HTML' });
 
           // Pacing delay
           await sleep(1500);
