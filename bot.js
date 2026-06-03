@@ -8,15 +8,6 @@ const handCricketManager = require('./game/handCricketManager');
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-
 const GIF_EVENTS = ["0", "4", "6", "out", "50", "100"];
 const CCL_GIFS = {
     "0": [
@@ -220,8 +211,7 @@ bot.catch((err) => {
   console.error("Error in bot:", err);
 });
 
-tourBotUI(bot, sleep, sendEventUpdate, COMMENTARY, CCL_GIFS, GIF_EVENTS);
-
+tourBotUI(bot, sleep, sendEventUpdate);
 
 try {
   bot.api.setMyCommands([
@@ -319,14 +309,14 @@ bot.command('quit', async (ctx) => {
     const hLobby = handCricketManager.getLobbyByUserId(userId);
     if (hLobby) {
         handCricketManager.deleteLobby(hLobby.chatId, hLobby.messageId);
-        await ctx.api.sendMessage(hLobby.chatId, `🛑 Match ended because <a href="tg://user?id=${userId}">${escapeHtml(ctx.from.first_name)}</a> quit the game.`, { parse_mode: 'HTML' });
+        await ctx.api.sendMessage(hLobby.chatId, `🛑 Match ended because <a href="tg://user?id=${userId}">${ctx.from.first_name}</a> quit the game.`, { parse_mode: 'HTML' });
         return ctx.reply("You quit the Hand Cricket match.");
     }
     
     const game = gameManager.getUserGame(userId);
     if (game) {
         gameManager.deleteGame(game.id);
-        await ctx.api.sendMessage(game.chatId, `🛑 CCL Match ended because <a href="tg://user?id=${userId}">${escapeHtml(ctx.from.first_name)}</a> quit the game.`, { parse_mode: 'HTML' });
+        await ctx.api.sendMessage(game.chatId, `🛑 CCL Match ended because <a href="tg://user?id=${userId}">${ctx.from.first_name}</a> quit the game.`, { parse_mode: 'HTML' });
         return ctx.reply("You quit the CCL match.");
     }
     
@@ -334,12 +324,12 @@ bot.command('quit', async (ctx) => {
     if (tour) {
         if (tour.hostId === userId) {
             tourManager.deleteTour(tour.id);
-            await ctx.api.sendMessage(tour.chatId, `🛑 Tour Match ended because the host <a href="tg://user?id=${userId}">${escapeHtml(ctx.from.first_name)}</a> quit the game.`, { parse_mode: 'HTML' });
+            await ctx.api.sendMessage(tour.chatId, `🛑 Tour Match ended because the host <a href="tg://user?id=${userId}">${ctx.from.first_name}</a> quit the game.`, { parse_mode: 'HTML' });
             return ctx.reply("You quit the Tour match. Lobby deleted.");
         } else {
             const res = tourManager.removePlayer(tour.id, userId, userId);
             if (res.success) {
-                await ctx.api.sendMessage(tour.chatId, `🚪 <a href="tg://user?id=${userId}">${escapeHtml(ctx.from.first_name)}</a> left the Tour match.`, { parse_mode: 'HTML' });
+                await ctx.api.sendMessage(tour.chatId, `🚪 <a href="tg://user?id=${userId}">${ctx.from.first_name}</a> left the Tour match.`, { parse_mode: 'HTML' });
                 return ctx.reply("You left the Tour match.");
             } else {
                 return ctx.reply("❌ " + res.error);
@@ -426,7 +416,7 @@ bot.command('cricket', async (ctx) => {
     const lobby = handCricketManager.createLobby(ctx.chat.id, user);
     
     const text = `🏏 <b>Hand Cricket Match</b> 🏏\n\n` +
-                 `Host: <a href="tg://user?id=${user.id}">${escapeHtml(user.first_name)}</a>\n` +
+                 `Host: <a href="tg://user?id=${user.id}">${user.first_name}</a>\n` +
                  `Waiting for an opponent to join...`;
                  
     const kb = new InlineKeyboard()
@@ -460,7 +450,7 @@ bot.command('ccl', async (ctx) => {
 
   await ctx.reply(
     `🏏 <b>CCL Match Started!</b>\n` +
-    `Host: ${escapeHtml(ctx.from.first_name)}\n` +
+    `Host: ${ctx.from.first_name}\n` +
     `Bet: ${bet}🪙\n\n` +
     `Click below to join!`,
     { reply_markup: kb, parse_mode: 'HTML' }
@@ -523,7 +513,7 @@ bot.on('callback_query:data', async (ctx) => {
       const tour = tourManager.getTour(tourId);
       if (!tour) return ctx.answerCallbackQuery();
       tour.hostId = userId;
-      await ctx.editMessageText(`🎊 <b>${escapeHtml(ctx.from.first_name)}</b> is the new Host!`, { parse_mode: 'HTML' });
+      await ctx.editMessageText(`🎊 <b>${ctx.from.first_name}</b> is the new Host!`, { parse_mode: 'HTML' });
       return;
   }
 
@@ -560,7 +550,7 @@ bot.on('callback_query:data', async (ctx) => {
 
       ctx.answerCallbackQuery(`The coin landed on ${tossResult}!`);
       const kb = new InlineKeyboard().text("Bat 🏏", `tour_decide_${tourId}_bat`).text("Bowl 🧤", `tour_decide_${tourId}_bowl`);
-      await ctx.editMessageText(`🪙 Match Toss: <b>${tossResult.toUpperCase()}</b>\n\n${escapeHtml(ctx.from.first_name)} won the toss! Choose Bat or Bowl:`, { reply_markup: kb, parse_mode: 'HTML' });
+      await ctx.editMessageText(`🪙 Match Toss: <b>${tossResult.toUpperCase()}</b>\n\n${ctx.from.first_name} won the toss! Choose Bat or Bowl:`, { reply_markup: kb, parse_mode: 'HTML' });
       return;
   }
 
@@ -582,13 +572,13 @@ bot.on('callback_query:data', async (ctx) => {
           const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId && p.id !== batT.nonStrikerId);
           const kb = new InlineKeyboard();
           available.forEach(p => kb.text(p.first_name, `tour_pickS_${tourId}_${batT.players.indexOf(p) + 1}`).row());
-          await ctx.editMessageText(`🏏 <b>Match Start!</b>\nSelected Opening Batter: ${escapeHtml(res.player.first_name)}\n\nCaptain, select the <b>second batter</b>:`, { reply_markup: kb, parse_mode: 'HTML' });
+          await ctx.editMessageText(`🏏 <b>Match Start!</b>\nSelected Opening Batter: ${res.player.first_name}\n\nCaptain, select the <b>second batter</b>:`, { reply_markup: kb, parse_mode: 'HTML' });
       } else if (tour.state === 'SELECT_BOWLER') {
           // Both batters set, now bowler
           const bowlT = tour[tour.bowlingTeamId];
           const kb = new InlineKeyboard();
           bowlT.players.forEach(p => kb.text(p.first_name, `tour_pickB_${tourId}_${bowlT.players.indexOf(p) + 1}`).row());
-          await ctx.editMessageText(`🏏 <b>Batters Set!</b>\nStriker: ${escapeHtml(tour[tour.battingTeamId].players.find(p=>p.id===tour[tour.battingTeamId].strikerId)?.first_name)}\nNon-Striker: ${escapeHtml(tour[tour.battingTeamId].players.find(p=>p.id===tour[tour.battingTeamId].nonStrikerId)?.first_name)}\n\nCaptain, select the <b>Opening Bowler</b>:`, { reply_markup: kb, parse_mode: 'HTML' });
+          await ctx.editMessageText(`🏏 <b>Batters Set!</b>\nStriker: ${tour[tour.battingTeamId].players.find(p=>p.id===tour[tour.battingTeamId].strikerId)?.first_name}\nNon-Striker: ${tour[tour.battingTeamId].players.find(p=>p.id===tour[tour.battingTeamId].nonStrikerId)?.first_name}\n\nCaptain, select the <b>Opening Bowler</b>:`, { reply_markup: kb, parse_mode: 'HTML' });
       } else {
           try { await ctx.deleteMessage(); } catch(e){}
       }
@@ -1085,56 +1075,29 @@ async function handleRoundResult(ctx, res) {
   const over = Math.floor((res.ballsThisRound - 1) / 6);
   const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
 
-  const cleanBatsman = escapeHtml(batsmanP?.first_name || 'Batsman');
-  const cleanBowler = escapeHtml(bowlerP?.first_name || 'Bowler');
+  await ctx.api.sendMessage(chatId, `Over ${over + 1}`);
+  await ctx.api.sendMessage(chatId, `Ball ${ballInOver}`);
+  await sleep(4000);
+  
+  await ctx.api.sendMessage(chatId, `${bowlerP.first_name} bowls a ${bowlStr} delivery!`);
+  await sleep(4000);
 
-  const eventKey = isWicket ? "out" : batStr;
-  const commentaryList = COMMENTARY[eventKey] || [];
-  const commText = commentaryList.length > 0 ? commentaryList[Math.floor(Math.random() * commentaryList.length)] : "";
-
-  let ballText = `🥎 <b>Over ${over + 1} | Ball ${ballInOver}</b>\n`;
-  ballText += `👉 <b>${cleanBowler}</b> bowls a <b>${bowlStr}</b> delivery!\n`;
   if (isWicket) {
-      ballText += `☝️ <b>OUT!</b> ${cleanBatsman} has been dismissed!\n`;
+      await sendEventUpdate(ctx, chatId, "out");
   } else {
-      const runsStr = batNum === 1 ? '1 run' : `${batNum} runs`;
-      ballText += `💥 <b>${cleanBatsman}</b> plays for <b>${runsStr}</b>!\n`;
+      await sendEventUpdate(ctx, chatId, batStr);
   }
-
-  if (commText) {
-      ballText += `\n💬 <i>${commText}</i>\n`;
-  }
-
-  ballText += `\n`;
-
+  await sleep(1000);
+  
+  // Display correct score (if innings just ended, show score1)
   if (res.inningsEnded) {
       const newBatP = game.players.find(p => p.id === game.batsmanId);
-      const cleanNewBat = escapeHtml(newBatP?.first_name || 'Batsman');
-      ballText += `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: <b>${game.score1}</b>\nTarget for ${cleanNewBat}: <b>${game.score1 + 1}</b>`;
+      await ctx.api.sendMessage(chatId, `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: ${game.score1}\nTarget for ${newBatP.first_name}: ${game.score1 + 1}`, { parse_mode: 'HTML' });
   } else {
       const currentScore = game.innings === 1 ? game.score1 : game.score2;
       const targetText = game.target ? ` (Target: ${game.target})` : (game.innings === 2 ? ` (Target: ${game.score1 + 1})` : "");
-      ballText += `📊 <b>Scorecard:</b> <code>${currentScore}/${game.innings === 1 ? 0 : 0}</code>${targetText}`;
+      await ctx.api.sendMessage(chatId, `📊 Scorecard: ${currentScore}/${game.innings === 1 ? 0 : 0} ${targetText}`);
   }
-
-  const gifList = CCL_GIFS[eventKey] || [];
-  const gifUrl = (GIF_EVENTS.includes(eventKey) && gifList.length > 0) ? gifList[Math.floor(Math.random() * gifList.length)] : null;
-
-  try {
-      if (gifUrl) {
-          await ctx.api.sendAnimation(chatId, gifUrl, { caption: ballText, parse_mode: 'HTML' });
-      } else {
-          await ctx.api.sendMessage(chatId, ballText, { parse_mode: 'HTML' });
-      }
-  } catch (e) {
-      console.log("Failed to send ball result, falling back to text:", e.message);
-      try {
-          await ctx.api.sendMessage(chatId, ballText, { parse_mode: 'HTML' });
-      } catch (err) {}
-  }
-
-  // Pacing delay to keep it readable but fast
-  await sleep(1500);
 
   // End conditions
   if (isWicket) {
@@ -1162,15 +1125,15 @@ async function handleRoundResult(ctx, res) {
           await ctx.api.sendMessage(chatId, "🤝 The match is a tie!");
       } else {
           const winnerP = game.players.find(p => p.id === res.winnerId);
-          const cleanWinner = escapeHtml(winnerP?.first_name || 'Player');
-          await ctx.api.sendMessage(chatId, `🏆 <b>${cleanWinner} won the match!</b> 🎉`, { parse_mode: 'HTML' });
+          await ctx.api.sendMessage(chatId, `🏆 <b>${winnerP.first_name} won the match!</b> 🎉`, { parse_mode: 'HTML' });
           if (game.bet > 0) {
-              await ctx.api.sendMessage(chatId, `💰 ${game.bet}🪙 coins transferred to ${cleanWinner} as bet winnings!`);
+              await ctx.api.sendMessage(chatId, `💰 ${game.bet}🪙 coins transferred to ${winnerP.first_name} as bet winnings!`);
           }
           await sb.recordMatchEnd(res.winnerId, res.loserId, game.bet);
       }
       gameManager.deleteGame(game.id);
   } else if (!inningsEnded) {
+
       // Round continuous!
       const batP = game.players.find(p => p.id === game.batsmanId);
       const bowlP = game.players.find(p => p.id === game.bowlerId);

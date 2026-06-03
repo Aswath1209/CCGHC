@@ -207,7 +207,6 @@ async function incrementStats(userId, updates) {
 
 async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
     const processPlayerList = async (players, outPlayers, isBattingTeam, isWinnerTeam, isTie) => {
-        const promises = [];
         for (const p of players) {
             if (p.originalId || p.id.toString().includes('_rebat_')) {
                 continue;
@@ -240,17 +239,14 @@ async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
 
             const participated = (updates.runs > 0 || updates.balls_faced > 0 || updates.balls_bowled > 0 || updates.wickets > 0);
             if (participated || isMotm || updates.wins > 0 || updates.losses > 0) {
-                promises.push(incrementStats(actualId, updates));
+                await incrementStats(actualId, updates);
             }
         }
-        await Promise.all(promises);
     };
 
     const isTie = !winnerTeamId;
-    await Promise.all([
-        processPlayerList(tour.teamA.players, tour.teamA.outPlayers, tour.battingTeamId === 'teamA', winnerTeamId === 'teamA', isTie),
-        processPlayerList(tour.teamB.players, tour.teamB.outPlayers, tour.battingTeamId === 'teamB', winnerTeamId === 'teamB', isTie)
-    ]);
+    await processPlayerList(tour.teamA.players, tour.teamA.outPlayers, tour.battingTeamId === 'teamA', winnerTeamId === 'teamA', isTie);
+    await processPlayerList(tour.teamB.players, tour.teamB.outPlayers, tour.battingTeamId === 'teamB', winnerTeamId === 'teamB', isTie);
 }
 
 module.exports = {

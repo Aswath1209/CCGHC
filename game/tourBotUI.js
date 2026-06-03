@@ -2,16 +2,7 @@ const { InlineKeyboard, InputFile } = require('grammy');
 const tourManager = require('./tourManager');
 const { generateScoreboardImage } = require('./scoreboardGenerator');
 
-module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTARY, CCL_GIFS, GIF_EVENTS) {
-
-  function escapeHtml(str) {
-      if (!str) return '';
-      return String(str)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-  }
-
+module.exports = function installTourMode(bot, sleep, sendEventUpdate) {
 
   async function isGCAdmin(ctx) {
       if (ctx.chat.type === 'private') return true;
@@ -50,13 +41,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     const over = Math.floor(tour.balls / 6);
     const ball = tour.balls % 6;
 
-    let text = tour.name ? `⚡ <b>${escapeHtml(tour.name.toUpperCase())} SCOREBOARD</b> ⚡\n` : `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\n`;
+    let text = tour.name ? `⚡ <b>${tour.name.toUpperCase()} SCOREBOARD</b> ⚡\n` : `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `🏏 <b>${escapeHtml(batT.name)}</b> (Batting)\n`;
+    text += `🏏 <b>${batT.name}</b> (Batting)\n`;
     text += `🔹 <b>Score:</b> <code>${totalS}/${batT.wickets}</code> runs\n`;
     text += `🔹 <b>Overs:</b> <code>${over}.${ball} / ${tour.config.overs}</code> ov\n\n`;
     
-    text += `🥎 <b>${escapeHtml(bowlT.name)}</b> (Bowling)\n`;
+    text += `🥎 <b>${bowlT.name}</b> (Bowling)\n`;
     if (tour.innings === 2) {
         text += `🔹 <b>Score:</b> <code>${bowlS}</code> runs (Completed)\n`;
         const needed = (bowlS + 1) - totalS;
@@ -81,9 +72,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         bowlerStats = ` (<code>${bowler.wickets || 0}-${bowler.runsConceded || 0}</code> in <code>${ov}.${bl}</code> ov)`;
     }
 
-    const cleanStriker = striker ? escapeHtml(striker.first_name) : '';
-    const cleanNonStriker = nonStriker ? escapeHtml(nonStriker.first_name) : '';
-    const cleanBowler = bowler ? escapeHtml(bowler.first_name) : '';
+    const cleanStriker = striker ? striker.first_name : '';
+    const cleanNonStriker = nonStriker ? nonStriker.first_name : '';
+    const cleanBowler = bowler ? bowler.first_name : '';
 
     text += `🏏 <b>Striker:</b> ${striker ? `<b>${cleanStriker}</b>${strikerStats}` : '<i>(Waiting...)</i>'}\n`;
     text += `🏏 <b>Non-Striker:</b> ${nonStriker ? `<b>${cleanNonStriker}</b>${nonStrikerStats}` : '<i>(Waiting...)</i>'}\n`;
@@ -94,7 +85,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
   // Lobby Card rendering
   function renderLobby(tour) {
-    let text = tour.name ? `🏆 <b>${escapeHtml(tour.name.toUpperCase())} LOBBY</b> 🏆\n` : `🏏 <b>Tour Match Lobby</b> 🏏\n`;
+    let text = tour.name ? `🏆 <b>${tour.name.toUpperCase()} LOBBY</b> 🏆\n` : `🏏 <b>Tour Match Lobby</b> 🏏\n`;
     text += `───────────────────\n`;
     text += `⚙️ <b>Settings:</b>\n`;
     text += `👉 <b>Overs:</b> ${tour.config.overs}\n`;
@@ -102,23 +93,23 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     text += `👉 <b>Bet:</b> ${tour.config.bet}🪙\n`;
     text += `───────────────────\n`;
     
-    text += `🔴 <b>${escapeHtml(tour.teamA.name)}</b>:\n`;
+    text += `🔴 <b>${tour.teamA.name}</b>:\n`;
     if (tour.teamA.players.length === 0) {
         text += `   <i>(No players yet)</i>\n`;
     } else {
         tour.teamA.players.forEach((p, idx) => {
             const isCap = p.id === tour.teamA.captainId ? " 👑" : "";
-            text += `   ${idx + 1}. ${escapeHtml(p.first_name)}${isCap}\n`;
+            text += `   ${idx + 1}. ${p.first_name}${isCap}\n`;
         });
     }
     
-    text += `\n🔵 <b>${escapeHtml(tour.teamB.name)}</b>:\n`;
+    text += `\n🔵 <b>${tour.teamB.name}</b>:\n`;
     if (tour.teamB.players.length === 0) {
         text += `   <i>(No players yet)</i>\n`;
     } else {
         tour.teamB.players.forEach((p, idx) => {
             const isCap = p.id === tour.teamB.captainId ? " 👑" : "";
-            text += `   ${idx + 1}. ${escapeHtml(p.first_name)}${isCap}\n`;
+            text += `   ${idx + 1}. ${p.first_name}${isCap}\n`;
         });
     }
     text += `───────────────────\n`;
@@ -714,169 +705,136 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
   async function handleTourResult(ctx, res) {
       const { tour, batStr, bowlStr, isWicket } = res;
-      try {
-          const batT = tour[tour.battingTeamId];
-          const bowlT = tour[tour.bowlingTeamId];
+      const batT = tour[tour.battingTeamId];
+      const bowlT = tour[tour.bowlingTeamId];
+      
+      const bowler = bowlT.players.find(p => p.id === res.originalBowlerId);
+      
+      const over = Math.floor((res.ballsThisRound - 1) / 6);
+      const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
+      
+      await ctx.api.sendMessage(tour.chatId, `⚾ <b>Over ${over+1} | Ball ${ballInOver}</b>`, { parse_mode: 'HTML' });
+      await sleep(1500); 
+      await ctx.api.sendMessage(tour.chatId, `👉 ${bowler.first_name} bowls a <b>${bowlStr}</b>!`, { parse_mode: 'HTML' });
+      await sleep(1500);
+      
+      if (isWicket) {
+          await sendEventUpdate(ctx, tour.chatId, "out");
+      } else {
+          await sendEventUpdate(ctx, tour.chatId, batStr);
+      }
+      await sleep(1000);
+      
+      await ctx.api.sendMessage(tour.chatId, renderScoreboard(tour), { parse_mode: 'HTML' });
+
+      if (res.matchEnded) {
+          const s1 = (tour.teamA.score || 0) + (tour.teamA.bonusRuns || 0) - (tour.teamA.penaltyRuns || 0);
+          const s2 = (tour.teamB.score || 0) + (tour.teamB.bonusRuns || 0) - (tour.teamB.penaltyRuns || 0);
+          const firstBat = tour.firstBattingTeamId || 'teamA';
+          const secondBat = firstBat === 'teamA' ? 'teamB' : 'teamA';
           
-          const bowler = bowlT.players.find(p => p.id === res.originalBowlerId);
-          const striker = batT.players.find(p => p.id === batT.strikerId);
-          
-          const over = Math.floor((res.ballsThisRound - 1) / 6);
-          const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
-
-          const cleanBowlerName = escapeHtml(bowler?.first_name || 'Bowler');
-          const cleanStrikerName = escapeHtml(striker?.first_name || 'Batsman');
-          
-          const eventKey = isWicket ? "out" : batStr;
-          const commentaryList = COMMENTARY[eventKey] || [];
-          const commText = commentaryList.length > 0 ? commentaryList[Math.floor(Math.random() * commentaryList.length)] : "";
-
-          let ballText = `🥎 <b>Over ${over + 1} | Ball ${ballInOver}</b>\n`;
-          ballText += `👉 <b>${cleanBowlerName}</b> bowls a <b>${bowlStr}</b> delivery!\n`;
-          if (isWicket) {
-              ballText += `☝️ <b>OUT!</b> ${cleanStrikerName} has been dismissed!\n`;
-          } else {
-              const runsStr = parseInt(batStr) === 1 ? '1 run' : `${batStr} runs`;
-              ballText += `💥 <b>${cleanStrikerName}</b> plays for <b>${runsStr}</b>!\n`;
-          }
-
-          if (commText) {
-              ballText += `\n💬 <i>${commText}</i>\n`;
-          }
-
-          ballText += `\n` + renderScoreboard(tour);
-
-          const gifList = CCL_GIFS[eventKey] || [];
-          const gifUrl = (GIF_EVENTS.includes(eventKey) && gifList.length > 0) ? gifList[Math.floor(Math.random() * gifList.length)] : null;
-
-          try {
-              if (gifUrl) {
-                  await ctx.api.sendAnimation(tour.chatId, gifUrl, { caption: ballText, parse_mode: 'HTML' });
+          let resultText = "The match ended in a tie!";
+          let winnerTeamId = null;
+          if (s1 !== s2) {
+              winnerTeamId = s1 > s2 ? 'teamA' : 'teamB';
+              const winnerName = tour[winnerTeamId].name;
+              if (winnerTeamId === secondBat) {
+                  const wicketsLeft = tour.config.wickets - tour[secondBat].wickets;
+                  resultText = `${winnerName} won by ${wicketsLeft} wicket${wicketsLeft > 1 ? 's' : ''}`;
               } else {
-                  await ctx.api.sendMessage(tour.chatId, ballText, { parse_mode: 'HTML' });
+                  const runsMargin = Math.abs(s1 - s2);
+                  resultText = `${winnerName} won by ${runsMargin} run${runsMargin > 1 ? 's' : ''}`;
               }
-          } catch (e) {
-              console.error("Failed to send tour ball result, falling back to text:", e.message);
-              try {
-                  await ctx.api.sendMessage(tour.chatId, ballText, { parse_mode: 'HTML' });
-              } catch (err) {}
           }
+          
+          const potmName = res.motm ? res.motm.first_name : null;
+          const potmId = res.motm ? res.motm.id : null;
 
-          // Pacing delay
-          await sleep(1500);
-
-          if (res.matchEnded) {
-              const s1 = (tour.teamA.score || 0) + (tour.teamA.bonusRuns || 0) - (tour.teamA.penaltyRuns || 0);
-              const s2 = (tour.teamB.score || 0) + (tour.teamB.bonusRuns || 0) - (tour.teamB.penaltyRuns || 0);
-              const firstBat = tour.firstBattingTeamId || 'teamA';
-              const secondBat = firstBat === 'teamA' ? 'teamB' : 'teamA';
-              
-              let resultText = "The match ended in a tie!";
-              let winnerTeamId = null;
-              if (s1 !== s2) {
-                  winnerTeamId = s1 > s2 ? 'teamA' : 'teamB';
-                  const winnerName = escapeHtml(tour[winnerTeamId].name);
-                  if (winnerTeamId === secondBat) {
-                      const wicketsLeft = tour.config.wickets - tour[secondBat].wickets;
-                      resultText = `${winnerName} won by ${wicketsLeft} wicket${wicketsLeft > 1 ? 's' : ''}`;
-                  } else {
-                      const runsMargin = Math.abs(s1 - s2);
-                      resultText = `${winnerName} won by ${runsMargin} run${runsMargin > 1 ? 's' : ''}`;
-                  }
-              }
-              
-              const potmName = res.motm ? res.motm.first_name : null;
-              const potmId = res.motm ? res.motm.id : null;
-
-              // Record player career stats
-              try {
-                  const careerStatsHelper = require('../db/careerStats');
-                  await careerStatsHelper.recordMatchStats(tour, potmId, winnerTeamId);
-              } catch (e) {
-                  console.error("Failed to record career stats:", e);
-              }
-              
-              let msg = s1 === s2 ? "🤝 <b>The match is a tie!</b>" : `🏆 <b>${resultText}!</b> 🎉`;
-              if (res.motm) msg += `\n🎖 <b>POTM:</b> ${escapeHtml(res.motm.first_name)}`;
-              
-              try {
-                  const buffer = await generateScoreboardImage(tour, resultText, potmName);
-                  if (buffer) {
-                      await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), {
-                          caption: msg,
-                          parse_mode: 'HTML'
-                      });
-                  } else {
-                      await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
-                  }
-              } catch (e) {
-                  console.error("Failed to generate/send TV scorecard image:", e);
+          // Record player career stats
+          try {
+              const careerStatsHelper = require('../db/careerStats');
+              await careerStatsHelper.recordMatchStats(tour, potmId, winnerTeamId);
+          } catch (e) {
+              console.error("Failed to record career stats:", e);
+          }
+          
+          let msg = s1 === s2 ? "🤝 <b>The match is a tie!</b>" : `🏆 <b>${resultText}!</b> 🎉`;
+          if (res.motm) msg += `\n🎖 <b>POTM:</b> ${res.motm.first_name}`;
+          
+          try {
+              const buffer = await generateScoreboardImage(tour, resultText, potmName);
+              if (buffer) {
+                  await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), {
+                      caption: msg,
+                      parse_mode: 'HTML'
+                  });
+              } else {
                   await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
               }
-              
-              tourManager.deleteTour(tour.id);
-          } else if (res.inningsEnded) {
-              tour.innings = 2;
-              tour.balls = 0;
-              const temp = tour.battingTeamId;
-              tour.battingTeamId = tour.bowlingTeamId;
-              tour.bowlingTeamId = temp;
-              
-              tour.teamA.strikerId = null;
-              tour.teamA.nonStrikerId = null;
-              tour.teamB.strikerId = null;
-              tour.teamB.nonStrikerId = null;
-              tour.activeBowlerId = null;
-              tour.previousBowlerId = null;
-              
-              tour.state = 'SELECT_BATTERS';
-              
-              const newBatT = tour[tour.battingTeamId];
-              const newBowlT = tour[tour.bowlingTeamId];
-              const target = tourManager.totalScore(newBowlT) + 1;
+          } catch (e) {
+              console.error("Failed to generate/send TV scorecard image:", e);
+              await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
+          }
+          
+          tourManager.deleteTour(tour.id);
+      } else if (res.inningsEnded) {
+          tour.innings = 2;
+          tour.balls = 0;
+          const temp = tour.battingTeamId;
+          tour.battingTeamId = tour.bowlingTeamId;
+          tour.bowlingTeamId = temp;
+          
+          tour.teamA.strikerId = null;
+          tour.teamA.nonStrikerId = null;
+          tour.teamB.strikerId = null;
+          tour.teamB.nonStrikerId = null;
+          tour.activeBowlerId = null;
+          tour.previousBowlerId = null;
+          
+          tour.state = 'SELECT_BATTERS';
+          
+          const newBatT = tour[tour.battingTeamId];
+          const newBowlT = tour[tour.bowlingTeamId];
+          const target = tourManager.totalScore(newBowlT) + 1;
 
-              const escapedNewBatTName = escapeHtml(newBatT.name);
-
-              await ctx.api.sendMessage(tour.chatId, 
-                  `🏁 <b>First Innings Over!</b>\nTarget for <b>${escapedNewBatTName}</b>: <b>${target} runs</b>`, 
-                  { parse_mode: 'HTML' }
-              );
-              
+          await ctx.api.sendMessage(tour.chatId, 
+              `🏁 <b>First Innings Over!</b>\nTarget for <b>${newBatT.name}</b>: <b>${target} runs</b>`, 
+              { parse_mode: 'HTML' }
+          );
+          
+          const kb = new InlineKeyboard();
+          newBatT.players.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${newBatT.players.indexOf(p) + 1}`).row());
+          
+          await ctx.api.sendMessage(tour.chatId, 
+              `🏏 <b>${newBatT.name}</b> Captain, select your <b>first opening batter (Striker)</b>:`, 
+              { reply_markup: kb, parse_mode: 'HTML' }
+          );
+      } else if (res.needsNewBatsman) {
+          const batT = tour[tour.battingTeamId];
+          const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId && p.id !== batT.nonStrikerId);
+          
+          if (available.length > 0) {
               const kb = new InlineKeyboard();
-              newBatT.players.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${newBatT.players.indexOf(p) + 1}`).row());
-              
-              await ctx.api.sendMessage(tour.chatId, 
-                  `🏏 <b>${escapedNewBatTName}</b> Captain, select your <b>first opening batter (Striker)</b>:`, 
-                  { reply_markup: kb, parse_mode: 'HTML' }
-              );
-          } else if (res.needsNewBatsman) {
-              const batT = tour[tour.battingTeamId];
-              const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId && p.id !== batT.nonStrikerId);
-              
-              if (available.length > 0) {
-                  const kb = new InlineKeyboard();
-                  available.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${batT.players.indexOf(p) + 1}`).row());
-                  kb.text("LMS (Play 1 Batter) 🏏", `tour_lms_${tour.id}`).row();
-                  await ctx.api.sendMessage(tour.chatId, `☝️ <b>Wicket!</b>\nCaptain, select new batsman or choose LMS:`, { reply_markup: kb, parse_mode: 'HTML' });
-              } else {
-                  await tagActivePlayers(ctx, tour);
-              }
-          } else if (res.needsNewBowler) {
-              const bowlT = tour[tour.bowlingTeamId];
-              const kb = new InlineKeyboard();
-              bowlT.players.forEach(p => {
-                  if (p.id !== tour.previousBowlerId || bowlT.players.length === 1) {
-                      kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row();
-                  }
-              });
-              await ctx.api.sendMessage(tour.chatId, `🔚 <b>Over Over!</b>\nCaptain, select new bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+              available.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${batT.players.indexOf(p) + 1}`).row());
+              kb.text("LMS (Play 1 Batter) 🏏", `tour_lms_${tour.id}`).row();
+              await ctx.api.sendMessage(tour.chatId, `☝️ <b>Wicket!</b>\nCaptain, select new batsman or choose LMS:`, { reply_markup: kb, parse_mode: 'HTML' });
           } else {
               await tagActivePlayers(ctx, tour);
           }
-      } finally {
-          if (!res.matchEnded) {
-              tour.processingBall = false;
-          }
+      } else if (res.needsNewBowler) {
+          const bowlT = tour[tour.bowlingTeamId];
+          const kb = new InlineKeyboard();
+          bowlT.players.forEach(p => {
+              if (p.id !== tour.previousBowlerId || bowlT.players.length === 1) {
+                  kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row();
+              }
+          });
+          await ctx.api.sendMessage(tour.chatId, `🔚 <b>Over Over!</b>\nCaptain, select new bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+      } else {
+          await tagActivePlayers(ctx, tour);
+      }
+      if (!res.matchEnded) {
+          tour.processingBall = false;
       }
   }
 
