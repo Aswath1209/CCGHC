@@ -648,7 +648,7 @@ bot.on('callback_query:data', async (ctx) => {
         let text = type === 'coins' ? '🏆 <b>Top 10 by Coins</b> 🏆\n\n' : '🏆 <b>Top 10 by Wins</b> 🏆\n\n';
         if (lb && lb.length > 0) {
             lb.forEach((u, i) => {
-               text += `${i+1}. <b>${u.first_name || 'Player'}</b> - ${u[type]}${type === 'coins' ? '🪙' : ' W'}\n`;
+               text += `${i+1}. <b>${escapeHtml(u.first_name || 'Player')}</b> - ${u[type]}${type === 'coins' ? '🪙' : ' W'}\n`;
             });
         } else {
             text += "No records found!";
@@ -823,7 +823,7 @@ bot.on('callback_query:data', async (ctx) => {
                   extraMsg += `👉 Scored: <b>${result.score2} runs</b> (Needed ${result.score1 + 1})\n`;
                   const winner = lobby.players.find(p => p.id === result.winnerId);
                   extraMsg += `🏁 <b>Super Ball Over!</b>\n`;
-                  extraMsg += `🏆 <b>Winner:</b> <a href="tg://user?id=${winner.id}">${winner.first_name}</a>\n`;
+                  extraMsg += `🏆 <b>Winner:</b> <a href="tg://user?id=${winner.id}">${escapeHtml(winner.first_name)}</a>\n`;
               } else if (result.type === 'SUPER_BALL_TIE_RESTART') {
                   extraMsg += `👉 Scored: <b>${result.score2} runs</b>\n`;
                   extraMsg += `⚖️ <b>Tied again (${result.score1}-${result.score2})!</b>\n🔄 Next Super Ball round starting...\n`;
@@ -858,7 +858,7 @@ async function sendCricketMsg(ctx, lobby, extraMsg = '') {
     
     if (lobby.state === 'LOBBY') {
         text += `🏏 <b>Hand Cricket Match</b>\n\n`;
-        text += `👤 <b>Host:</b> <a href="tg://user?id=${lobby.host.id}">${lobby.host.first_name}</a>\n`;
+        text += `👤 <b>Host:</b> <a href="tg://user?id=${lobby.host.id}">${escapeHtml(lobby.host.first_name)}</a>\n`;
         text += `⏳ Waiting for an opponent to join...`;
         
         const kb = new InlineKeyboard().text("🏏 Join Match", "cric_join");
@@ -868,9 +868,9 @@ async function sendCricketMsg(ctx, lobby, extraMsg = '') {
     if (lobby.state === 'TOSS_CHOOSE_SIDE') {
         const opponent = lobby.players.find(p => p.id !== lobby.host.id);
         text += `🪙 <b>Toss Phase</b> 🪙\n\n`;
-        text += `Host: <a href="tg://user?id=${lobby.host.id}">${lobby.host.first_name}</a>\n`;
-        text += `Opponent: <a href="tg://user?id=${opponent.id}">${opponent.first_name}</a>\n\n`;
-        text += `👉 <a href="tg://user?id=${lobby.host.id}">${lobby.host.first_name}</a>, choose <b>Heads</b> or <b>Tails</b>:`;
+        text += `Host: <a href="tg://user?id=${lobby.host.id}">${escapeHtml(lobby.host.first_name)}</a>\n`;
+        text += `Opponent: <a href="tg://user?id=${opponent.id}">${escapeHtml(opponent.first_name)}</a>\n\n`;
+        text += `👉 <a href="tg://user?id=${lobby.host.id}">${escapeHtml(lobby.host.first_name)}</a>, choose <b>Heads</b> or <b>Tails</b>:`;
         
         const kb = new InlineKeyboard()
             .text("🪙 Heads", "cric_tosschoice_heads")
@@ -885,8 +885,8 @@ async function sendCricketMsg(ctx, lobby, extraMsg = '') {
         
         text += `🪙 <b>Toss Phase</b> 🪙\n\n`;
         text += `Coin landed on: <b>${choiceText}</b>\n`;
-        text += `🏆 Toss won by: <a href="tg://user?id=${winner.id}">${winner.first_name}</a>\n\n`;
-        text += `👉 <a href="tg://user?id=${winner.id}">${winner.first_name}</a>, elect to <b>Bat</b> or <b>Bowl</b>:`;
+        text += `🏆 Toss won by: <a href="tg://user?id=${winner.id}">${escapeHtml(winner.first_name)}</a>\n\n`;
+        text += `👉 <a href="tg://user?id=${winner.id}">${escapeHtml(winner.first_name)}</a>, elect to <b>Bat</b> or <b>Bowl</b>:`;
         
         const kb = new InlineKeyboard()
             .text("🏏 Bat first", "cric_rolechoice_bat")
@@ -901,8 +901,8 @@ async function sendCricketMsg(ctx, lobby, extraMsg = '') {
     const currentBatSub = lobby.submissions[lobby.batsmanId];
     const currentBowlSub = lobby.submissions[lobby.bowlerId];
 
-    let batLine = `👤 <b>Bat:</b> <a href="tg://user?id=${batPlayer.id}">${batPlayer.first_name}</a>`;
-    let bowlLine = `👤 <b>Bowl:</b> <a href="tg://user?id=${bowlPlayer.id}">${bowlPlayer.first_name}</a>`;
+    let batLine = `👤 <b>Bat:</b> <a href="tg://user?id=${batPlayer.id}">${escapeHtml(batPlayer.first_name)}</a>`;
+    let bowlLine = `👤 <b>Bowl:</b> <a href="tg://user?id=${bowlPlayer.id}">${escapeHtml(bowlPlayer.first_name)}</a>`;
 
     if (currentBatSub !== undefined || currentBowlSub !== undefined) {
         if (currentBatSub !== undefined) {
@@ -935,9 +935,9 @@ async function sendCricketMsg(ctx, lobby, extraMsg = '') {
 
         const batChose = lobby.submissions[lobby.batsmanId] !== undefined;
         if (!batChose) {
-            text += `👉 <a href="tg://user?id=${batPlayer.id}">${batPlayer.first_name}</a>, choose a number:`;
+            text += `👉 <a href="tg://user?id=${batPlayer.id}">${escapeHtml(batPlayer.first_name)}</a>, choose a number:`;
         } else {
-            text += `✅ ${batPlayer.first_name} chose. 👉 <a href="tg://user?id=${bowlPlayer.id}">${bowlPlayer.first_name}</a>, choose a number:`;
+            text += `✅ ${escapeHtml(batPlayer.first_name)} chose. 👉 <a href="tg://user?id=${bowlPlayer.id}">${escapeHtml(bowlPlayer.first_name)}</a>, choose a number:`;
         }
 
         const kb = new InlineKeyboard()
@@ -967,7 +967,7 @@ async function sendCricketMsg(ctx, lobby, extraMsg = '') {
         const winner = lobby.players.find(p => p.id === lobby.winnerId);
         text += `🏁 <b>GAME OVER!</b>\n`;
         if (winner) {
-            text += `🏆 <b>Winner:</b> <a href="tg://user?id=${winner.id}">${winner.first_name}</a>\n`;
+            text += `🏆 <b>Winner:</b> <a href="tg://user?id=${winner.id}">${escapeHtml(winner.first_name)}</a>\n`;
         } else {
             text += `⚖️ <b>It's a DRAW!</b>\n`;
         }
@@ -978,9 +978,9 @@ async function sendCricketMsg(ctx, lobby, extraMsg = '') {
     // Explicit Prompts for sequential choice
     const batChose = lobby.submissions[lobby.batsmanId] !== undefined;
     if (!batChose) {
-        text += `👉 <a href="tg://user?id=${batPlayer.id}">${batPlayer.first_name}</a>, choose a number:`;
+        text += `👉 <a href="tg://user?id=${batPlayer.id}">${escapeHtml(batPlayer.first_name)}</a>, choose a number:`;
     } else {
-        text += `✅ ${batPlayer.first_name} chose. 👉 <a href="tg://user?id=${bowlPlayer.id}">${bowlPlayer.first_name}</a>, choose a number:`;
+        text += `✅ ${escapeHtml(batPlayer.first_name)} chose. 👉 <a href="tg://user?id=${bowlPlayer.id}">${escapeHtml(bowlPlayer.first_name)}</a>, choose a number:`;
     }
 
     const kb = new InlineKeyboard()
