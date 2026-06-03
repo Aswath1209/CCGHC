@@ -179,8 +179,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     
     await ctx.api.sendMessage(tour.chatId, 
         `🔔 <b>Next Ball!</b>\n` +
-        `🏏 Striker: <a href="tg://user?id=${getBasePlayerId(striker.id)}">${striker.first_name}</a>\n` +
-        `🥎 Bowler: <a href="tg://user?id=${getBasePlayerId(bowler.id)}">${bowler.first_name}</a>\n\n` +
+        `🏏 Striker: <a href="tg://user?id=${getBasePlayerId(striker.id)}">${escapeHtml(striker.first_name)}</a>\n` +
+        `🥎 Bowler: <a href="tg://user?id=${getBasePlayerId(bowler.id)}">${escapeHtml(bowler.first_name)}</a>\n\n` +
         `<i>Click below to submit your play in DMs!</i>`, 
         { reply_markup: kb, parse_mode: 'HTML' }
     );
@@ -260,7 +260,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const success = tourManager.appointCaptain(tour.id, ctx.from.id, targetUserId, teamKey);
       if (success) {
-          await ctx.reply(`👑 <b>${first_name}</b> is now the captain of <b>${tour[teamKey].name}</b>!`, { parse_mode: 'HTML' });
+          await ctx.reply(`👑 <b>${escapeHtml(first_name)}</b> is now the captain of <b>${escapeHtml(tour[teamKey].name)}</b>!`, { parse_mode: 'HTML' });
       } else {
           await ctx.reply("❌ Failed to appoint captain.");
       }
@@ -291,7 +291,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const res = tourManager.joinTeam(tour.id, { id: targetUser.id, first_name: targetUser.first_name }, teamKey);
       
       if (res.success) {
-          await ctx.reply(`✅ Added <b>${targetUser.first_name}</b> to <b>${tour[teamKey].name}</b>!`, { parse_mode: 'HTML' });
+          await ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(tour[teamKey].name)}</b>!`, { parse_mode: 'HTML' });
       } else {
           await ctx.reply(`❌ ${res.error}`);
       }
@@ -328,19 +328,19 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const res = tourManager.removePlayer(tour.id, ctx.from.id, targetUserId);
       if (res.success) {
-          await ctx.reply(`🚪 <b>${first_name}</b> was removed from the match.`, { parse_mode: 'HTML' });
+          await ctx.reply(`🚪 <b>${escapeHtml(first_name)}</b> was removed from the match.`, { parse_mode: 'HTML' });
           if (res.clearedActive) {
               await ctx.reply("⚠️ Active batsman/bowler was removed. Captains, please select replacement.");
               if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL') {
                   const batT = tour[tour.battingTeamId];
                   const kb = new InlineKeyboard();
                   batT.players.filter(p => !batT.outPlayers.includes(p.id)).forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${batT.players.indexOf(p) + 1}`).row());
-                  await ctx.reply(`🏏 Captain of ${batT.name}, select your Striker:`, { reply_markup: kb, parse_mode: 'HTML' });
+                  await ctx.reply(`🏏 Captain of ${escapeHtml(batT.name)}, select your Striker:`, { reply_markup: kb, parse_mode: 'HTML' });
               } else if (tour.state === 'SELECT_BOWLER') {
                   const bowlT = tour[tour.bowlingTeamId];
                   const kb = new InlineKeyboard();
                   bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row());
-                  await ctx.reply(`🥎 Captain of ${bowlT.name}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+                  await ctx.reply(`🥎 Captain of ${escapeHtml(bowlT.name)}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
               }
           }
       } else {
@@ -367,12 +367,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const res = tourManager.setBatsman(tour.id, ctx.from.id, index, position);
       if (res.success) {
-          await ctx.reply(`✅ <b>${res.player.first_name}</b> is now playing as <b>${position === 'S' ? 'Striker' : 'Non-Striker'}</b>!`, { parse_mode: 'HTML' });
+          await ctx.reply(`✅ <b>${escapeHtml(res.player.first_name)}</b> is now playing as <b>${position === 'S' ? 'Striker' : 'Non-Striker'}</b>!`, { parse_mode: 'HTML' });
           if (tour.state === 'SELECT_BOWLER') {
               const bowlT = tour[tour.bowlingTeamId];
               const kb = new InlineKeyboard();
               bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row());
-              await ctx.reply(`🥎 Captain of ${bowlT.name}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+              await ctx.reply(`🥎 Captain of ${escapeHtml(bowlT.name)}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
           } else if (tour.state === 'PLAYING') {
               await tagActivePlayers(ctx, tour);
               const striker = batT.players.find(p => p.id === batT.strikerId);
@@ -405,7 +405,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const res = tourManager.setBowler(tour.id, ctx.from.id, index);
       if (res.success) {
-          await ctx.reply(`✅ <b>${res.player.first_name}</b> is bowling!`, { parse_mode: 'HTML' });
+          await ctx.reply(`✅ <b>${escapeHtml(res.player.first_name)}</b> is bowling!`, { parse_mode: 'HTML' });
           if (tour.state === 'PLAYING') {
               await tagActivePlayers(ctx, tour);
               const batTeam = tour[tour.battingTeamId];
@@ -432,7 +432,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const batT = tour[tour.battingTeamId];
           const striker = batT.players.find(p => p.id === batT.strikerId);
           const strikerName = striker ? striker.first_name : 'None';
-          await ctx.reply(`✅ <b>LMS Enabled!</b> Striker is now <b>${strikerName}</b>.`, { parse_mode: 'HTML' });
+          await ctx.reply(`✅ <b>LMS Enabled!</b> Striker is now <b>${escapeHtml(strikerName)}</b>.`, { parse_mode: 'HTML' });
           if (tour.state === 'SELECT_BOWLER') {
               const bowlT = tour[tour.bowlingTeamId];
               const kb = new InlineKeyboard();
@@ -441,7 +441,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                       kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row();
                   }
               });
-              await ctx.reply(`👉 Captain of ${bowlT.name}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+              await ctx.reply(`👉 Captain of ${escapeHtml(bowlT.name)}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
           } else if (tour.state === 'PLAYING') {
               await tagActivePlayers(ctx, tour);
           }
@@ -472,7 +472,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const res = tourManager.rebatPlayer(tour.id, tour.hostId, teamChar, index);
       if (res) {
           const cleanName = res.first_name.replace(/\s*\(rebat\)/gi, '');
-          await ctx.reply(`🔄 <b>${cleanName} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
+          await ctx.reply(`🔄 <b>${escapeHtml(cleanName)} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
           if (tour.state === 'LOBBY') {
               await ctx.reply(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
           } else {
@@ -490,19 +490,19 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("No active tour found.");
       
-      let text = `👥 <b>Roster for ${tour.teamA.name}:</b>\n`;
+      let text = `👥 <b>Roster for ${escapeHtml(tour.teamA.name)}:</b>\n`;
       tour.teamA.players.forEach((p, i) => {
           const cap = p.id === tour.teamA.captainId ? " (C)" : "";
           const active = (p.id === tour.teamA.strikerId ? " (Striker)" : "") || (p.id === tour.teamA.nonStrikerId ? " (Non-Striker)" : "");
           const out = tour.teamA.outPlayers.includes(p.id) ? " (Out)" : "";
-          text += `${i + 1}. ${p.first_name}${cap}${active}${out}\n`;
+          text += `${i + 1}. ${escapeHtml(p.first_name)}${cap}${active}${out}\n`;
       });
       
-      text += `\n👥 <b>Roster for ${tour.teamB.name}:</b>\n`;
+      text += `\n👥 <b>Roster for ${escapeHtml(tour.teamB.name)}:</b>\n`;
       tour.teamB.players.forEach((p, i) => {
           const cap = p.id === tour.teamB.captainId ? " (C)" : "";
           const active = (p.id === tour.activeBowlerId ? " (Bowler)" : "");
-          text += `${i + 1}. ${p.first_name}${cap}${active}\n`;
+          text += `${i + 1}. ${escapeHtml(p.first_name)}${cap}${active}\n`;
       });
       
       await ctx.reply(text, { parse_mode: 'HTML' });
@@ -554,10 +554,10 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const t2Overs = tour.innings2Balls !== undefined ? getOversStr(tour.innings2Balls) : (tour.innings === 2 ? getOversStr(tour.balls) : `0.0`);
       
       // Team 1 Batting
-      text += `🏏 <b>${team1.name}</b>: <b>${team1Score}/${team1.wickets || 0}</b> (${t1Overs} ov)\n`;
+      text += `🏏 <b>${escapeHtml(team1.name)}</b>: <b>${team1Score}/${team1.wickets || 0}</b> (${t1Overs} ov)\n`;
       team1.players.forEach(p => {
           if (p.balls > 0 || p.runs > 0) {
-              text += `   • ${p.first_name}: ${p.runs || 0} (${p.balls || 0}b)\n`;
+              text += `   • ${escapeHtml(p.first_name)}: ${p.runs || 0} (${p.balls || 0}b)\n`;
           }
       });
       // Team 1 Bowling
@@ -566,17 +566,17 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           if (p.ballsBowled > 0) {
               const ov = Math.floor(p.ballsBowled / 6);
               const bl = p.ballsBowled % 6;
-              text += `   • ${p.first_name}: ${p.wickets || 0}-${p.runsConceded || 0} (${ov}.${bl} ov)\n`;
+              text += `   • ${escapeHtml(p.first_name)}: ${p.wickets || 0}-${p.runsConceded || 0} (${ov}.${bl} ov)\n`;
           }
       });
       
       text += `───────────────────\n`;
       
       // Team 2 Batting
-      text += `🏏 <b>${team2.name}</b>: <b>${team2Score}/${team2.wickets || 0}</b> (${t2Overs} ov)\n`;
+      text += `🏏 <b>${escapeHtml(team2.name)}</b>: <b>${team2Score}/${team2.wickets || 0}</b> (${t2Overs} ov)\n`;
       team2.players.forEach(p => {
           if (p.balls > 0 || p.runs > 0) {
-              text += `   • ${p.first_name}: ${p.runs || 0} (${p.balls || 0}b)\n`;
+              text += `   • ${escapeHtml(p.first_name)}: ${p.runs || 0} (${p.balls || 0}b)\n`;
           }
       });
       // Team 2 Bowling
@@ -585,7 +585,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           if (p.ballsBowled > 0) {
               const ov = Math.floor(p.ballsBowled / 6);
               const bl = p.ballsBowled % 6;
-              text += `   • ${p.first_name}: ${p.wickets || 0}-${p.runsConceded || 0} (${ov}.${bl} ov)\n`;
+              text += `   • ${escapeHtml(p.first_name)}: ${p.wickets || 0}-${p.runsConceded || 0} (${ov}.${bl} ov)\n`;
           }
       });
       
