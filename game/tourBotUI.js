@@ -186,6 +186,44 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     );
   }
 
+  // Prompt player selection based on state
+  async function promptPlayerSelection(ctx, tour) {
+      if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL') {
+          const batT = tour[tour.battingTeamId];
+          const activeCount = batT.players.length - batT.outPlayers.length;
+          const battingCount = (batT.strikerId ? 1 : 0) + (batT.nonStrikerId ? 1 : 0);
+          
+          if (battingCount < Math.min(2, activeCount)) {
+              if (!batT.strikerId) {
+                  const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.nonStrikerId);
+                  const kb = new InlineKeyboard();
+                  available.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${batT.players.indexOf(p) + 1}`).row());
+                  await ctx.api.sendMessage(tour.chatId, `🏏 Captain of ${escapeHtml(batT.name)}, select your Striker:`, { reply_markup: kb, parse_mode: 'HTML' });
+              } else if (!batT.nonStrikerId) {
+                  const available = batT.players.filter(p => !batT.outPlayers.includes(p.id) && p.id !== batT.strikerId);
+                  const kb = new InlineKeyboard();
+                  available.forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_NS_${batT.players.indexOf(p) + 1}`).row());
+                  kb.text("LMS (Play 1 Batter) 🏏", `tour_lms_${tour.id}`).row();
+                  const striker = batT.players.find(p => p.id === batT.strikerId);
+                  await ctx.api.sendMessage(tour.chatId, 
+                      `🏏 Striker Set: <b>${escapeHtml(striker ? striker.first_name : '')}</b>\n\n` +
+                      `👉 Captain of ${escapeHtml(batT.name)}, select your <b>second opening batter (Non-Striker)</b> or choose LMS:`, 
+                      { reply_markup: kb, parse_mode: 'HTML' }
+                  );
+              }
+          }
+      } else if (tour.state === 'SELECT_BOWLER') {
+          const bowlT = tour[tour.bowlingTeamId];
+          const kb = new InlineKeyboard();
+          bowlT.players.forEach(p => {
+              if (p.id !== tour.previousBowlerId || bowlT.players.length === 1) {
+                  kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row();
+              }
+          });
+          await ctx.api.sendMessage(tour.chatId, `🥎 Captain of ${escapeHtml(bowlT.name)}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+      }
+  }
+
   // --- Bot Commands Definitions ---
 
   bot.command('tour', async (ctx) => {
@@ -292,6 +330,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       if (res.success) {
           await ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(tour[teamKey].name)}</b>!`, { parse_mode: 'HTML' });
+          if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
+              await promptPlayerSelection(ctx, tour);
+          }
       } else {
           await ctx.reply(`❌ ${res.error}`);
       }
@@ -331,17 +372,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           await ctx.reply(`🚪 <b>${escapeHtml(first_name)}</b> was removed from the match.`, { parse_mode: 'HTML' });
           if (res.clearedActive) {
               await ctx.reply("⚠️ Active batsman/bowler was removed. Captains, please select replacement.");
-              if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL') {
-                  const batT = tour[tour.battingTeamId];
-                  const kb = new InlineKeyboard();
-                  batT.players.filter(p => !batT.outPlayers.includes(p.id)).forEach(p => kb.text(p.first_name, `tour_selectbat_${tour.id}_S_${batT.players.indexOf(p) + 1}`).row());
-                  await ctx.reply(`🏏 Captain of ${escapeHtml(batT.name)}, select your Striker:`, { reply_markup: kb, parse_mode: 'HTML' });
-              } else if (tour.state === 'SELECT_BOWLER') {
-                  const bowlT = tour[tour.bowlingTeamId];
-                  const kb = new InlineKeyboard();
-                  bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row());
-                  await ctx.reply(`🥎 Captain of ${escapeHtml(bowlT.name)}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
-              }
+          }
+          if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
+              await promptPlayerSelection(ctx, tour);
           }
       } else {
           await ctx.reply(`❌ ${res.error}`);
@@ -368,11 +401,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const res = tourManager.setBatsman(tour.id, ctx.from.id, index, position);
       if (res.success) {
           await ctx.reply(`✅ <b>${escapeHtml(res.player.first_name)}</b> is now playing as <b>${position === 'S' ? 'Striker' : 'Non-Striker'}</b>!`, { parse_mode: 'HTML' });
-          if (tour.state === 'SELECT_BOWLER') {
-              const bowlT = tour[tour.bowlingTeamId];
-              const kb = new InlineKeyboard();
-              bowlT.players.forEach(p => kb.text(p.first_name, `tour_selectbowl_${tour.id}_${bowlT.players.indexOf(p) + 1}`).row());
-              await ctx.reply(`🥎 Captain of ${escapeHtml(bowlT.name)}, select bowler:`, { reply_markup: kb, parse_mode: 'HTML' });
+          if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
+              await promptPlayerSelection(ctx, tour);
           } else if (tour.state === 'PLAYING') {
               await tagActivePlayers(ctx, tour);
               const striker = batT.players.find(p => p.id === batT.strikerId);
@@ -417,6 +447,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               if (bowler) {
                   try { await ctx.api.sendMessage(bowler.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
               }
+          } else if (tour.state === 'SELECT_BOWLER') {
+              await promptPlayerSelection(ctx, tour);
           }
       } else {
           await ctx.reply(`❌ ${res.error}`);
@@ -479,6 +511,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               await ctx.reply(renderScoreboard(tour), { parse_mode: 'HTML' });
               if (tour.state === 'PLAYING') {
                   await tagActivePlayers(ctx, tour);
+              } else if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
+                  await promptPlayerSelection(ctx, tour);
               }
           }
       } else {
