@@ -69,7 +69,15 @@ const COMMENTARY = {
         "🏏 That bat has more holes than Swiss cheese!",
         "🤷‍♂️ Even my grandma could hit that for a single.",
         "🥶 Chilled out? You need to score, mate!",
-        "💤 ZZZ... Wake me up when a run is scored."
+        "💤 ZZZ... Wake me up when a run is scored.",
+        "Defended with soft hands. No run.",
+        "🎯 Bowler is spot on! Right in the blockhole.",
+        "🤫 Dead silent. Clean play but no run.",
+        "🧐 Batsman is scanning the field, but finding no gaps.",
+        "🛡️ Textbook defense! Play and miss.",
+        "⚡ Beat him with pace! Beat the outside edge.",
+        "Dot ball. The run rate is crying for help.",
+        "🤨 Just a tap to short cover. Not in the mood to run."
     ],
     "1": [
         "🏃 Quick single taken.", 
@@ -89,7 +97,15 @@ const COMMENTARY = {
         "🦊 Crafty running, snatching a run.",
         "🥇 Every run counts in this battle!",
         "🌪️ Speeding through for one.",
-        "🔥 Burning up the pitch for a single."
+        "🔥 Burning up the pitch for a single.",
+        "⚡ Scurries through for a quick single.",
+        "🤝 A gentle push into the gap for one.",
+        "🏃 Soft hands, smart call, easy single.",
+        "🏃‍♂️ Quick off the mark, strike rotated.",
+        "🎯 Tapped to mid-on and off they go.",
+        "👟 Quick scramble to the other end.",
+        "💨 Fast running keeps the fielder on toes.",
+        "🔄 Rotating the strike, keeping the game moving."
     ],
     "2": [
         "🏃‍♂️ Two runs!", 
@@ -106,7 +122,14 @@ const COMMENTARY = {
         "🏹 Two runs harvested from the field.",
         "⚖️ Balancing the risk with two runs.",
         "🌊 Rolling in the runs, two at a time.",
-        "🔋 Recharging the total with a double."
+        "🔋 Recharging the total with a double.",
+        "🏃‍♂️🏃‍♂️ Exceptional running, they hustle back for a double!",
+        "🏏 Driven through the covers, easy two runs.",
+        "🐆 Coming back hard for the second run! Excellent hustle.",
+        "⚡ Pierced the gap, fielders chase as they grab two.",
+        "📈 Score ticks up by two! Nicely played.",
+        "🔥 A brace of runs added to the scoreboard.",
+        "💪 Great athletic display to complete the second."
     ],
     "3": [
         "🏃‍♂️ Three runs! Great running!", 
@@ -120,7 +143,13 @@ const COMMENTARY = {
         "🥵 Fielder is panting! 3 runs taken.",
         "💥 Gajab running, bhai! (Amazing running, brother!)",
         "🏃‍♂️🏃‍♂️🏃‍♂️ Non-stop action for three runs!",
-        "🎯 Exploiting the gaps beautifully for 3."
+        "🎯 Exploiting the gaps beautifully for 3.",
+        "🥵 Exhausting! Three runs collected with pure running.",
+        "🏏 Beautiful stroke through deep mid-wicket, fielders pull it back.",
+        "⚡ Great running between the wickets, absolute sprint for three.",
+        "🏃‍♂️🏃‍♂️🏃‍♂️ Swept away, fielders chase and they slide home for a triple!",
+        "🔥 Terrific communication, three easy runs.",
+        "📈 Pushing the field to its limits, three runs!"
     ],
     "4": [
         "🔥 Cracking four! What a shot!", 
@@ -140,7 +169,15 @@ const COMMENTARY = {
         "🚁 Helicopter 4? Almost!",
         "💎 A gem of a boundary. 4 runs.",
         "🐅 Roaring with power! Four!",
-        "⚡ 'Absolute lightning to the fence!'"
+        "⚡ 'Absolute lightning to the fence!'",
+        "🏏 Pure elegance! Driven through extra cover for four!",
+        "🚀 Fast outfield! The ball races away to the boundary fence.",
+        "💥 Cracking sound off the willow, absolute boundary!",
+        "🎯 Shot of the day! Pristine timing for four.",
+        "🎸 Pierced the infield with surgical precision! Boundary!",
+        "🔥 Pulled away powerfully! Four runs.",
+        "⚡ The crowd goes wild as the ball crosses the rope!",
+        "🤩 Absolute class! No need to run for that."
     ],
     "6": [
         "🚀 Massive six! Into the stands!", 
@@ -160,7 +197,15 @@ const COMMENTARY = {
         "🔱 God-level hitting! 6 runs.",
         "🌋 Eruption of power! Out of the stadium!",
         "🛰️ NASA just spotted the ball. 6 runs.",
-        "🌈 Arcing beautifully into the crowd. 6!"
+        "🌈 Arcing beautifully into the crowd. 6!",
+        "🌌 THAT IS HUGE! Clean out of the stadium!",
+        "🚀 High, handsome, and into the third tier! SIX!",
+        "💣 Monstruous hit! The ball has disappeared into the night sky.",
+        "👑 Majestic! Lofted over long-on for a massive six.",
+        "🛸 Launch codes entered! That's gone into orbit.",
+        "🕺 Smacked with sheer authority! 6 runs!",
+        "💥 Helicopter shot! Erupts into a massive sixer.",
+        "🏟️ Stand and deliver! The crowd is catch-hunting in the stands."
     ],
     "out": [
         "💥 Bowled him! What a delivery!", 
@@ -181,7 +226,15 @@ const COMMENTARY = {
         "💨 'Snicked it... and taken!'",
         "👻 Disappeared! Like your chances of winning. OUT!",
         "😵 Stunned! The stumps are flying.",
-        "📉 Career-ending delivery? Maybe!"
+        "📉 Career-ending delivery? Maybe!",
+        "☝️ GONE! The finger goes up! Bowler celebrates.",
+        "💥 Stumps shattered! Clean bowled, absolute beauty!",
+        "😱 What a catch! Diving at point to dismiss the batsman.",
+        "🚪 Long walk back to the pavilion. OUT!",
+        "😢 Tragic end to the innings. Caught at the boundary.",
+        "🚾 Plumb in front! That's a massive wicket.",
+        "👋 Cheerio, batter! Better luck next time.",
+        "💀 Silence in the stadium as the star batsman departs!"
     ],
     "50": [
         "🎉 Half-century! What a milestone!", 
@@ -193,7 +246,12 @@ const COMMENTARY = {
         "🍾 Pop the champagne! 50 up.",
         "📈 The graphs are all pointing up!",
         "🦁 Sher hai tu! (You're a lion!) Magnificent 50.",
-        "🏅 Quality through and through. 50 runs."
+        "🏅 Quality through and through. 50 runs.",
+        "🏏 Raising the bat! A magnificent half-century!",
+        "👑 Playing a key innings, fifty up and well deserved!",
+        "🔥 Masterclass in batting! 50 runs milestone reached.",
+        "👏 Standing ovation from the dressing room! 50 up.",
+        "🌟 Anchoring the innings beautifully. Golden 50!"
     ],
     "100": [
         "🏅 CENTURY! What a magnificent innings!", 
@@ -205,7 +263,12 @@ const COMMENTARY = {
         "🎂 A ton of runs! Magnificent.",
         "🙌 Bow down to the centurion!",
         "👑 Badshah of the stadium! (King of the stadium!) 100!",
-        "🔱 Simply unstoppable. 100 runs."
+        "🔱 Simply unstoppable. 100 runs.",
+        "👑 A GLORIOUS CENTURY! Helmets off, arms raised!",
+        "🏆 Pure class! A century of the highest order.",
+        "🌟 Landmark moment! 100 runs in a sensational display.",
+        "🎉 The stadium rises to applaud a masterful ton!",
+        "Legendary batting! A century to remember."
     ]
 };
 
