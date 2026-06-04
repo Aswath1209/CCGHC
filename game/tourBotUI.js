@@ -231,7 +231,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const args = ctx.message.text.split(' ');
           const teamChar = args[1]?.toUpperCase();
           const index = parseInt(args[2]);
-          if (teamChar && !isNaN(index)) {
+          if (teamChar && (teamChar === 'A' || teamChar === 'B') && !isNaN(index)) {
               const teamKey = teamChar === 'A' ? 'teamA' : 'teamB';
               const team = tour[teamKey];
               const player = team.players[index - 1];
@@ -311,7 +311,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const args = ctx.message.text.split(' ');
           const teamChar = args[1]?.toUpperCase();
           const index = parseInt(args[2]);
-          if (teamChar && !isNaN(index)) {
+          if (teamChar && (teamChar === 'A' || teamChar === 'B') && !isNaN(index)) {
               const teamKey = teamChar === 'A' ? 'teamA' : 'teamB';
               const team = tour[teamKey];
               const player = team.players[index - 1];
@@ -599,9 +599,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can issue penalties.");
       
       const args = ctx.message.text.split(' ');
-      const teamChar = args[1];
+      const teamChar = args[1]?.toUpperCase();
       const runs = parseInt(args[2]);
-      if (!teamChar || isNaN(runs)) return ctx.reply("Usage: /penalty [A/B] [runs]");
+      if (!teamChar || (teamChar !== 'A' && teamChar !== 'B') || isNaN(runs)) return ctx.reply("Usage: /penalty [A/B] [runs]");
       
       const res = tourManager.adjustRuns(tour.id, ctx.from.id, teamChar, runs, true);
       if (res) {
@@ -615,9 +615,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can award bonuses.");
       
       const args = ctx.message.text.split(' ');
-      const teamChar = args[1];
+      const teamChar = args[1]?.toUpperCase();
       const runs = parseInt(args[2]);
-      if (!teamChar || isNaN(runs)) return ctx.reply("Usage: /bonus [A/B] [runs]");
+      if (!teamChar || (teamChar !== 'A' && teamChar !== 'B') || isNaN(runs)) return ctx.reply("Usage: /bonus [A/B] [runs]");
       
       const res = tourManager.adjustRuns(tour.id, ctx.from.id, teamChar, runs, false);
       if (res) {

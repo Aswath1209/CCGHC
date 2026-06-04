@@ -375,7 +375,10 @@ function adjustRuns(tourId, hostId, teamChar, amount, isPenalty) {
     const tour = tours.get(tourId);
     if (!tour || tour.hostId !== hostId) return null;
 
-    const team = teamChar.toUpperCase() === 'A' ? tour.teamA : tour.teamB;
+    const charUpper = teamChar.toUpperCase();
+    if (charUpper !== 'A' && charUpper !== 'B') return null;
+
+    const team = charUpper === 'A' ? tour.teamA : tour.teamB;
     if (isPenalty) team.penaltyRuns += amount;
     else team.bonusRuns += amount;
 
@@ -386,7 +389,10 @@ function rebatPlayer(tourId, hostId, teamChar, playerIndex) {
     const tour = tours.get(tourId);
     if (!tour || tour.hostId !== hostId) return null;
 
-    const team = teamChar.toUpperCase() === 'A' ? tour.teamA : tour.teamB;
+    const charUpper = teamChar.toUpperCase();
+    if (charUpper !== 'A' && charUpper !== 'B') return null;
+
+    const team = charUpper === 'A' ? tour.teamA : tour.teamB;
     const player = team.players[playerIndex - 1];
     if (!player) return null;
 
