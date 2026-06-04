@@ -708,7 +708,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         return true;
     }
     
-    await handleTourResult(ctx, res);
+    handleTourResult(ctx, res).catch(err => console.error("Error in handleTourResult:", err));
     return true; 
   };
 

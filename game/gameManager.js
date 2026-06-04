@@ -36,6 +36,7 @@ function createGame(chatId, messageId, hostUser, bet = 0) {
     createdAt: Date.now(),
     halfCenturyAnnounced: false,
     centuryAnnounced: false,
+    processingBall: false,
   };
   games.set(gameId, game);
   userGameMap.set(hostUser.id, gameId);
@@ -122,6 +123,8 @@ function submitPlay(gameId, userId, rawInput) {
   if (!game || game.state !== 'PLAYING') return { success: false, error: 'Invalid state' };
   if (userId !== game.batsmanId && userId !== game.bowlerId) return { success: false, error: 'Not in game' };
 
+  if (game.processingBall) return { success: false, error: 'Please wait for the current ball animation to finish.' };
+
   const isBatsman = userId === game.batsmanId;
 
   // Validate input
@@ -144,6 +147,8 @@ function submitPlay(gameId, userId, rawInput) {
   if (game.batChoice === null || game.bowlChoice === null) {
     return { success: true, waiting: true };
   }
+
+  game.processingBall = true;
 
   // Both played — resolve
   const batNum = parseInt(game.batChoice);

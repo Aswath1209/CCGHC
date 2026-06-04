@@ -1049,7 +1049,7 @@ bot.on('message:text', async (ctx) => {
         return;
     }
     
-    await handleRoundResult(ctx, res);
+    handleRoundResult(ctx, res).catch(err => console.error("Error in handleRoundResult:", err));
 });
 
 
@@ -1088,76 +1088,82 @@ async function handleRoundResult(ctx, res) {
   const cleanBatsman = escapeHtml(batsmanP?.first_name || 'Batsman');
   const cleanBowler = escapeHtml(bowlerP?.first_name || 'Bowler');
 
-  await ctx.api.sendMessage(chatId, `Over ${over + 1}`);
-  await ctx.api.sendMessage(chatId, `Ball ${ballInOver}`);
-  await sleep(4000);
-  
-  await ctx.api.sendMessage(chatId, `${cleanBowler} bowls a ${bowlStr} delivery!`);
-  await sleep(4000);
+  try {
+    await ctx.api.sendMessage(chatId, `Over ${over + 1}`);
+    await ctx.api.sendMessage(chatId, `Ball ${ballInOver}`);
+    await sleep(4000);
+    
+    await ctx.api.sendMessage(chatId, `${cleanBowler} bowls a ${bowlStr} delivery!`);
+    await sleep(4000);
 
-  if (isWicket) {
-      await sendEventUpdate(ctx, chatId, "out");
-  } else {
-      await sendEventUpdate(ctx, chatId, batStr);
-  }
-  await sleep(1000);
-  
-  // Display correct score (if innings just ended, show score1)
-  if (res.inningsEnded) {
-      const newBatP = game.players.find(p => p.id === game.batsmanId);
-      const cleanNewBat = escapeHtml(newBatP?.first_name || 'Batsman');
-      await ctx.api.sendMessage(chatId, `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: ${game.score1}\nTarget for ${cleanNewBat}: ${game.score1 + 1}`, { parse_mode: 'HTML' });
-  } else {
-      const currentScore = game.innings === 1 ? game.score1 : game.score2;
-      const targetText = game.target ? ` (Target: ${game.target})` : (game.innings === 2 ? ` (Target: ${game.score1 + 1})` : "");
-      await ctx.api.sendMessage(chatId, `📊 Scorecard: ${currentScore}/${game.innings === 1 ? 0 : 0} ${targetText}`);
-  }
+    if (isWicket) {
+        await sendEventUpdate(ctx, chatId, "out");
+    } else {
+        await sendEventUpdate(ctx, chatId, batStr);
+    }
+    await sleep(1000);
+    
+    // Display correct score (if innings just ended, show score1)
+    if (res.inningsEnded) {
+        const newBatP = game.players.find(p => p.id === game.batsmanId);
+        const cleanNewBat = escapeHtml(newBatP?.first_name || 'Batsman');
+        await ctx.api.sendMessage(chatId, `☝️ <b>WICKET!</b> First innings ends.\nFinal Score: ${game.score1}\nTarget for ${cleanNewBat}: ${game.score1 + 1}`, { parse_mode: 'HTML' });
+    } else {
+        const currentScore = game.innings === 1 ? game.score1 : game.score2;
+        const targetText = game.target ? ` (Target: ${game.target})` : (game.innings === 2 ? ` (Target: ${game.score1 + 1})` : "");
+        await ctx.api.sendMessage(chatId, `📊 Scorecard: ${currentScore}/${game.innings === 1 ? 0 : 0} ${targetText}`);
+    }
 
-  // Pacing delay to keep it readable but fast
-  await sleep(1500);
+    // Pacing delay to keep it readable but fast
+    await sleep(1500);
 
-  // End conditions
-  if (isWicket) {
-      if (inningsEnded) {
-          game.halfCenturyAnnounced = false;
-          game.centuryAnnounced = false;
-          // Send instructions again for new innings
-          const nBatP = game.players.find(p => p.id === game.batsmanId);
-          const nBowlP = game.players.find(p => p.id === game.bowlerId);
-          await sendDMInstructions(ctx, game, nBatP, nBowlP);
-      }
-  } else {
-      if (hit50) {
-          await sendEventUpdate(ctx, chatId, "50");
-          await ctx.api.sendMessage(chatId, "🎉 Half-century! Keep it up!");
-      }
-      if (hit100) {
-          await sendEventUpdate(ctx, chatId, "100");
-          await ctx.api.sendMessage(chatId, "🏆 Century! Amazing innings!");
-      }
-  }
-  
-  if (matchEnded) {
-      if (tie) {
-          await ctx.api.sendMessage(chatId, "🤝 The match is a tie!");
-      } else {
-          const winnerP = game.players.find(p => p.id === res.winnerId);
-          const cleanWinner = escapeHtml(winnerP?.first_name || 'Player');
-          await ctx.api.sendMessage(chatId, `🏆 <b>${cleanWinner} won the match!</b> 🎉`, { parse_mode: 'HTML' });
-          if (game.bet > 0) {
-              await ctx.api.sendMessage(chatId, `💰 ${game.bet}🪙 coins transferred to ${cleanWinner} as bet winnings!`);
-          }
-          await sb.recordMatchEnd(res.winnerId, res.loserId, game.bet);
-      }
-      gameManager.deleteGame(game.id);
-  } else if (!inningsEnded) {
-      // Round continuous!
-      const batP = game.players.find(p => p.id === game.batsmanId);
-      const bowlP = game.players.find(p => p.id === game.bowlerId);
-      try {
-          await ctx.api.sendMessage(batP.id, "🏏 Send your shot number (0,1,2,3,4,6):");
-          await ctx.api.sendMessage(bowlP.id, "⚾ Send your delivery as one of:\nRS, Bouncer, Yorker, Short, Slower, Knuckle");
-      } catch(e) {}
+    // End conditions
+    if (isWicket) {
+        if (inningsEnded) {
+            game.halfCenturyAnnounced = false;
+            game.centuryAnnounced = false;
+            // Send instructions again for new innings
+            const nBatP = game.players.find(p => p.id === game.batsmanId);
+            const nBowlP = game.players.find(p => p.id === game.bowlerId);
+            await sendDMInstructions(ctx, game, nBatP, nBowlP);
+        }
+    } else {
+        if (hit50) {
+            await sendEventUpdate(ctx, chatId, "50");
+            await ctx.api.sendMessage(chatId, "🎉 Half-century! Keep it up!");
+        }
+        if (hit100) {
+            await sendEventUpdate(ctx, chatId, "100");
+            await ctx.api.sendMessage(chatId, "🏆 Century! Amazing innings!");
+        }
+    }
+    
+    if (matchEnded) {
+        if (tie) {
+            await ctx.api.sendMessage(chatId, "🤝 The match is a tie!");
+        } else {
+            const winnerP = game.players.find(p => p.id === res.winnerId);
+            const cleanWinner = escapeHtml(winnerP?.first_name || 'Player');
+            await ctx.api.sendMessage(chatId, `🏆 <b>${cleanWinner} won the match!</b> 🎉`, { parse_mode: 'HTML' });
+            if (game.bet > 0) {
+                await ctx.api.sendMessage(chatId, `💰 ${game.bet}🪙 coins transferred to ${cleanWinner} as bet winnings!`);
+            }
+            await sb.recordMatchEnd(res.winnerId, res.loserId, game.bet);
+        }
+        gameManager.deleteGame(game.id);
+    } else if (!inningsEnded) {
+        // Round continuous!
+        const batP = game.players.find(p => p.id === game.batsmanId);
+        const bowlP = game.players.find(p => p.id === game.bowlerId);
+        try {
+            await ctx.api.sendMessage(batP.id, "🏏 Send your shot number (0,1,2,3,4,6):");
+            await ctx.api.sendMessage(bowlP.id, "⚾ Send your delivery as one of:\nRS, Bouncer, Yorker, Short, Slower, Knuckle");
+        } catch(e) {}
+    }
+  } finally {
+    if (!matchEnded) {
+        game.processingBall = false;
+    }
   }
 }
 
