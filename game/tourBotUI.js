@@ -133,28 +133,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         .text("Join Team A 🔴", `tour_join_${tour.id}_teamA`)
         .text("Join Team B 🔵", `tour_join_${tour.id}_teamB`)
         .row()
-        .text("Configure ⚙️", `tour_configmenu_${tour.id}`)
-        .row()
         .text("Start Match 🚀", `tour_start_${tour.id}`)
         .text("Cancel Tour ❌", `tour_cancellobby_${tour.id}`);
-  }
-
-  // Settings Configuration Keyboard
-  function getConfigureKeyboard(tour) {
-    return new InlineKeyboard()
-        .text("Overs: -1 📉", `tour_config_${tour.id}_overs_minus`)
-        .text(`Overs: ${tour.config.overs}`, `tour_config_${tour.id}_noop`)
-        .text("Overs: +1 📈", `tour_config_${tour.id}_overs_plus`)
-        .row()
-        .text("Wickets: -1 📉", `tour_config_${tour.id}_wickets_minus`)
-        .text(`Wkts: ${tour.config.wickets}`, `tour_config_${tour.id}_noop`)
-        .text("Wickets: +1 📈", `tour_config_${tour.id}_wickets_plus`)
-        .row()
-        .text("Bet: -500 🪙", `tour_config_${tour.id}_bet_minus`)
-        .text(`Bet: ${tour.config.bet}`, `tour_config_${tour.id}_noop`)
-        .text("Bet: +500 🪙", `tour_config_${tour.id}_bet_plus`)
-        .row()
-        .text("Back 🔙", `tour_configback_${tour.id}`);
   }
 
   // Tag players in GC with a button redirecting to DMs and overrides
@@ -173,9 +153,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         .url("Send Play 🎮", `https://t.me/${bot.botInfo.username}?start=tour`)
         .row()
         .text("Swap Striker 🔄", `tour_swap_striker_${tour.id}`)
-        .text("Swap Bowler 🔄", `tour_swap_bowler_${tour.id}`)
-        .row()
-        .text("Configure ⚙️", `tour_configmenu_${tour.id}`);
+        .text("Swap Bowler 🔄", `tour_swap_bowler_${tour.id}`);
     
     await ctx.api.sendMessage(tour.chatId, 
         `🔔 <b>Next Ball!</b>\n` +
@@ -235,12 +213,68 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     await ctx.reply(renderLobby(res.tour), { reply_markup: getLobbyKeyboard(res.tour), parse_mode: 'HTML' });
   });
 
-  bot.command('tourconfig', async (ctx) => {
+  bot.command('set_overs', async (ctx) => {
       const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
-      if (!tour) return ctx.reply("No active Tour match found.");
-      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can configure match settings.");
+      if (!tour) return ctx.reply("⚠️ No active Tour match found.");
       
-      await ctx.reply(`⚙️ <b>Configure Tour Match Settings:</b>`, { reply_markup: getConfigureKeyboard(tour), parse_mode: 'HTML' });
+      const isAllowed = ctx.from.id === tour.hostId || ctx.from.id === tour.teamA.captainId || ctx.from.id === tour.teamB.captainId;
+      if (!isAllowed) return ctx.reply("❌ Only the host or captains can change settings.");
+      
+      if (tour.state !== 'LOBBY') return ctx.reply("❌ Match has already started! You can only change settings in the lobby.");
+      
+      const args = ctx.message.text.split(' ');
+      const overs = parseInt(args[1]);
+      if (isNaN(overs) || overs < 1 || overs > 20) {
+          return ctx.reply("Usage: /set_overs [1-20]");
+      }
+      
+      tour.config.overs = overs;
+      tour.maxBalls = overs * 6;
+      
+      await ctx.reply(`⚙️ <b>Overs updated to:</b> <code>${overs}</code> overs.`, { parse_mode: 'HTML' });
+  });
+
+  bot.command('set_wickets', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("⚠️ No active Tour match found.");
+      
+      const isAllowed = ctx.from.id === tour.hostId || ctx.from.id === tour.teamA.captainId || ctx.from.id === tour.teamB.captainId;
+      if (!isAllowed) return ctx.reply("❌ Only the host or captains can change settings.");
+      
+      if (tour.state !== 'LOBBY') return ctx.reply("❌ Match has already started! You can only change settings in the lobby.");
+      
+      const args = ctx.message.text.split(' ');
+      const wickets = parseInt(args[1]);
+      if (isNaN(wickets) || wickets < 1 || wickets > 10) {
+          return ctx.reply("Usage: /set_wickets [1-10]");
+      }
+      
+      tour.config.wickets = wickets;
+      tour.teamA.inningsRemainingWickets = wickets;
+      tour.teamB.inningsRemainingWickets = wickets;
+      
+      await ctx.reply(`⚙️ <b>Wickets updated to:</b> <code>${wickets}</code> wickets.`, { parse_mode: 'HTML' });
+  });
+
+  bot.command('powersurge', async (ctx) => {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      if (!tour) return ctx.reply("⚠️ No active Tour match found.");
+      
+      const isAllowed = ctx.from.id === tour.hostId || ctx.from.id === tour.teamA.captainId || ctx.from.id === tour.teamB.captainId;
+      if (!isAllowed) return ctx.reply("❌ Only the host or captains can toggle Power Surge.");
+      
+      tour.powerSurge = !tour.powerSurge;
+      
+      if (tour.powerSurge) {
+          await ctx.reply(
+              `⚡️ <b>Power Surge Activated!</b>\n\n` +
+              `🏏 Batsman can now play <b>5</b>.\n` +
+              `🥎 Bowler can now bowl <b>Leg Cutter</b>!`,
+              { parse_mode: 'HTML' }
+          );
+      } else {
+          await ctx.reply(`⚡️ <b>Power Surge Deactivated!</b>`, { parse_mode: 'HTML' });
+      }
   });
 
   bot.command('teamname', async (ctx) => {
@@ -408,10 +442,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               const striker = batT.players.find(p => p.id === batT.strikerId);
               const bowler = tour[tour.bowlingTeamId].players.find(p => p.id === tour.activeBowlerId);
               if (striker) {
-                  try { await ctx.api.sendMessage(striker.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
+                  try { await ctx.api.sendMessage(striker.id, tour.powerSurge
+                      ? "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 5, 6):"
+                      : "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
               }
               if (bowler) {
-                  try { await ctx.api.sendMessage(bowler.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
+                  try { await ctx.api.sendMessage(bowler.id, tour.powerSurge
+                      ? "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Leg Cutter, Knuckle):"
+                      : "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
               }
           }
       } else {
@@ -442,10 +480,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               const striker = batTeam.players.find(p => p.id === batTeam.strikerId);
               const bowler = bowlT.players.find(p => p.id === tour.activeBowlerId);
               if (striker) {
-                  try { await ctx.api.sendMessage(striker.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
+                  try { await ctx.api.sendMessage(striker.id, tour.powerSurge
+                      ? "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 5, 6):"
+                      : "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
               }
               if (bowler) {
-                  try { await ctx.api.sendMessage(bowler.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
+                  try { await ctx.api.sendMessage(bowler.id, tour.powerSurge
+                      ? "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Leg Cutter, Knuckle):"
+                      : "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
               }
           } else if (tour.state === 'SELECT_BOWLER') {
               await promptPlayerSelection(ctx, tour);
@@ -695,8 +737,11 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           "7. /bowling [index] - Select/re-select bowler\n" +
           "8. /teams - View roster indices\n" +
           "9. /penalty [A/B] [runs] / /bonus [A/B] [runs]\n" +
-          "10. /endtour - Safely cancel the Tour match\n" +
-          "11. /tourresume - Resume match if stuck (Host)\n",
+          "10. /set_overs [overs] - Set match overs (Host/Captains in lobby)\n" +
+          "11. /set_wickets [wickets] - Set match wickets (Host/Captains in lobby)\n" +
+          "12. /powersurge - Toggle Power Surge (Host/Captains)\n" +
+          "13. /endtour - Safely cancel the Tour match\n" +
+          "14. /tourresume - Resume match if stuck (Host)\n",
           { parse_mode: 'HTML' }
       );
   });
@@ -722,6 +767,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
             '2': 'Yorker', 'yorker': 'Yorker',
             '3': 'Short', 'short': 'Short',
             '4': 'Slower', 'slower': 'Slower',
+            '5': 'Leg Cutter', 'leg cutter': 'Leg Cutter', 'legcutter': 'Leg Cutter',
             '6': 'Knuckle', 'knuckle': 'Knuckle'
         };
         const displayName = DELIVERY_NAMES[String(bowlVal).toLowerCase()] || bowlVal;
@@ -735,9 +781,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         const waitingForBatter = tour.choices.bowlChoice !== null && tour.choices.batChoice === null;
         
         if (waitingForBowler && ctx.from.id.toString() === getBasePlayerId(striker.id)) {
-            try { await ctx.api.sendMessage(Number(getBasePlayerId(bowler.id)), "⚾ Please submit your delivery (RS, Bouncer, Yorker, Short, Slower, Knuckle) in DM!"); } catch(e){}
+            try { await ctx.api.sendMessage(Number(getBasePlayerId(bowler.id)), tour.powerSurge
+                ? "⚾ Please submit your delivery (RS, Bouncer, Yorker, Short, Slower, Leg Cutter, Knuckle) in DM!"
+                : "⚾ Please submit your delivery (RS, Bouncer, Yorker, Short, Slower, Knuckle) in DM!"); } catch(e){}
         } else if (waitingForBatter && ctx.from.id.toString() === getBasePlayerId(bowler.id)) {
-            try { await ctx.api.sendMessage(Number(getBasePlayerId(striker.id)), "🏏 Please submit your shot (0, 1, 2, 3, 4, 6) in DM!"); } catch(e){}
+            try { await ctx.api.sendMessage(Number(getBasePlayerId(striker.id)), tour.powerSurge
+                ? "🏏 Please submit your shot (0, 1, 2, 3, 4, 5, 6) in DM!"
+                : "🏏 Please submit your shot (0, 1, 2, 3, 4, 6) in DM!"); } catch(e){}
         }
         return true;
     }
@@ -747,18 +797,16 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   };
 
   async function handleTourResult(ctx, res) {
-      const { tour, batStr, bowlStr, isWicket } = res;
+          const { tour, batStr, bowlStr, isWicket } = res;
       try {
           const batT = tour[tour.battingTeamId];
           const bowlT = tour[tour.bowlingTeamId];
           
-          const bowler = bowlT.players.find(p => p.id === res.originalBowlerId);
-          const striker = batT.players.find(p => p.id === batT.strikerId);
-          
           const over = Math.floor((res.ballsThisRound - 1) / 6);
           const ballInOver = ((res.ballsThisRound - 1) % 6) + 1;
 
-          const cleanBowlerName = escapeHtml(bowler?.first_name || 'Bowler');
+          const cleanBatsmanName = escapeHtml(res.batsmanName || 'Batsman');
+          const cleanBowlerName = escapeHtml(res.bowlerName || 'Bowler');
           
           await ctx.api.sendMessage(tour.chatId, `⚾ <b>Over ${over+1} | Ball ${ballInOver}</b>`, { parse_mode: 'HTML' });
           await sleep(1500); 
@@ -766,11 +814,35 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           await sleep(1500);
           
           if (isWicket) {
-              await sendEventUpdate(ctx, tour.chatId, "out");
+              await sendEventUpdate(ctx, tour.chatId, "out", cleanBatsmanName, cleanBowlerName);
           } else {
-              await sendEventUpdate(ctx, tour.chatId, batStr);
+              await sendEventUpdate(ctx, tour.chatId, batStr, cleanBatsmanName, cleanBowlerName);
           }
           await sleep(1000);
+
+          // Milestone celebrations
+          if (res.hit50) {
+              await sendEventUpdate(ctx, tour.chatId, "50", cleanBatsmanName, cleanBowlerName);
+              await ctx.api.sendMessage(tour.chatId, `🎉 <b>Half-Century!</b> Magnificent batting by <b>${cleanBatsmanName}</b>! 50 runs up! 👏`, { parse_mode: 'HTML' });
+              await sleep(1500);
+          }
+          if (res.hit100) {
+              await sendEventUpdate(ctx, tour.chatId, "100", cleanBatsmanName, cleanBowlerName);
+              await ctx.api.sendMessage(tour.chatId, `🏆 <b>CENTURY!</b> A sensational milestone for <b>${cleanBatsmanName}</b>! 100 runs in a masterclass innings! 👑`, { parse_mode: 'HTML' });
+              await sleep(1500);
+          }
+          if (res.hitDuck) {
+              await ctx.api.sendMessage(tour.chatId, `🦆 <b>DUCK!</b> <b>${cleanBatsmanName}</b> is dismissed for a duck! Back to the pavilion without scoring.`, { parse_mode: 'HTML' });
+              await sleep(1500);
+          }
+          if (res.hitHattrick) {
+              await ctx.api.sendMessage(tour.chatId, `🔥 <b>💥 HATTRICK! 💥</b> <b>${cleanBowlerName}</b> has taken 3 wickets in 3 balls! Unbelievable scenes here! 🥳`, { parse_mode: 'HTML' });
+              await sleep(1500);
+          }
+          if (res.hitFiveWickets) {
+              await ctx.api.sendMessage(tour.chatId, `🖐️ <b>5-WICKET HAUL!</b> <b>${cleanBowlerName}</b> completes a brilliant 5-wicket haul! Absolute class bowling! 🥎`, { parse_mode: 'HTML' });
+              await sleep(1500);
+          }
           
           await ctx.api.sendMessage(tour.chatId, renderScoreboard(tour), { parse_mode: 'HTML' });
 
@@ -918,56 +990,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           return;
       }
 
-      if (data.startsWith('tour_configmenu_')) {
-          const tourId = data.split('_')[2];
-          const tour = tourManager.getTour(tourId);
-          if (!tour) return ctx.answerCallbackQuery();
-          if (tour.hostId !== userId) return ctx.answerCallbackQuery({ text: "Only the host can configure match settings.", show_alert: true });
-          
-          await ctx.editMessageText(`⚙️ <b>Configure Tour Match Settings:</b>`, { reply_markup: getConfigureKeyboard(tour), parse_mode: 'HTML' });
-          ctx.answerCallbackQuery();
-          return;
-      }
 
-      if (data.startsWith('tour_config_')) {
-          const parts = data.split('_');
-          const tourId = parts[2];
-          const setting = parts[3];
-          const action = parts[4];
-          const tour = tourManager.getTour(tourId);
-          if (!tour) return ctx.answerCallbackQuery();
-          if (tour.hostId !== userId) return ctx.answerCallbackQuery({ text: "Only the host can configure match settings.", show_alert: true });
-          
-          if (setting === 'overs') {
-              if (action === 'plus') tour.config.overs = Math.min(20, tour.config.overs + 1);
-              if (action === 'minus') tour.config.overs = Math.max(1, tour.config.overs - 1);
-          } else if (setting === 'wickets') {
-              if (action === 'plus') tour.config.wickets = Math.min(10, tour.config.wickets + 1);
-              if (action === 'minus') tour.config.wickets = Math.max(1, tour.config.wickets - 1);
-          } else if (setting === 'bet') {
-              if (action === 'plus') tour.config.bet += 500;
-              if (action === 'minus') tour.config.bet = Math.max(0, tour.config.bet - 500);
-          }
-          
-          await ctx.editMessageReplyMarkup({ reply_markup: getConfigureKeyboard(tour) });
-          ctx.answerCallbackQuery();
-          return;
-      }
-
-      if (data.startsWith('tour_configback_')) {
-          const tourId = data.split('_')[2];
-          const tour = tourManager.getTour(tourId);
-          if (!tour) return ctx.answerCallbackQuery();
-          
-          if (tour.state === 'LOBBY') {
-              await ctx.editMessageText(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
-          } else {
-              await ctx.editMessageText(renderScoreboard(tour), { parse_mode: 'HTML' });
-              await tagActivePlayers(ctx, tour);
-          }
-          ctx.answerCallbackQuery();
-          return;
-      }
 
       if (data.startsWith('tour_start_')) {
           const tourId = data.split('_')[2];
@@ -1303,10 +1326,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const bowler = tour[tour.bowlingTeamId].players.find(p => p.id === tour.activeBowlerId);
           
           if (striker) {
-              try { await ctx.api.sendMessage(striker.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
+              try { await ctx.api.sendMessage(striker.id, tour.powerSurge
+                  ? "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 5, 6):"
+                  : "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your shot number in DM (0, 1, 2, 3, 4, 6):", { parse_mode: 'HTML' }); } catch(e){}
           }
           if (bowler) {
-              try { await ctx.api.sendMessage(bowler.id, "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
+              try { await ctx.api.sendMessage(bowler.id, tour.powerSurge
+                  ? "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Leg Cutter, Knuckle):"
+                  : "🔄 <b>Lineup Swapped!</b> Please submit/re-submit your delivery in DM (RS, Bouncer, Yorker, Short, Slower, Knuckle):", { parse_mode: 'HTML' }); } catch(e){}
           }
           return;
       }

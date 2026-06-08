@@ -29,6 +29,7 @@ function createTour(chatId, hostUser, name = '') {
     name: name || '',
     chatId: chatId,
     hostId: hostUser.id,
+    powerSurge: false,
     state: 'LOBBY', // Initial state is LOBBY
     config: {
       overs: 5,
@@ -471,16 +472,36 @@ function submitPlay(tourId, userId, rawInput) {
         return { success: false, error: debugInfo };
     }
     
-    const BATSMAN_OPTIONS = new Set(['0','1','2','3','4','6']);
+    const BATSMAN_OPTIONS = tour.powerSurge 
+        ? new Set(['0','1','2','3','4','5','6']) 
+        : new Set(['0','1','2','3','4','6']);
     const BOWLER_MAP = { 'rs':'0', 'bouncer':'1', 'yorker':'2', 'short':'3', 'slower':'4', 'knuckle':'6' };
+    if (tour.powerSurge) {
+        BOWLER_MAP['leg cutter'] = '5';
+        BOWLER_MAP['legcutter'] = '5';
+    }
     
     if (isStriker) {
-        if (!BATSMAN_OPTIONS.has(rawInput)) return { success: false, error: 'Invalid shot! Send one of: 0, 1, 2, 3, 4, 6' };
+        if (!BATSMAN_OPTIONS.has(rawInput)) {
+            return { 
+                success: false, 
+                error: tour.powerSurge 
+                    ? 'Invalid shot! Send one of: 0, 1, 2, 3, 4, 5, 6' 
+                    : 'Invalid shot! Send one of: 0, 1, 2, 3, 4, 6' 
+            };
+        }
         if (tour.choices.batChoice !== null) return { success: false, error: 'You already played this ball.' };
         tour.choices.batChoice = rawInput;
     } else {
         const mapped = BOWLER_MAP[rawInput.toLowerCase()];
-        if (!mapped) return { success: false, error: 'Invalid delivery! Send one of: RS, Bouncer, Yorker, Short, Slower, Knuckle' };
+        if (!mapped) {
+            return { 
+                success: false, 
+                error: tour.powerSurge 
+                    ? 'Invalid delivery! Send one of: RS, Bouncer, Yorker, Short, Slower, Leg Cutter, Knuckle' 
+                    : 'Invalid delivery! Send one of: RS, Bouncer, Yorker, Short, Slower, Knuckle' 
+            };
+        }
         if (tour.choices.bowlChoice !== null) return { success: false, error: 'You already bowled this ball.' };
         tour.choices.bowlChoice = rawInput;
         tour.choices.bowlNum = mapped;
@@ -508,16 +529,37 @@ function submitPlay(tourId, userId, rawInput) {
     const bowlTeam = tour[tour.bowlingTeamId];
     const bowler = bowlTeam.players.find(p => p.id === tour.activeBowlerId);
 
+    let hit50 = false;
+    let hit100 = false;
+    let hitDuck = false;
+    let hitHattrick = false;
+    let hitFiveWickets = false;
+    let batsmanName = "";
+    let bowlerName = "";
+
     if (striker) {
         if (striker.runs === undefined) striker.runs = 0;
         if (striker.balls === undefined) striker.balls = 0;
         if (striker.fours === undefined) striker.fours = 0;
         if (striker.sixes === undefined) striker.sixes = 0;
         striker.balls++;
+        batsmanName = striker.first_name;
         if (!isWicket) {
             striker.runs += batNum;
             if (batNum === 4) striker.fours++;
             if (batNum === 6) striker.sixes++;
+            if (striker.runs >= 50 && !striker.halfCenturyAnnounced) {
+                striker.halfCenturyAnnounced = true;
+                hit50 = true;
+            }
+            if (striker.runs >= 100 && !striker.centuryAnnounced) {
+                striker.centuryAnnounced = true;
+                hit100 = true;
+            }
+        } else {
+            if (striker.runs === 0) {
+                hitDuck = true;
+            }
         }
     }
     if (bowler) {
@@ -525,10 +567,20 @@ function submitPlay(tourId, userId, rawInput) {
         if (bowler.runsConceded === undefined) bowler.runsConceded = 0;
         if (bowler.ballsBowled === undefined) bowler.ballsBowled = 0;
         bowler.ballsBowled++;
+        bowlerName = bowler.first_name;
         if (isWicket) {
             bowler.wickets++;
+            bowler.consecutiveWickets = (bowler.consecutiveWickets || 0) + 1;
+            if (bowler.consecutiveWickets === 3) {
+                hitHattrick = true;
+            }
+            if (bowler.wickets === 5 && !bowler.fiveWicketHaulAnnounced) {
+                bowler.fiveWicketHaulAnnounced = true;
+                hitFiveWickets = true;
+            }
         } else {
             bowler.runsConceded += batNum;
+            bowler.consecutiveWickets = 0;
         }
     }
 
@@ -544,12 +596,19 @@ function submitPlay(tourId, userId, rawInput) {
         winnerTeamId: null,
         needsNewBatsman: false,
         needsNewBowler: false,
-        tie: false
+        tie: false,
+        hit50,
+        hit100,
+        hitDuck,
+        hitHattrick,
+        hitFiveWickets,
+        batsmanName,
+        bowlerName
     };
     
     if (!isWicket) {
         batTeam.score += batNum;
-        if ((batNum === 1 || batNum === 3) && batTeam.nonStrikerId) {
+        if ((batNum === 1 || batNum === 3 || batNum === 5) && batTeam.nonStrikerId) {
             const tmp = batTeam.strikerId;
             batTeam.strikerId = batTeam.nonStrikerId;
             batTeam.nonStrikerId = tmp;
