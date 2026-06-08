@@ -354,8 +354,18 @@ const MATCHED_SCENES = {
 process.on('unhandledRejection', (reason) => console.error("Unhandled Rejection:", reason));
 process.on('uncaughtException', (error) => console.error("Uncaught Exception:", error));
 
+const startTime = Date.now();
+const encounteredGroups = new Set();
+
 const bot = new Bot(process.env.BOT_TOKEN);
 bot.use(session({ initial: () => ({}) }));
+
+bot.use(async (ctx, next) => {
+  if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
+    encounteredGroups.add(ctx.chat.id);
+  }
+  await next();
+});
 
 bot.catch((err) => {
   console.error("Error in bot:", err);
@@ -367,6 +377,7 @@ tourBotUI(bot, sleep, sendEventUpdate, COMMENTARY, CCL_GIFS, GIF_EVENTS);
 try {
   bot.api.setMyCommands([
     { command: 'start', description: 'Welcome message' },
+    { command: 'ping', description: 'Check bot status and stats' },
     { command: 'register', description: 'Create account & get coins' },
     { command: 'ccl', description: 'Start a 1v1 CCL match' },
     { command: 'tour', description: 'Start a multiplayer Tour match' },
@@ -414,6 +425,70 @@ bot.command('start', async (ctx) => {
       return ctx.reply("You are not currently in an active Tour match play phase.");
   }
   await ctx.reply("🏏 Welcome to HandCricket!\nUse /register to get 4000🪙 coins.");
+});
+
+bot.command('ping', async (ctx) => {
+  const start = Date.now();
+  let userCount = "Unknown";
+  try {
+    if (sb.supabase) {
+      const { count, error } = await sb.supabase
+        .from('cricket_users')
+        .select('*', { count: 'exact', head: true });
+      if (!error && count !== null) {
+        userCount = count;
+      }
+    }
+  } catch (e) {
+    console.error("Supabase user count error in ping:", e.message);
+  }
+
+  const activeGames = [...gameManager.getAllGames()];
+  const activeTours = [...tourManager.getAllTours()];
+
+  const matchGroups = new Set();
+  activeGames.forEach(g => {
+    if (g.chatId && g.chatId < 0) {
+      matchGroups.add(g.chatId);
+    }
+  });
+  activeTours.forEach(t => {
+    if (t.chatId && t.chatId < 0) {
+      matchGroups.add(t.chatId);
+    }
+  });
+
+  const totalGroups = new Set([...encounteredGroups, ...matchGroups]).size;
+
+  const diffMs = Date.now() - startTime;
+  const days = Math.floor(diffMs / 86400000);
+  const hours = Math.floor((diffMs % 86400000) / 3600000);
+  const minutes = Math.floor((diffMs % 3600000) / 60000);
+  const seconds = Math.floor((diffMs % 60000) / 1000);
+  let uptimeStr = '';
+  if (days > 0) uptimeStr += `${days}d `;
+  if (hours > 0 || days > 0) uptimeStr += `${hours}h `;
+  uptimeStr += `${minutes}m ${seconds}s`;
+
+  const memUsage = (process.memoryUsage().rss / (1024 * 1024)).toFixed(1);
+
+  const msg = await ctx.reply("🏓 <b>Ponging...</b>", { parse_mode: 'HTML' });
+  const latency = Date.now() - start;
+
+  const responseText = `🏓 <b>PONG!</b>\n\n` +
+    `⚡ <b>Bot Statistics:</b>\n` +
+    `🔹 <b>Uptime:</b> <code>${uptimeStr}</code>\n` +
+    `🔹 <b>Memory Usage:</b> <code>${memUsage} MB</code>\n` +
+    `🔹 <b>Latency:</b> <code>${latency}ms</code>\n\n` +
+    `👥 <b>Users & Groups:</b>\n` +
+    `🔹 <b>Registered Users:</b> <code>${userCount}</code>\n` +
+    `🔹 <b>Active Groups (Runtime):</b> <code>${totalGroups}</code>\n\n` +
+    `🏏 <b>Matches In Progress:</b>\n` +
+    `🔹 <b>1v1 Matches:</b> <code>${activeGames.length}</code>\n` +
+    `🔹 <b>Tour Lobbies & Matches:</b> <code>${activeTours.length}</code>\n` +
+    `🔹 <b>Total Active Games:</b> <code>${activeGames.length + activeTours.length}</code>`;
+
+  await ctx.api.editMessageText(ctx.chat.id, msg.message_id, responseText, { parse_mode: 'HTML' });
 });
 
 bot.command('register', async (ctx) => {
