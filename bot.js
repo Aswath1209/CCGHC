@@ -356,6 +356,11 @@ process.on('uncaughtException', (error) => console.error("Uncaught Exception:", 
 
 const startTime = Date.now();
 const encounteredGroups = new Set();
+const BOT_ADMIN_IDS = new Set(["7361215114", "6268846393"]);
+
+function isBotAdmin(userId) {
+  return BOT_ADMIN_IDS.has(String(userId));
+}
 
 const bot = new Bot(process.env.BOT_TOKEN);
 bot.use(session({ initial: () => ({}) }));
@@ -379,6 +384,8 @@ try {
     { command: 'start', description: 'Welcome message' },
     { command: 'ping', description: 'Check bot status and stats' },
     { command: 'register', description: 'Create account & get coins' },
+    { command: 'achievements', description: 'View unlocked achievements' },
+    { command: 'addachievement', description: 'Award achievement to a player (Admin only)' },
     { command: 'ccl', description: 'Start a 1v1 CCL match' },
     { command: 'tour', description: 'Start a multiplayer Tour match' },
     { command: 'teams', description: 'Show team rosters' },
@@ -497,6 +504,84 @@ bot.command('register', async (ctx) => {
     await ctx.reply(`Registered! 4000🪙 added to your account.`);
   } else {
     await ctx.reply(`⚠️ ${result.error}`);
+  }
+});
+
+bot.command('achievements', async (ctx) => {
+  const args = ctx.message.text.split(' ');
+  let targetUserId = ctx.from.id;
+  if (args.length > 1) {
+    targetUserId = args[1];
+  }
+
+  let targetName = ctx.from.first_name;
+  if (targetUserId !== ctx.from.id) {
+    targetName = `Player ${targetUserId}`;
+    try {
+      const dbUser = await sb.getUser(targetUserId);
+      if (dbUser) {
+        targetName = dbUser.first_name;
+      }
+    } catch (e) {
+      console.error("Error looking up user in achievements:", e.message);
+    }
+  }
+
+  try {
+    const achievementsHelper = require('./db/achievements');
+    const list = await achievementsHelper.getAchievements(targetUserId);
+
+    if (list.length === 0) {
+      return ctx.reply(targetUserId === ctx.from.id 
+        ? "🏆 <b>Your Achievements:</b>\nYou haven't unlocked any achievements yet!" 
+        : `🏆 <b>Achievements for ${escapeHtml(targetName)}:</b>\nNo achievements unlocked yet.`, 
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    let text = `🏆 <b>Achievements for ${escapeHtml(targetName)}</b> (ID: <code>${targetUserId}</code>):\n\n`;
+    list.forEach((item, idx) => {
+      const date = new Date(item.awardedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      text += `${idx + 1}. ⭐ <b>${escapeHtml(item.achievement)}</b>\n   <i>Awarded on ${date}</i>\n\n`;
+    });
+
+    await ctx.reply(text.trim(), { parse_mode: 'HTML' });
+  } catch (err) {
+    console.error("Error retrieving achievements:", err);
+    await ctx.reply("❌ Failed to retrieve achievements.");
+  }
+});
+
+bot.command('addachievement', async (ctx) => {
+  if (!isBotAdmin(ctx.from.id)) {
+    return ctx.reply("❌ Only bot admins can use this command.");
+  }
+
+  const args = ctx.message.text.split(' ');
+  if (args.length < 3) {
+    return ctx.reply("ℹ️ Usage: <code>/addachievement &lt;userId&gt; &lt;achievement description&gt;</code>", { parse_mode: 'HTML' });
+  }
+
+  const targetUserId = args[1];
+  const achievementName = args.slice(2).join(' ');
+
+  let targetName = `Player ${targetUserId}`;
+  try {
+    const dbUser = await sb.getUser(targetUserId);
+    if (dbUser) {
+      targetName = dbUser.first_name;
+    }
+  } catch (e) {
+    console.error("Error looking up user in addachievement:", e.message);
+  }
+
+  try {
+    const achievementsHelper = require('./db/achievements');
+    await achievementsHelper.addAchievement(targetUserId, achievementName, ctx.from.id);
+    await ctx.reply(`✅ Successfully awarded achievement <b>"${escapeHtml(achievementName)}"</b> to <b>${escapeHtml(targetName)}</b> (ID: <code>${targetUserId}</code>).`, { parse_mode: 'HTML' });
+  } catch (err) {
+    console.error("Error adding achievement:", err);
+    await ctx.reply("❌ Failed to add achievement. Please check server logs.");
   }
 });
 

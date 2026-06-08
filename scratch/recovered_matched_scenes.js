@@ -1,0 +1,2 @@
+"const GIF_EVENTS = [\"0\", \"4\", \"6\", \"out\", \"50\", \"100\"];\nconst CCL_GIFS = {};\nconst COMMENTARY = {};\n\nconst MATCHED_SCENES = {\n    \"0\": [\n        {\n            gif: \"https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUybHM4N29ib3ZkY3JxND
+<truncated 13160 bytes>
