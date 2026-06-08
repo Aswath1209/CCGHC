@@ -220,8 +220,6 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const isAllowed = ctx.from.id === tour.hostId || ctx.from.id === tour.teamA.captainId || ctx.from.id === tour.teamB.captainId;
       if (!isAllowed) return ctx.reply("❌ Only the host or captains can change settings.");
       
-      if (tour.state !== 'LOBBY') return ctx.reply("❌ Match has already started! You can only change settings in the lobby.");
-      
       const args = ctx.message.text.split(' ');
       const overs = parseInt(args[1]);
       if (isNaN(overs) || overs < 1 || overs > 20) {
@@ -240,8 +238,6 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const isAllowed = ctx.from.id === tour.hostId || ctx.from.id === tour.teamA.captainId || ctx.from.id === tour.teamB.captainId;
       if (!isAllowed) return ctx.reply("❌ Only the host or captains can change settings.");
-      
-      if (tour.state !== 'LOBBY') return ctx.reply("❌ Match has already started! You can only change settings in the lobby.");
       
       const args = ctx.message.text.split(' ');
       const wickets = parseInt(args[1]);

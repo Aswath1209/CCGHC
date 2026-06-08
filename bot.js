@@ -26,33 +26,33 @@ const MATCHED_SCENES = {
         {
             "gif": "https://media4.giphy.com/media/v1.Y2lkPTZjMDliOTUybHM4N29ib3ZkY3JxNDhjbXlkeDAycnFtYWYyM3QxajF2eXltZ2Z4ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QtipHdYxYopX3W6vMs/giphy.gif",
             "commentaries": [
-                "😶 Dot ball! Pressure builds...",
-                "🎯 Tight delivery, no run.",
-                "🛑 No run, good fielding!",
+                "😶 Dot ball! Pressure builds on {batsman}...",
+                "🎯 Tight delivery from {bowler}, no run.",
+                "🛑 No run, good fielding to stop {batsman}!",
                 "🤌 'The ball is red, round and weighs about five ounces.'",
                 "🥱 Abey saale! Bat pakadna sikh le pehle. (Hindi Sledge)",
                 "🎤 'He's looking for some runs, but finds only fresh air!'",
                 "🤡 Why are you so fat? Only because every time I hit a shot, your sister gives me a biscuit!",
-                "🧱 Solid defense, but the scoreboard is crying.",
-                "🐢 Faster than a turtle, but slower than the score.",
+                "🧱 Solid defense by {batsman}, but the scoreboard is crying.",
+                "🐢 {batsman} is playing slower than a turtle.",
                 "🥱 Waking up for the match? Or just watching the dots?",
-                "🤐 Shhh... do you hear that? It's the sound of nothing happening.",
-                "😤 Andha hai kya? (Are you blind?) Clearly missed that!",
+                "🤐 Shhh... {bowler} bowls, and nothing happens.",
+                "😤 Andha hai kya, {batsman}? Clearly missed {bowler}'s ball!",
                 "🧟 Bhootnike! Bowl better than that!",
-                "🧊 Ice in the veins, or just frozen at the crease?",
-                "🚧 Roadblock! Can't find a way through.",
+                "🧊 Ice in the veins, or is {batsman} just frozen?",
+                "🚧 Roadblock! {batsman} can't find a way through {bowler}'s field.",
                 "🏏 That bat has more holes than Swiss cheese!",
-                "🤷‍♂️ Even my grandma could hit that for a single.",
-                "🥶 Chilled out? You need to score, mate!",
+                "🤷‍♂️ Even my grandma could hit {bowler}'s ball for a single, {batsman}.",
+                "🥶 Chilled out, {batsman}? You need to score, mate!",
                 "💤 ZZZ... Wake me up when a run is scored.",
-                "Defended with soft hands. No run.",
-                "🎯 Bowler is spot on! Right in the blockhole.",
-                "🤫 Dead silent. Clean play but no run.",
-                "🧐 Batsman is scanning the field, but finding no gaps.",
-                "🛡️ Textbook defense! Play and miss.",
-                "⚡ Beat him with pace! Beat the outside edge.",
+                "Defended with soft hands by {batsman}. No run.",
+                "🎯 {bowler} is spot on! Right in the blockhole.",
+                "🤫 Dead silent. {batsman} plays it clean but no run.",
+                "🧐 {batsman} is scanning the field, but finding no gaps.",
+                "🛡️ Textbook defense! {batsman} plays and misses.",
+                "⚡ {bowler} beats {batsman} with pace!",
                 "Dot ball. The run rate is crying for help.",
-                "🤨 Just a tap to short cover. Not in the mood to run."
+                "🤨 {batsman} taps it to short cover, not running."
             ]
         }
     ],
@@ -60,32 +60,32 @@ const MATCHED_SCENES = {
         {
             "gif": null,
             "commentaries": [
-                "🏃 Quick single taken.",
-                "👟 Running hard for one.",
-                "⚡ One run added.",
-                "🔥 Fast feet! One run.",
+                "🏃 Quick single taken by {batsman}.",
+                "👟 {batsman} is running hard for one.",
+                "⚡ One run added to the score.",
+                "🔥 Fast feet by {batsman}! One run.",
                 "🐕 Like a dog chasing a bone!",
-                "🚶 Just a gentle stroll for a single.",
-                "🔄 Rotating strike like a pro.",
-                "👀 Keeping the scoreboard ticking.",
-                "🏎️ Zoom! A quick single.",
+                "🚶 Just a gentle stroll for {batsman} to take a single.",
+                "🔄 {batsman} rotates strike like a pro.",
+                "👀 {batsman} keeps the scoreboard ticking.",
+                "🏎️ Zoom! {batsman} scrambles for a quick single.",
                 "🤝 Teamwork makes the dream work.",
-                "🎯 Precision placement for a single.",
+                "🎯 Precision placement by {batsman} for a single.",
                 "🤌 'Taking the easy option, one run.'",
                 "🌟 Ek gaya! (One done!) Keep them coming.",
-                "💨 Blink and you'll miss the single!",
-                "🦊 Crafty running, snatching a run.",
+                "💨 Blink and you'll miss {batsman}'s single!",
+                "🦊 Crafty running by {batsman}, snatching a run.",
                 "🥇 Every run counts in this battle!",
-                "🌪️ Speeding through for one.",
-                "🔥 Burning up the pitch for a single.",
-                "⚡ Scurries through for a quick single.",
-                "🤝 A gentle push into the gap for one.",
-                "🏃 Soft hands, smart call, easy single.",
-                "🏃‍♂️ Quick off the mark, strike rotated.",
-                "🎯 Tapped to mid-on and off they go.",
-                "👟 Quick scramble to the other end.",
-                "💨 Fast running keeps the fielder on toes.",
-                "🔄 Rotating the strike, keeping the game moving."
+                "🌪️ {batsman} speeding through for one.",
+                "🔥 {batsman} is burning up the pitch for a single.",
+                "⚡ {batsman} scurries through for a quick single.",
+                "🤝 A gentle push into the gap by {batsman} for one.",
+                "🏃 Soft hands, smart call, easy single for {batsman}.",
+                "🏃‍♂️ {batsman} is quick off the mark, strike rotated.",
+                "🎯 Tapped to mid-on by {batsman} and off they go.",
+                "👟 Quick scramble by {batsman} to the other end.",
+                "💨 Fast running by {batsman} keeps the fielder on toes.",
+                "🔄 {batsman} rotates the strike, keeping the game moving."
             ]
         }
     ],
@@ -93,28 +93,28 @@ const MATCHED_SCENES = {
         {
             "gif": null,
             "commentaries": [
-                "🏃‍♂️ Two runs!",
-                "💨 Good running between wickets.",
-                "🔥 Two runs scored.",
-                "✌️ Double trouble!",
+                "🏃‍♂️ Two runs for {batsman}!",
+                "💨 Good running between wickets by {batsman}.",
+                "🔥 Two runs scored by {batsman}.",
+                "✌️ Double trouble! {batsman} grabs two.",
                 "🐆 Prowling for those two runs.",
-                "🏃🏃 Two more to the tally.",
-                "📈 Moving the score along nicely.",
-                "🌪️ A whirlwind of running! Two runs.",
-                "🛤️ Smooth as silk for a double.",
-                "🚀 Pushing hard for the second!",
-                "💪 Tagda running! (Strong running!) Double taken.",
+                "🏃🏃 Two more to the tally for {batsman}.",
+                "📈 {batsman} moves the score along nicely.",
+                "🌪️ A whirlwind of running! Two runs for {batsman}.",
+                "🛤️ {batsman} goes smooth as silk for a double.",
+                "🚀 {batsman} is pushing hard for the second!",
+                "💪 Tagda running by {batsman}! Double taken.",
                 "🏹 Two runs harvested from the field.",
-                "⚖️ Balancing the risk with two runs.",
+                "⚖️ {batsman} balances the risk with two runs.",
                 "🌊 Rolling in the runs, two at a time.",
                 "🔋 Recharging the total with a double.",
-                "🏃‍♂️🏃‍♂️ Exceptional running, they hustle back for a double!",
-                "🏏 Driven through the covers, easy two runs.",
-                "🐆 Coming back hard for the second run! Excellent hustle.",
-                "⚡ Pierced the gap, fielders chase as they grab two.",
-                "📈 Score ticks up by two! Nicely played.",
-                "🔥 A brace of runs added to the scoreboard.",
-                "💪 Great athletic display to complete the second."
+                "🏃‍♂️🏃‍♂️ Exceptional running, {batsman} hustles back for a double!",
+                "🏏 Driven through the covers by {batsman}, easy two runs.",
+                "🐆 {batsman} coming back hard for the second run! Excellent hustle.",
+                "⚡ {batsman} pierced the gap, fielders chase as they grab two.",
+                "📈 Score ticks up by two! Nicely played by {batsman}.",
+                "🔥 A brace of runs added to the scoreboard by {batsman}.",
+                "💪 Great athletic display by {batsman} to complete the second."
             ]
         }
     ],
@@ -122,24 +122,24 @@ const MATCHED_SCENES = {
         {
             "gif": null,
             "commentaries": [
-                "🏃‍♂️ Three runs! Great running!",
-                "💨 Three runs added.",
-                "🔥 Three runs scored.",
-                "🦵 Fitness test! Three runs taken.",
+                "🏃‍♂️ Three runs! Great running by {batsman}!",
+                "💨 Three runs added by {batsman}.",
+                "🔥 Three runs scored by {batsman}.",
+                "🦵 Fitness test! Three runs taken by {batsman}.",
                 "🥇 A hat-trick of runs in one ball!",
-                "🏁 Chasing them down... three runs!",
+                "🏁 Fielder chasing them down... three runs to {batsman}!",
                 "💨 The fielders are getting a workout.",
-                "⚡ Blazing speed for a triple!",
-                "🥵 Fielder is panting! 3 runs taken.",
+                "⚡ Blazing speed by {batsman} for a triple!",
+                "🥵 Fielder is panting! 3 runs taken by {batsman}.",
                 "💥 Gajab running, bhai! (Amazing running, brother!)",
-                "🏃‍♂️🏃‍♂️🏃‍♂️ Non-stop action for three runs!",
-                "🎯 Exploiting the gaps beautifully for 3.",
-                "🥵 Exhausting! Three runs collected with pure running.",
-                "🏏 Beautiful stroke through deep mid-wicket, fielders pull it back.",
-                "⚡ Great running between the wickets, absolute sprint for three.",
-                "🏃‍♂️🏃‍♂️🏃‍♂️ Swept away, fielders chase and they slide home for a triple!",
-                "🔥 Terrific communication, three easy runs.",
-                "📈 Pushing the field to its limits, three runs!"
+                "🏃‍♂️🏃‍♂️🏃‍♂️ Non-stop action by {batsman} for three runs!",
+                "🎯 {batsman} exploits the gaps beautifully for 3.",
+                "🥵 Exhausting! Three runs collected by {batsman} with pure running.",
+                "🏏 Beautiful stroke by {batsman} through deep mid-wicket, fielders pull it back.",
+                "⚡ Great running between the wickets, absolute sprint by {batsman} for three.",
+                "🏃‍♂️🏃‍♂️🏃‍♂️ Swept away by {batsman}, they slide home for a triple!",
+                "🔥 Terrific communication, three easy runs for {batsman}.",
+                "📈 {batsman} pushing the field to its limits, three runs!"
             ]
         }
     ],
@@ -147,36 +147,36 @@ const MATCHED_SCENES = {
         {
             "gif": "https://media0.giphy.com/media/3o7btXfjIjTcU64YdG/giphy.gif",
             "commentaries": [
-                "🔥 Cracking four! What a shot!",
-                "🏏 Beautiful timing for four runs!",
-                "🎸 Rocks the stadium! Four runs!",
-                "🎯 Precision of a surgeon. Four runs.",
+                "🔥 Cracking four from {batsman}! What a shot!",
+                "🏏 Beautiful timing from {batsman} for four runs!",
+                "🎸 {batsman} rocks the stadium! Four runs!",
+                "🎯 Precision of a surgeon from {batsman}. Four runs.",
                 "📣 The crowd is loving this boundary!",
-                "🏹 Shot through the covers like an arrow!",
-                "🧨 Exploded off the bat!",
+                "🏹 Shot by {batsman} through the covers like an arrow!",
+                "🧨 Exploded off {batsman}'s bat!",
                 "🚁 Helicopter 4? Almost!",
-                "🐅 Roaring with power! Four!",
-                "🏏 Pure elegance! Driven through extra cover for four!",
-                "💥 Cracking sound off the willow, absolute boundary!",
-                "🎸 Pierced the infield with surgical precision! Boundary!",
+                "🐅 {batsman} roaring with power! Four!",
+                "🏏 Pure elegance from {batsman}! Driven through extra cover for four!",
+                "💥 Cracking sound off {batsman}'s willow, absolute boundary!",
+                "🎸 {batsman} pierced the infield with surgical precision! Boundary!",
                 "⚡ The crowd goes wild as the ball crosses the rope!"
             ]
         },
         {
             "gif": "https://media.giphy.com/media/ANpwXNVebeJ0TK9bTL/giphy.gif",
             "commentaries": [
-                "💥 The ball races to the boundary!",
+                "💥 The ball off {batsman}'s bat races to the boundary!",
                 "🚀 'Like a tracer bullet!' - Ravi Shastri mode.",
-                "🔨 Hammered away to the fence!",
-                "🤩 'Everything about that was class!'",
-                "💸 Easy money! Four runs.",
-                "🔥 Timing, no effort. 4 runs.",
+                "🔨 Hammered away to the fence by {batsman}!",
+                "🤩 'Everything about that was class from {batsman}!'",
+                "💸 Easy money for {batsman}! Four runs.",
+                "🔥 Timing, no effort from {batsman}. 4 runs.",
                 "🥵 Maza aa gaya! (I loved it!) What a boundary!",
-                "💎 A gem of a boundary. 4 runs.",
+                "💎 A gem of a boundary from {batsman}. 4 runs.",
                 "⚡ 'Absolute lightning to the fence!'",
-                "🚀 Fast outfield! The ball races away to the boundary fence.",
-                "🎯 Shot of the day! Pristine timing for four.",
-                "🔥 Pulled away powerfully! Four runs.",
+                "🚀 Fast outfield! The ball races away from {batsman}'s bat to the fence.",
+                "🎯 Shot of the day! Pristine timing by {batsman} for four.",
+                "🔥 Pulled away powerfully by {batsman}! Four runs.",
                 "🤩 Absolute class! No need to run for that."
             ]
         }
@@ -197,47 +197,47 @@ const MATCHED_SCENES = {
         {
             "gif": "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUya3R1eHhuaW85Mno1OTlycmJ2OXFibnA5NW5qc3Vid3djbXZkMjZ0NyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oKIPoelgPeRrfqKlO/giphy.gif",
             "commentaries": [
-                "🚀 Massive six! Into the stands!",
-                "🏟️ 'If you're a fan in the top tier, keep your eyes open!'",
+                "🚀 Massive six from {batsman}! Into the stands!",
+                "🏟️ {batsman} sends it to the top tier! Keep your eyes open!",
                 "🦅 Flight 101: Destination Boundary Heights.",
-                "🕺 Dance down the track and smash it!",
-                "🛰️ NASA just spotted the ball. 6 runs.",
-                "💣 Monstruous hit! The ball has disappeared into the night sky.",
-                "💥 Helicopter shot! Erupts into a massive sixer."
+                "🕺 {batsman} dances down the track and smashes it!",
+                "🛰️ NASA just spotted {batsman}'s ball. 6 runs.",
+                "💣 Monstruous hit by {batsman}! The ball has disappeared.",
+                "💥 Helicopter shot from {batsman}! Erupts into a massive sixer."
             ]
         },
         {
             "gif": "https://media.giphy.com/media/kDXtscxqmTgm9XIWXk/giphy.gif",
             "commentaries": [
-                "🎉 What a smash! Six runs!",
-                "💣 KA-BOOM! Out of the park!",
+                "🎉 What a smash by {batsman}! Six runs!",
+                "💣 KA-BOOM! {batsman} hits it out of the park!",
                 "⚡ 'Absolute carnage!'",
-                "💥 DHO dala! (Washed them!) Sixer!",
-                "🌈 Arcing beautifully into the crowd. 6!",
-                "👑 Majestic! Lofted over long-on for a massive six.",
+                "💥 {batsman} ne DHO dala! Sixer!",
+                "🌈 {batsman}'s shot arcs beautifully into the crowd. 6!",
+                "👑 Majestic from {batsman}! Lofted over long-on for a massive six.",
                 "🏟️ Stand and deliver! The crowd is catch-hunting in the stands."
             ]
         },
         {
             "gif": "https://media.giphy.com/media/3DHe8wnmz5VKpyucJt/giphy.gif",
             "commentaries": [
-                "🔥 Smoked it for a sixer! 🔥",
-                "🍿 Get the popcorn, this is a show! 6 runs.",
-                "🤴 King of the crease! Huge six.",
-                "🔱 God-level hitting! 6 runs.",
-                "🌌 THAT IS HUGE! Clean out of the stadium!",
-                "🛸 Launch codes entered! That's gone into orbit."
+                "🔥 {batsman} smoked it for a sixer! 🔥",
+                "🍿 Get the popcorn, {batsman} is putting on a show! 6 runs.",
+                "🤴 {batsman} is the king of the crease! Huge six.",
+                "🔱 God-level hitting by {batsman}! 6 runs.",
+                "🌌 THAT IS HUGE! {batsman} hits it clean out of the stadium!",
+                "🛸 Launch codes entered by {batsman}! That's gone into orbit."
             ]
         },
         {
             "gif": "https://media.giphy.com/media/tBfzeRunuQrP2kuTEb/giphy.gif",
             "commentaries": [
-                "🌌 'That's gone into orbit!'",
-                "🤯 'He's making them look like schoolboys!'",
-                "🧨 Power, timing, and pure disrespect!",
-                "🌋 Eruption of power! Out of the stadium!",
-                "🚀 High, handsome, and into the third tier! SIX!",
-                "🕺 Smacked with sheer authority! 6 runs!"
+                "🌌 'That's gone into orbit from {batsman}!'",
+                "🤯 '{batsman} is making {bowler} look like a schoolboy!'",
+                "🧨 Power, timing, and pure disrespect from {batsman}!",
+                "🌋 Eruption of power from {batsman}! Out of the stadium!",
+                "🚀 High, handsome from {batsman}, and into the third tier! SIX!",
+                "🕺 Smacked by {batsman} with sheer authority! 6 runs!"
             ]
         }
     ],
@@ -304,48 +304,48 @@ const MATCHED_SCENES = {
         {
             "gif": "https://media3.giphy.com/media/Wq3WRGe9N5HkSqjITT/giphy.gif",
             "commentaries": [
-                "💥 Bowled him! What a delivery!",
-                "🚾 Mind the windows on your way out!",
-                "🚪 This way to the pavilion, please.",
-                "🏏 'You're just a bits and pieces player!'",
+                "💥 Bowled him! What a delivery by {bowler} to dismiss {batsman}!",
+                "🚾 Mind the windows on your way out, {batsman}!",
+                "🚪 {batsman}, this way to the pavilion, please.",
+                "🏏 '{batsman} is just a bits and pieces player!' - sledge.",
                 "👻 Disappeared! Like your chances of winning. OUT!",
-                "💥 Stumps shattered! Clean bowled, absolute beauty!",
-                "🚾 Plumb in front! That's a massive wicket."
+                "💥 Stumps shattered! {bowler} clean bowls {batsman}!",
+                "🚾 {batsman} is plumb in front! Massive wicket for {bowler}."
             ]
         },
         {
             "gif": "https://media.giphy.com/media/trVKor40BRBF649Wad/giphy.gif",
             "commentaries": [
-                "😢 Caught out! End of the innings!",
+                "😢 Caught out! {batsman} falls to {bowler}'s delivery!",
                 "🎤 'He's gone! The finger goes up!'",
-                "🤫 Silence in the ground. Wicket falls.",
-                "💀 GONE! Absolutely clinical.",
-                "😵 Stunned! The stumps are flying.",
-                "😱 What a catch! Diving at point to dismiss the batsman.",
-                "👋 Cheerio, batter! Better luck next time."
+                "🤫 Silence in the ground as {batsman} departs.",
+                "💀 {batsman} is GONE! Absolutely clinical from {bowler}.",
+                "😵 {batsman} is stunned! The stumps are flying thanks to {bowler}.",
+                "😱 What a catch! Diving to dismiss {batsman} off {bowler}'s delivery.",
+                "👋 Cheerio, {batsman}! Better luck next time against {bowler}."
             ]
         },
         {
             "gif": "https://media.giphy.com/media/fXcP4RuOgAah2g9dOb/giphy.gif",
             "commentaries": [
-                "🚫 Out! The crowd goes silent...",
+                "🚫 Out! {batsman} is out off {bowler}'s bowling!",
                 "🤡 'Why don't you get some runs, mate?'",
-                "💔 Heartbreak! The batter is walking.",
-                "💩 Bhai, tujhse na ho payega. (Brother, you can't do it.) OUT!",
+                "💔 Heartbreak! {batsman} is walking back.",
+                "💩 {batsman}, tujhse na ho payega. OUT!",
                 "📉 Career-ending delivery? Maybe!",
-                "🚪 Long walk back to the pavilion. OUT!",
-                "💀 Silence in the stadium as the star batsman departs!"
+                "🚪 Long walk back for {batsman}. OUT!",
+                "💀 Silence as {batsman} departs off {bowler}'s bowling!"
             ]
         },
         {
             "gif": "https://media.giphy.com/media/DYbTfb0Gqe148AAcMP/giphy.gif",
             "commentaries": [
-                "👋 'Cheerio!' - Off you go.",
-                "🚮 Trash disposal complete. Out!",
-                "📦 Pack your bags! You're done.",
-                "💨 'Snicked it... and taken!'",
-                "☝️ GONE! The finger goes up! Bowler celebrates.",
-                "😢 Tragic end to the innings. Caught at the boundary."
+                "👋 'Cheerio!' - Off you go, {batsman}.",
+                "🚮 {bowler} disposes {batsman}. Out!",
+                "📦 Pack your bags, {batsman}! You're done.",
+                "💨 Snicked by {batsman}... and taken off {bowler}!",
+                "☝️ GONE! The finger goes up for {batsman}! {bowler} celebrates.",
+                "😢 Tragic end for {batsman}. Caught at the boundary off {bowler}."
             ]
         }
     ]
