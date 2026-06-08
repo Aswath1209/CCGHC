@@ -386,6 +386,7 @@ try {
     { command: 'register', description: 'Create account & get coins' },
     { command: 'achievements', description: 'View unlocked achievements' },
     { command: 'addachievement', description: 'Award achievement to a player (Admin only)' },
+    { command: 'removeachievement', description: 'Remove an achievement from a player (Admin only)' },
     { command: 'ccl', description: 'Start a 1v1 CCL match' },
     { command: 'tour', description: 'Start a multiplayer Tour match' },
     { command: 'teams', description: 'Show team rosters' },
@@ -582,6 +583,43 @@ bot.command('addachievement', async (ctx) => {
   } catch (err) {
     console.error("Error adding achievement:", err);
     await ctx.reply("❌ Failed to add achievement. Please check server logs.");
+  }
+});
+
+bot.command('removeachievement', async (ctx) => {
+  if (!isBotAdmin(ctx.from.id)) {
+    return ctx.reply("❌ Only bot admins can use this command.");
+  }
+
+  const args = ctx.message.text.split(' ');
+  if (args.length < 3) {
+    return ctx.reply("ℹ️ Usage: <code>/removeachievement &lt;userId&gt; &lt;index or exact description&gt;</code>", { parse_mode: 'HTML' });
+  }
+
+  const targetUserId = args[1];
+  const identifier = args.slice(2).join(' ');
+
+  let targetName = `Player ${targetUserId}`;
+  try {
+    const dbUser = await sb.getUser(targetUserId);
+    if (dbUser) {
+      targetName = dbUser.first_name;
+    }
+  } catch (e) {
+    console.error("Error looking up user in removeachievement:", e.message);
+  }
+
+  try {
+    const achievementsHelper = require('./db/achievements');
+    const res = await achievementsHelper.removeAchievement(targetUserId, identifier);
+    if (res.success) {
+      await ctx.reply(`✅ Successfully removed achievement matching <b>"${escapeHtml(identifier)}"</b> from <b>${escapeHtml(targetName)}</b> (ID: <code>${targetUserId}</code>).`, { parse_mode: 'HTML' });
+    } else {
+      await ctx.reply(`❌ ${res.error || "Failed to remove achievement."}`);
+    }
+  } catch (err) {
+    console.error("Error removing achievement:", err);
+    await ctx.reply("❌ Failed to remove achievement. Please check server logs.");
   }
 });
 

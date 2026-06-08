@@ -38,6 +38,22 @@ async function runTests() {
     assert.ok(isBotAdmin("6268846393"), "6268846393 should be admin");
     assert.ok(!isBotAdmin("12345"), "Normal user should not be admin");
 
+    // 5. Verify removal by text
+    const delRes = await achievementsHelper.removeAchievement('test_user_123', 'Incredible 100 Runs');
+    assert.ok(delRes.success, "removeAchievement by text should return success");
+    list = await achievementsHelper.getAchievements('test_user_123');
+    assert.strictEqual(list.length, 0, "Achievements list should be empty after removal");
+
+    // 6. Verify removal by index
+    await achievementsHelper.addAchievement('test_user_123', 'First Achievement', '7361215114');
+    await achievementsHelper.addAchievement('test_user_123', 'Second Achievement', '7361215114');
+    
+    const delResIndex = await achievementsHelper.removeAchievement('test_user_123', '2');
+    assert.ok(delResIndex.success, "removeAchievement by index should return success");
+    list = await achievementsHelper.getAchievements('test_user_123');
+    assert.strictEqual(list.length, 1, "Achievements list should contain 1 item after index removal");
+    assert.strictEqual(list[0].achievement, 'First Achievement', "Remaining item should be 'First Achievement'");
+
     console.log("Achievements system successfully validated!");
     
     // Clean up
