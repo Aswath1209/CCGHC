@@ -511,12 +511,13 @@ bot.command('register', async (ctx) => {
 bot.command('achievements', async (ctx) => {
   const args = ctx.message.text.split(' ');
   let targetUserId = ctx.from.id;
-  if (args.length > 1) {
-    targetUserId = args[1];
-  }
-
   let targetName = ctx.from.first_name;
-  if (targetUserId !== ctx.from.id) {
+
+  if (ctx.message.reply_to_message && ctx.message.reply_to_message.from) {
+    targetUserId = ctx.message.reply_to_message.from.id;
+    targetName = ctx.message.reply_to_message.from.first_name;
+  } else if (args.length > 1) {
+    targetUserId = args[1];
     targetName = `Player ${targetUserId}`;
     try {
       const dbUser = await sb.getUser(targetUserId);
@@ -559,12 +560,22 @@ bot.command('addachievement', async (ctx) => {
   }
 
   const args = ctx.message.text.split(' ');
-  if (args.length < 3) {
-    return ctx.reply("ℹ️ Usage: <code>/addachievement &lt;userId&gt; &lt;achievement description&gt;</code>", { parse_mode: 'HTML' });
-  }
+  let targetUserId = null;
+  let achievementName = null;
 
-  const targetUserId = args[1];
-  const achievementName = args.slice(2).join(' ');
+  if (ctx.message.reply_to_message && ctx.message.reply_to_message.from) {
+    targetUserId = ctx.message.reply_to_message.from.id;
+    if (args.length < 2) {
+      return ctx.reply("ℹ️ Usage: reply to a user's message with <code>/addachievement &lt;achievement description&gt;</code>", { parse_mode: 'HTML' });
+    }
+    achievementName = args.slice(1).join(' ');
+  } else {
+    if (args.length < 3) {
+      return ctx.reply("ℹ️ Usage: <code>/addachievement &lt;userId&gt; &lt;achievement description&gt;</code>", { parse_mode: 'HTML' });
+    }
+    targetUserId = args[1];
+    achievementName = args.slice(2).join(' ');
+  }
 
   let targetName = `Player ${targetUserId}`;
   try {
@@ -592,12 +603,22 @@ bot.command('removeachievement', async (ctx) => {
   }
 
   const args = ctx.message.text.split(' ');
-  if (args.length < 3) {
-    return ctx.reply("ℹ️ Usage: <code>/removeachievement &lt;userId&gt; &lt;index or exact description&gt;</code>", { parse_mode: 'HTML' });
-  }
+  let targetUserId = null;
+  let identifier = null;
 
-  const targetUserId = args[1];
-  const identifier = args.slice(2).join(' ');
+  if (ctx.message.reply_to_message && ctx.message.reply_to_message.from) {
+    targetUserId = ctx.message.reply_to_message.from.id;
+    if (args.length < 2) {
+      return ctx.reply("ℹ️ Usage: reply to a user's message with <code>/removeachievement &lt;index or exact description&gt;</code>", { parse_mode: 'HTML' });
+    }
+    identifier = args.slice(1).join(' ');
+  } else {
+    if (args.length < 3) {
+      return ctx.reply("ℹ️ Usage: <code>/removeachievement &lt;userId&gt; &lt;index or exact description&gt;</code>", { parse_mode: 'HTML' });
+    }
+    targetUserId = args[1];
+    identifier = args.slice(2).join(' ');
+  }
 
   let targetName = `Player ${targetUserId}`;
   try {
