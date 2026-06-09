@@ -721,33 +721,24 @@ bot.command('profile', async (ctx) => {
   }
 });
 
+function getTopMenuKeyboard() {
+  return new InlineKeyboard()
+    .text("🏏 Most Runs", "top_runs").text("🥎 Most Wickets", "top_wickets")
+    .row()
+    .text("⭐ Most MVPs", "top_mvps").text("🦆 Most Ducks", "top_ducks")
+    .row()
+    .text("💥 Highest Score", "top_highscores");
+}
+
 bot.command('top', async (ctx) => {
   try {
-    const careerStats = require('./db/careerStats');
-    const lists = await careerStats.getTopLists();
-
-    const renderList = (list, key) => {
-      const filtered = list.filter(p => (p[key] || 0) > 0);
-      if (filtered.length === 0) {
-        return `<i>No records yet</i>\n`;
-      }
-      return filtered.map((p, idx) => {
-        const name = p.first_name || `Player ${p.user_id}`;
-        return `${idx + 1}. <code>${escapeHtml(name)}</code> - <b>${p[key]}</b>`;
-      }).join('\n') + '\n';
-    };
-
-    let text = `🏆 <b>GLOBAL LEADERBOARDS</b> 🏆\n\n` +
-      `🏏 <b>Top 10 Run Scorers:</b>\n` + renderList(lists.topRuns, 'runs') + `\n` +
-      `🥎 <b>Top 10 Wicket Takers:</b>\n` + renderList(lists.topWickets, 'wickets') + `\n` +
-      `⭐ <b>Top 10 MVPs:</b>\n` + renderList(lists.topMvps, 'motm') + `\n` +
-      `🦆 <b>Top 10 Ducks:</b>\n` + renderList(lists.topDucks, 'ducks') + `\n` +
-      `💥 <b>Top 10 Highest Scores:</b>\n` + renderList(lists.topHighscores, 'highscore');
-
-    await ctx.reply(text.trim(), { parse_mode: 'HTML' });
+    await ctx.reply(
+      "🏆 <b>GLOBAL LEADERBOARDS</b> 🏆\n\nSelect a category to view the top 10 players:",
+      { reply_markup: getTopMenuKeyboard(), parse_mode: 'HTML' }
+    );
   } catch (err) {
-    console.error("Error displaying leaderboards:", err);
-    await ctx.reply("❌ Failed to retrieve global leaderboards.");
+    console.error("Error displaying top menu:", err);
+    await ctx.reply("❌ Failed to open leaderboards.");
   }
 });
 
@@ -938,6 +929,61 @@ bot.command('endmatch', async (ctx) => {
 bot.on('callback_query:data', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
+
+  if (data === 'top_menu') {
+      await ctx.editMessageText(
+          "🏆 <b>GLOBAL LEADERBOARDS</b> 🏆\n\nSelect a category to view the top 10 players:",
+          { reply_markup: getTopMenuKeyboard(), parse_mode: 'HTML' }
+      );
+      return ctx.answerCallbackQuery();
+  }
+
+  if (data.startsWith('top_')) {
+      try {
+          const careerStats = require('./db/careerStats');
+          const lists = await careerStats.getTopLists();
+
+          const renderList = (list, key) => {
+            const filtered = list.filter(p => (p[key] || 0) > 0);
+            if (filtered.length === 0) {
+              return `<i>No records yet</i>\n`;
+            }
+            return filtered.map((p, idx) => {
+              const name = p.first_name || `Player ${p.user_id}`;
+              return `${idx + 1}. <code>${escapeHtml(name)}</code> - <b>${p[key]}</b>`;
+            }).join('\n') + '\n';
+          };
+
+          let title = "";
+          let listContent = "";
+
+          if (data === 'top_runs') {
+              title = "🏏 <b>Top 10 Run Scorers:</b>\n\n";
+              listContent = renderList(lists.topRuns, 'runs');
+          } else if (data === 'top_wickets') {
+              title = "🥎 <b>Top 10 Wicket Takers:</b>\n\n";
+              listContent = renderList(lists.topWickets, 'wickets');
+          } else if (data === 'top_mvps') {
+              title = "⭐ <b>Top 10 MVPs:</b>\n\n";
+              listContent = renderList(lists.topMvps, 'motm');
+          } else if (data === 'top_ducks') {
+              title = "🦆 <b>Top 10 Ducks:</b>\n\n";
+              listContent = renderList(lists.topDucks, 'ducks');
+          } else if (data === 'top_highscores') {
+              title = "💥 <b>Top 10 Highest Scores:</b>\n\n";
+              listContent = renderList(lists.topHighscores, 'highscore');
+          }
+
+          const kb = new InlineKeyboard().text("Back ⬅️", "top_menu");
+          await ctx.editMessageText(
+              `🏆 <b>GLOBAL LEADERBOARDS</b> 🏆\n\n` + title + listContent,
+              { reply_markup: kb, parse_mode: 'HTML' }
+          );
+      } catch (err) {
+          console.error("Error editing top leaderboard:", err);
+      }
+      return ctx.answerCallbackQuery();
+  }
 
   if (data.startsWith('tour_votehost_')) {
       const tourId = data.split('_')[2];
