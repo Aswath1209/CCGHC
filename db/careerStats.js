@@ -32,47 +32,19 @@ function backfillLegacyStats(s) {
         s.batting_innings = s.batting_innings || 0;
     }
 
-    // 2. High Score
-    if ((s.highscore === 0 || !s.highscore) && s.runs > 0) {
-        if (s.centuries > 0) {
-            s.highscore = Math.max(100, Math.round(s.runs / s.batting_innings));
-        } else if (s.fifties > 0) {
-            s.highscore = Math.max(50, Math.round(s.runs / s.batting_innings));
-        } else {
-            s.highscore = Math.max(1, Math.round(s.runs / s.batting_innings));
-        }
-    } else {
-        s.highscore = s.highscore || 0;
-    }
-
-    // 3. Bowling Innings
+    // 2. Bowling Innings
     if ((s.bowling_innings === 0 || !s.bowling_innings) && s.balls_bowled > 0) {
         s.bowling_innings = Math.max(1, Math.round(s.balls_bowled / 6));
     } else {
         s.bowling_innings = s.bowling_innings || 0;
     }
 
-    // 4. Best Bowling
-    if ((s.best_wickets === 0 || !s.best_wickets) && s.wickets > 0) {
-        if (s.fivew > 0) {
-            s.best_wickets = 5;
-        } else if (s.threew > 0) {
-            s.best_wickets = 3;
-        } else {
-            s.best_wickets = 1;
-        }
-        
-        if (s.runs_conceded > 0) {
-            s.best_runs_conceded = Math.max(1, Math.round((s.runs_conceded / s.wickets) * s.best_wickets));
-        } else {
-            s.best_runs_conceded = 0;
-        }
-    } else {
-        s.best_wickets = s.best_wickets || 0;
-        s.best_runs_conceded = s.best_runs_conceded || 0;
-    }
-
+    // Keep all other original values exactly as they are in the DB
+    s.highscore = s.highscore || 0;
     s.ducks = s.ducks || 0;
+    s.best_wickets = s.best_wickets || 0;
+    s.best_runs_conceded = s.best_runs_conceded || 0;
+
     return s;
 }
 
@@ -158,9 +130,9 @@ async function getStats(userId) {
     };
 
     const needsBackfill = (
-        (s.runs > 0 || s.balls_faced > 0) && (s.batting_innings === 0 || s.highscore === 0)
+        (s.runs > 0 || s.balls_faced > 0) && s.batting_innings === 0
     ) || (
-        s.balls_bowled > 0 && (s.bowling_innings === 0 || (s.wickets > 0 && s.best_wickets === 0))
+        s.balls_bowled > 0 && s.bowling_innings === 0
     );
 
     if (needsBackfill) {
@@ -169,12 +141,8 @@ async function getStats(userId) {
         if (isSupabase) {
             sb.supabase.from('cricket_career_stats')
                 .update({
-                    highscore: s.highscore,
-                    best_wickets: s.best_wickets,
-                    best_runs_conceded: s.best_runs_conceded,
                     batting_innings: s.batting_innings,
-                    bowling_innings: s.bowling_innings,
-                    ducks: s.ducks
+                    bowling_innings: s.bowling_innings
                 })
                 .eq('user_id', userId)
                 .then(({ error }) => {
@@ -184,12 +152,8 @@ async function getStats(userId) {
             const localData = readStats();
             localData[key] = {
                 ...localData[key],
-                highscore: s.highscore,
-                best_wickets: s.best_wickets,
-                best_runs_conceded: s.best_runs_conceded,
                 batting_innings: s.batting_innings,
-                bowling_innings: s.bowling_innings,
-                ducks: s.ducks
+                bowling_innings: s.bowling_innings
             };
             writeStats(localData);
         }

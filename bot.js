@@ -17,7 +17,7 @@ function escapeHtml(str) {
 }
 
 
-const GIF_EVENTS = ["0", "4", "6", "out", "50", "100", "duck"];
+const GIF_EVENTS = ["0", "4", "6", "out", "50", "100", "duck", "threewickets", "fivewickets", "hattrick"];
 const CCL_GIFS = {};
 const COMMENTARY = {};
 
@@ -380,6 +380,33 @@ const MATCHED_SCENES = {
                 "🦆 Cheerio! <b>{batsman}</b> got a duck!",
                 "🤦‍♂️ An innings to forget for <b>{batsman}</b>.",
                 "🚪 Walk of shame for the batter! Out for a duck."
+            ]
+        }
+    ],
+    "threewickets": [
+        {
+            "gif": "https://media.giphy.com/media/RiiCewAJiJbXrsFys3/giphy.gif",
+            "commentaries": [
+                "🔥 <b>3-WICKET HAUL!</b> <b>{bowler}</b> is on fire with 3 wickets! 🥎",
+                "🌟 Fantastic bowling! <b>{bowler}</b> claims their 3rd wicket of the match!"
+            ]
+        }
+    ],
+    "fivewickets": [
+        {
+            "gif": "https://media.giphy.com/media/RiiCewAJiJbXrsFys3/giphy.gif",
+            "commentaries": [
+                "🖐️ <b>5-WICKET HAUL!</b> Sensational bowling by <b>{bowler}</b>! A day to remember! 🥎",
+                "👑 Masterclass! <b>{bowler}</b> completes a glorious 5-wicket haul!"
+            ]
+        }
+    ],
+    "hattrick": [
+        {
+            "gif": "https://media.giphy.com/media/RiiCewAJiJbXrsFys3/giphy.gif",
+            "commentaries": [
+                "💥 <b>HATTRICK!</b> 3 wickets in 3 consecutive balls for <b>{bowler}</b>! Absolutely unbelievable! 🥳",
+                "🔥 Magic from <b>{bowler}</b>! A hat-trick of wickets!"
             ]
         }
     ]
@@ -1548,7 +1575,7 @@ bot.on('message:text', async (ctx) => {
 
 
 
-async function sendEventUpdate(ctx, chatId, eventKey, batsmanName = "Batsman", bowlerName = "Bowler") {
+async function sendEventUpdate(ctx, chatId, eventKey, batsmanName = "Batsman", bowlerName = "Bowler", isDuck = false) {
   const scenes = MATCHED_SCENES[eventKey] || [];
   if (scenes.length === 0) return;
 
@@ -1559,15 +1586,19 @@ async function sendEventUpdate(ctx, chatId, eventKey, batsmanName = "Batsman", b
 
   text = text.replace(/{batsman}/g, batsmanName).replace(/{bowler}/g, bowlerName);
 
+  if (eventKey === "out" && isDuck) {
+      text += "\n🦆 <b>Dismissed for a duck!</b>";
+  }
+
   if (scene.gif) {
       try {
-          await ctx.api.sendAnimation(chatId, scene.gif, { caption: text });
+          await ctx.api.sendAnimation(chatId, scene.gif, { caption: text, parse_mode: 'HTML' });
           return;
       } catch(e) {
           console.log("GIF send failed", e.message);
       }
   }
-  if (text) await ctx.api.sendMessage(chatId, text);
+  if (text) await ctx.api.sendMessage(chatId, text, { parse_mode: 'HTML' });
 }
 
 // 

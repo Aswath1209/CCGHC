@@ -809,8 +809,11 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           await ctx.api.sendMessage(tour.chatId, `👉 ${cleanBowlerName} bowls a <b>${bowlStr}</b>!`, { parse_mode: 'HTML' });
           await sleep(1500);
           
+          const isDuck = res.hitDuck;
+          const hasBowlingMilestone = res.hitThreeWickets || res.hitHattrick || res.hitFiveWickets;
+
           if (isWicket) {
-              await sendEventUpdate(ctx, tour.chatId, "out", cleanBatsmanName, cleanBowlerName);
+              await sendEventUpdate(ctx, tour.chatId, "out", cleanBatsmanName, cleanBowlerName, isDuck && hasBowlingMilestone);
           } else {
               await sendEventUpdate(ctx, tour.chatId, batStr, cleanBatsmanName, cleanBowlerName);
           }
@@ -827,16 +830,18 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               await ctx.api.sendMessage(tour.chatId, `🏆 <b>CENTURY!</b> A sensational milestone for <b>${cleanBatsmanName}</b>! 100 runs in a masterclass innings! 👑`, { parse_mode: 'HTML' });
               await sleep(1500);
           }
-          if (res.hitDuck) {
+          if (isDuck && !hasBowlingMilestone) {
               await sendEventUpdate(ctx, tour.chatId, "duck", cleanBatsmanName, cleanBowlerName);
               await sleep(1500);
           }
           if (res.hitHattrick) {
-              await ctx.api.sendMessage(tour.chatId, `🔥 <b>💥 HATTRICK! 💥</b> <b>${cleanBowlerName}</b> has taken 3 wickets in 3 balls! Unbelievable scenes here! 🥳`, { parse_mode: 'HTML' });
+              await sendEventUpdate(ctx, tour.chatId, "hattrick", cleanBatsmanName, cleanBowlerName);
               await sleep(1500);
-          }
-          if (res.hitFiveWickets) {
-              await ctx.api.sendMessage(tour.chatId, `🖐️ <b>5-WICKET HAUL!</b> <b>${cleanBowlerName}</b> completes a brilliant 5-wicket haul! Absolute class bowling! 🥎`, { parse_mode: 'HTML' });
+          } else if (res.hitFiveWickets) {
+              await sendEventUpdate(ctx, tour.chatId, "fivewickets", cleanBatsmanName, cleanBowlerName);
+              await sleep(1500);
+          } else if (res.hitThreeWickets) {
+              await sendEventUpdate(ctx, tour.chatId, "threewickets", cleanBatsmanName, cleanBowlerName);
               await sleep(1500);
           }
           

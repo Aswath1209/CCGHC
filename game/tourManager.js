@@ -533,6 +533,7 @@ function submitPlay(tourId, userId, rawInput) {
     let hit100 = false;
     let hitDuck = false;
     let hitHattrick = false;
+    let hitThreeWickets = false;
     let hitFiveWickets = false;
     let batsmanName = "";
     let bowlerName = "";
@@ -574,6 +575,10 @@ function submitPlay(tourId, userId, rawInput) {
             if (bowler.consecutiveWickets === 3) {
                 hitHattrick = true;
             }
+            if (bowler.wickets === 3 && !bowler.threeWicketHaulAnnounced) {
+                bowler.threeWicketHaulAnnounced = true;
+                hitThreeWickets = true;
+            }
             if (bowler.wickets === 5 && !bowler.fiveWicketHaulAnnounced) {
                 bowler.fiveWicketHaulAnnounced = true;
                 hitFiveWickets = true;
@@ -601,6 +606,7 @@ function submitPlay(tourId, userId, rawInput) {
         hit100,
         hitDuck,
         hitHattrick,
+        hitThreeWickets,
         hitFiveWickets,
         batsmanName,
         bowlerName
