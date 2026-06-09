@@ -581,22 +581,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('canceltour', async (ctx) => {
-      if (ctx.chat.type === 'private') {
-          return ctx.reply("Tour matches can only be canceled in groups.");
-      }
-      
-      const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
-      if (!tour) return ctx.reply("No active Tour match found in this chat.");
-      
-      if (!(await isGCAdmin(ctx))) {
-          return ctx.reply("❌ Only an administrator of this group can cancel the Tour match.");
-      }
-      
-      const kb = new InlineKeyboard()
-          .text("Sure, Cancel ✅", `tour_cancel_yes_${tour.id}`)
-          .text("No, Keep ❌", `tour_cancel_no_${tour.id}`);
-          
-      await ctx.reply("⚠️ <b>Cancel Tour Match?</b>\nAre you sure you want to cancel the active Tour match?", { reply_markup: kb, parse_mode: 'HTML' });
+      await ctx.reply("⚠️ The <code>/canceltour</code> command has been moved to <code>/endtour</code>.\n\nPlease type <code>/endtour confirm</code> to end the active Tour match.", { parse_mode: 'HTML' });
   });
 
   bot.command('score', async (ctx) => {
@@ -700,13 +685,28 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   bot.command('endtour', async (ctx) => {
       const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("No active Tour match in this chat.");
-      if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can end the tour.");
       
-      const kb = new InlineKeyboard()
-          .text("Yes, End Match ✅", `confirm_endtour_yes_${tour.id}`)
-          .text("No, Continue ❌", `confirm_endtour_no`);
-          
-      await ctx.reply("⚠️ <b>Cancel Match?</b>\nAre you sure you want to end this Tour match?", { reply_markup: kb, parse_mode: 'HTML' });
+      const isHost = tour.hostId === ctx.from.id;
+      const isAdmin = await isGCAdmin(ctx);
+      if (!isHost && !isAdmin) {
+          return ctx.reply("❌ Only the host or a group administrator can end the tour.");
+      }
+      
+      const text = ctx.message.text.trim().toLowerCase();
+      const parts = text.split(/\s+/);
+      const isConfirm = parts[1] === 'confirm';
+      
+      if (isConfirm) {
+          tourManager.deleteTour(tour.id);
+          await ctx.reply("🛑 <b>The Tour match has been ended.</b>", { parse_mode: 'HTML' });
+      } else {
+          await ctx.reply(
+              "⚠️ <b>WARNING: Ending Tour Match</b>\n\n" +
+              "Are you sure you want to end this Tour match? All current progress will be lost.\n\n" +
+              "To confirm, type:\n<code>/endtour confirm</code>",
+              { parse_mode: 'HTML' }
+          );
+      }
   });
 
   bot.command('tourresume', async (ctx) => {
