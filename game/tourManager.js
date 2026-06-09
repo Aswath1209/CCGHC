@@ -635,8 +635,9 @@ function submitPlay(tourId, userId, rawInput) {
     const currentBatTeamScore = totalScore(batTeam);
 
     const targetPassed = tour.innings === 2 && currentBatTeamScore > bowlingTeamScore;
-    const oversFinished = tour.balls >= tour.config.overs * 6;
-    const maxWickets = tour.config.wickets || 10;
+    const maxOvers = tour.isSuperOver ? 1 : tour.config.overs;
+    const oversFinished = tour.balls >= maxOvers * 6;
+    const maxWickets = tour.isSuperOver ? 2 : (tour.config.wickets || 10);
     const allOut = batTeam.wickets >= batTeam.players.length || batTeam.wickets >= maxWickets;
     
     if (targetPassed || oversFinished || allOut) {
@@ -737,5 +738,5 @@ module.exports = {
   createTour, getTour, getUserTour, deleteTour, joinTeam,
   appointCaptain, renameTeam, removePlayer, startTour, handleToss,
   setBatsman, setBowler, submitPlay, adjustRuns, rebatPlayer,
-  triggerLMS, totalScore, getAllTours, getBasePlayerId
+  triggerLMS, totalScore, getAllTours, getBasePlayerId, calculateMOTM
 };

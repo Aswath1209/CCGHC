@@ -33,6 +33,31 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       return str;
   }
 
+  function resetTeamForSuperOver(team) {
+      team.score = 0;
+      team.wickets = 0;
+      team.bonusRuns = 0;
+      team.penaltyRuns = 0;
+      team.outPlayers = [];
+      team.strikerId = null;
+      team.nonStrikerId = null;
+      if (team.players) {
+          for (const p of team.players) {
+              p.runs = 0;
+              p.balls = 0;
+              p.fours = 0;
+              p.sixes = 0;
+              p.wickets = 0;
+              p.runsConceded = 0;
+              p.ballsBowled = 0;
+              p.halfCenturyAnnounced = false;
+              p.centuryAnnounced = false;
+              p.threeWicketHaulAnnounced = false;
+              p.fiveWicketHaulAnnounced = false;
+          }
+      }
+  }
+
   // Renders the aligned scorecard
   function renderScoreboard(tour) {
     const batT = tour[tour.battingTeamId];
@@ -50,17 +75,24 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     const over = Math.floor(tour.balls / 6);
     const ball = tour.balls % 6;
 
-    let text = tour.name ? `⚡ <b>${escapeHtml(tour.name.toUpperCase())} SCOREBOARD</b> ⚡\n` : `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\n`;
+    const targetOvers = tour.isSuperOver ? 1 : tour.config.overs;
+
+    let text = "";
+    if (tour.isSuperOver) {
+        text += `🏆 <b>SUPER OVER #${tour.superOverCount} SCOREBOARD</b> 🏆\n`;
+    } else {
+        text += tour.name ? `⚡ <b>${escapeHtml(tour.name.toUpperCase())} SCOREBOARD</b> ⚡\n` : `⚡ <b>LIVE TOUR MATCH SCOREBOARD</b> ⚡\n`;
+    }
     text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
     text += `🏏 <b>${escapeHtml(batT.name)}</b> (Batting)\n`;
     text += `🔹 <b>Score:</b> <code>${totalS}/${batT.wickets}</code> runs\n`;
-    text += `🔹 <b>Overs:</b> <code>${over}.${ball} / ${tour.config.overs}</code> ov\n\n`;
+    text += `🔹 <b>Overs:</b> <code>${over}.${ball} / ${targetOvers}</code> ov\n\n`;
     
     text += `🥎 <b>${escapeHtml(bowlT.name)}</b> (Bowling)\n`;
     if (tour.innings === 2) {
         text += `🔹 <b>Score:</b> <code>${bowlS}</code> runs (Completed)\n`;
         const needed = (bowlS + 1) - totalS;
-        const remaining = (tour.config.overs * 6) - tour.balls;
+        const remaining = (targetOvers * 6) - tour.balls;
         text += `━━━━━━━━━━━━━━━━━━━━━━\n`;
         if (needed > 0 && remaining >= 0) {
             text += `🎯 <b>Target:</b> <code>${bowlS + 1}</code> | Need <b>${needed}</b> off <b>${remaining}</b> balls\n`;
@@ -788,7 +820,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         return true;
     }
     
-    handleTourResult(ctx, res).catch(err => console.error("Error in handleTourResult:", err));
+    await handleTourResult(ctx, res).catch(err => console.error("Error in handleTourResult:", err));
     return true; 
   };
 
@@ -856,11 +888,54 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               const firstBat = tour.firstBattingTeamId || 'teamA';
               const secondBat = firstBat === 'teamA' ? 'teamB' : 'teamA';
               
+              if (s1 === s2) {
+                  // Trigger/Continue Super Over tie-breaker
+                  tour.isSuperOver = true;
+                  tour.superOverCount = (tour.superOverCount || 0) + 1;
+                  
+                  if (!tour.mainMatchTeamA) {
+                      tour.mainMatchTeamA = JSON.parse(JSON.stringify(tour.teamA));
+                      tour.mainMatchTeamB = JSON.parse(JSON.stringify(tour.teamB));
+                  }
+                  
+                  // The team who bat last will bat first in the super over.
+                  // (which is tour.battingTeamId because they just finished batting second in the match/innings)
+                  const lastBattingTeamId = tour.battingTeamId;
+                  const nextBattingTeamId = lastBattingTeamId;
+                  const nextBowlingTeamId = lastBattingTeamId === 'teamA' ? 'teamB' : 'teamA';
+                  
+                  tour.battingTeamId = nextBattingTeamId;
+                  tour.bowlingTeamId = nextBowlingTeamId;
+                  tour.firstBattingTeamId = nextBattingTeamId; // First to bat in this Super Over
+                  
+                  resetTeamForSuperOver(tour.teamA);
+                  resetTeamForSuperOver(tour.teamB);
+                  
+                  tour.balls = 0;
+                  tour.innings = 1;
+                  tour.state = 'SELECT_BATTERS';
+                  
+                  await ctx.api.sendMessage(tour.chatId, 
+                      `🤝 <b>The match ended in a TIE!</b>\n\n` +
+                      `🔥 <b>Heading to SUPER OVER #${tour.superOverCount}!</b>\n` +
+                      `Rules: <b>1 Over | 2 Wickets</b>\n\n` +
+                      `🏏 <b>${escapeHtml(tour[nextBattingTeamId].name)}</b> will bat first!\n` +
+                      `Captains, select your batters & bowler using /batting and /bowling.`, 
+                      { parse_mode: 'HTML' }
+                  );
+                  
+                  await promptPlayerSelection(ctx, tour);
+                  return;
+              }
+              
               let resultText = "The match ended in a tie!";
-              let winnerTeamId = null;
-              if (s1 !== s2) {
-                  winnerTeamId = s1 > s2 ? 'teamA' : 'teamB';
-                  const winnerName = escapeHtml(tour[winnerTeamId].name);
+              let winnerTeamId = s1 > s2 ? 'teamA' : 'teamB';
+              const winnerName = escapeHtml(tour[winnerTeamId].name);
+              
+              if (tour.mainMatchTeamA) {
+                  const superOverRunsMargin = Math.abs(s1 - s2);
+                  resultText = `${winnerName} won the Super Over by ${superOverRunsMargin} run${superOverRunsMargin > 1 ? 's' : ''}`;
+              } else {
                   if (winnerTeamId === secondBat) {
                       const wicketsLeft = tour.config.wickets - tour[secondBat].wickets;
                       resultText = `${winnerName} won by ${wicketsLeft} wicket${wicketsLeft > 1 ? 's' : ''}`;
@@ -868,6 +943,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                       const runsMargin = Math.abs(s1 - s2);
                       resultText = `${winnerName} won by ${runsMargin} run${runsMargin > 1 ? 's' : ''}`;
                   }
+              }
+              
+              // Restore main match stats for POTM & career stats recording if Super Over occurred
+              if (tour.mainMatchTeamA) {
+                  tour.teamA = tour.mainMatchTeamA;
+                  tour.teamB = tour.mainMatchTeamB;
+                  res.motm = tourManager.calculateMOTM(tour, winnerTeamId);
               }
               
               const potmName = res.motm ? res.motm.first_name : null;
@@ -881,7 +963,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   console.error("Failed to record career stats:", e);
               }
               
-              let msg = s1 === s2 ? "🤝 <b>The match is a tie!</b>" : `🏆 <b>${resultText}!</b> 🎉`;
+              let msg = `🏆 <b>${resultText}!</b> 🎉`;
               if (res.motm) msg += `\n🎖 <b>POTM:</b> ${escapeHtml(res.motm.first_name)}`;
               
               try {
