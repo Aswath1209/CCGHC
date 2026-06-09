@@ -727,7 +727,7 @@ function getTopMenuKeyboard() {
     .row()
     .text("⭐ Most MVPs", "top_mvps").text("🦆 Most Ducks", "top_ducks")
     .row()
-    .text("💥 Highest Score", "top_highscores");
+    .text("💥 Highest Score", "top_highscores").text("🔥 Best Bowling", "top_bestbowling");
 }
 
 bot.command('top', async (ctx) => {
@@ -972,6 +972,17 @@ bot.on('callback_query:data', async (ctx) => {
           } else if (data === 'top_highscores') {
               title = "💥 <b>Top 10 Highest Scores:</b>\n\n";
               listContent = renderList(lists.topHighscores, 'highscore');
+          } else if (data === 'top_bestbowling') {
+              title = "🔥 <b>Top 10 Best Bowling Figures:</b>\n\n";
+              const filtered = lists.topBestBowling.filter(p => (p.best_wickets || 0) > 0);
+              if (filtered.length === 0) {
+                  listContent = `<i>No records yet</i>\n`;
+              } else {
+                  listContent = filtered.map((p, idx) => {
+                      const name = p.first_name || `Player ${p.user_id}`;
+                      return `${idx + 1}. <code>${escapeHtml(name)}</code> - <b>${p.best_wickets}/${p.best_runs_conceded}</b>`;
+                  }).join('\n') + '\n';
+              }
           }
 
           const kb = new InlineKeyboard().text("Back ⬅️", "top_menu");
