@@ -357,6 +357,30 @@ const MATCHED_SCENES = {
                 "🥚 An absolute egg! <b>{batsman}</b> departs for a duck.",
                 "😭 A disappointing zero for <b>{batsman}</b>."
             ]
+        },
+        {
+            "gif": "https://media.giphy.com/media/LO8yQjlRoBQaxCgPT0/giphy.gif",
+            "commentaries": [
+                "🦆 Oh dear! <b>{batsman}</b> walks back with a duck!",
+                "🚪 No runs scored, straight back to the bench.",
+                "👀 Caught or bowled, it's a zero for <b>{batsman}</b>."
+            ]
+        },
+        {
+            "gif": "https://media.giphy.com/media/kFiDBSmVOYCkuPDgec/giphy.gif",
+            "commentaries": [
+                "🥚 <b>{batsman}</b> got a big fat zero!",
+                "🤫 Silence in the ground as the batter departs without scoring.",
+                "📉 A quick stay at the crease. OUT for 0!"
+            ]
+        },
+        {
+            "gif": "https://media.giphy.com/media/OoDsb7FHoRTO0OMz2k/giphy.gif",
+            "commentaries": [
+                "🦆 Cheerio! <b>{batsman}</b> got a duck!",
+                "🤦‍♂️ An innings to forget for <b>{batsman}</b>.",
+                "🚪 Walk of shame for the batter! Out for a duck."
+            ]
         }
     ]
 };
