@@ -403,6 +403,7 @@ try {
     { command: 'endtour', description: 'Forcibly end Tour match' },
     { command: 'tourhelp', description: 'Show Tour guide' },
     { command: 'profile', description: 'View your stats' },
+    { command: 'top', description: 'Show global leaderboards (Runs, Wickets, MVPs, Ducks, Highscores)' },
     { command: 'help', description: 'Commands list' }
   ]).catch(e => console.error("setMyCommands error (non-blocking):", e.message));
 } catch (e) {
@@ -664,20 +665,55 @@ bot.command('profile', async (ctx) => {
         `🏆 MOTM Awards: <b>${stats.motm}</b>\n` +
         `✅ Wins: <b>${stats.wins}</b>  |  ❌ Losses: <b>${stats.losses}</b>\n\n` +
         `🏏 <b>Career Batting:</b>\n` +
+        `🔹 Innings: <b>${stats.batting_innings}</b>\n` +
         `🔹 Runs: <b>${stats.runs}</b>\n` +
+        `🔹 High Score: <b>${stats.highscore}</b>\n` +
         `🔹 Average: <b>${avgStr}</b>\n` +
         `🔹 Strike Rate: <b>${sr}</b>\n` +
         `🔹 50s: <b>${stats.fifties || 0}</b>  |  100s: <b>${stats.centuries || 0}</b>\n` +
+        `🔹 Ducks: <b>${stats.ducks}</b>\n` +
         `🔹 Fours (4s): <b>${stats.fours}</b>  |  Sixes (6s): <b>${stats.sixes}</b>\n\n` +
         `🥎 <b>Career Bowling:</b>\n` +
+        `🔹 Innings: <b>${stats.bowling_innings}</b>\n` +
         `🔹 Wickets: <b>${stats.wickets}</b>\n` +
         `🔹 Economy: <b>${econ}</b>\n` +
+        `🔹 Best Bowling: <b>${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}</b>\n` +
         `🔹 3w: <b>${stats.threew || 0}</b>  |  5w: <b>${stats.fivew || 0}</b>`,
         { parse_mode: 'HTML' }
       );
   } catch (e) {
       console.error(e);
       await ctx.reply("⚠️ Error loading profile");
+  }
+});
+
+bot.command('top', async (ctx) => {
+  try {
+    const careerStats = require('./db/careerStats');
+    const lists = await careerStats.getTopLists();
+
+    const renderList = (list, key) => {
+      const filtered = list.filter(p => (p[key] || 0) > 0);
+      if (filtered.length === 0) {
+        return `<i>No records yet</i>\n`;
+      }
+      return filtered.map((p, idx) => {
+        const name = p.first_name || `Player ${p.user_id}`;
+        return `${idx + 1}. <code>${escapeHtml(name)}</code> - <b>${p[key]}</b>`;
+      }).join('\n') + '\n';
+    };
+
+    let text = `🏆 <b>GLOBAL LEADERBOARDS</b> 🏆\n\n` +
+      `🏏 <b>Top 10 Run Scorers:</b>\n` + renderList(lists.topRuns, 'runs') + `\n` +
+      `🥎 <b>Top 10 Wicket Takers:</b>\n` + renderList(lists.topWickets, 'wickets') + `\n` +
+      `⭐ <b>Top 10 MVPs:</b>\n` + renderList(lists.topMvps, 'motm') + `\n` +
+      `🦆 <b>Top 10 Ducks:</b>\n` + renderList(lists.topDucks, 'ducks') + `\n` +
+      `💥 <b>Top 10 Highest Scores:</b>\n` + renderList(lists.topHighscores, 'highscore');
+
+    await ctx.reply(text.trim(), { parse_mode: 'HTML' });
+  } catch (err) {
+    console.error("Error displaying leaderboards:", err);
+    await ctx.reply("❌ Failed to retrieve global leaderboards.");
   }
 });
 

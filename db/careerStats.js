@@ -52,7 +52,13 @@ async function getStats(userId) {
                     fifties: data.fifties || 0,
                     centuries: data.centuries || 0,
                     threew: data.threew || 0,
-                    fivew: data.fivew || 0
+                    fivew: data.fivew || 0,
+                    highscore: data.highscore || 0,
+                    ducks: data.ducks || 0,
+                    best_wickets: data.best_wickets || 0,
+                    best_runs_conceded: data.best_runs_conceded || 0,
+                    batting_innings: data.batting_innings || 0,
+                    bowling_innings: data.bowling_innings || 0
                 };
             }
         } catch (e) {
@@ -78,7 +84,13 @@ async function getStats(userId) {
             fifties: 0,
             centuries: 0,
             threew: 0,
-            fivew: 0
+            fivew: 0,
+            highscore: 0,
+            ducks: 0,
+            best_wickets: 0,
+            best_runs_conceded: 0,
+            batting_innings: 0,
+            bowling_innings: 0
         };
     }
     const s = data[key];
@@ -97,7 +109,13 @@ async function getStats(userId) {
         fifties: s.fifties || 0,
         centuries: s.centuries || 0,
         threew: s.threew || 0,
-        fivew: s.fivew || 0
+        fivew: s.fivew || 0,
+        highscore: s.highscore || 0,
+        ducks: s.ducks || 0,
+        best_wickets: s.best_wickets || 0,
+        best_runs_conceded: s.best_runs_conceded || 0,
+        batting_innings: s.batting_innings || 0,
+        bowling_innings: s.bowling_innings || 0
     };
 }
 
@@ -126,9 +144,37 @@ async function incrementStats(userId, updates) {
                 fifties: 0,
                 centuries: 0,
                 threew: 0,
-                fivew: 0
+                fivew: 0,
+                highscore: 0,
+                ducks: 0,
+                best_wickets: 0,
+                best_runs_conceded: 0,
+                batting_innings: 0,
+                bowling_innings: 0
             };
             
+            const currentBestW = current.best_wickets || 0;
+            const currentBestR = current.best_runs_conceded || 0;
+            const matchW = updates.best_wickets || 0;
+            const matchR = updates.best_runs_conceded || 0;
+            const bowledThisMatch = (updates.balls_bowled || 0) > 0;
+
+            let nextBestW = currentBestW;
+            let nextBestR = currentBestR;
+
+            if (bowledThisMatch) {
+                if (currentBestW === 0 && currentBestR === 0) {
+                    nextBestW = matchW;
+                    nextBestR = matchR;
+                } else if (matchW > currentBestW) {
+                    nextBestW = matchW;
+                    nextBestR = matchR;
+                } else if (matchW === currentBestW && matchR < currentBestR) {
+                    nextBestW = matchW;
+                    nextBestR = matchR;
+                }
+            }
+
             const nextStats = {
                 runs: (current.runs || 0) + (updates.runs || 0),
                 balls_faced: (current.balls_faced || 0) + (updates.balls_faced || 0),
@@ -144,7 +190,13 @@ async function incrementStats(userId, updates) {
                 fifties: (current.fifties || 0) + (updates.fifties || 0),
                 centuries: (current.centuries || 0) + (updates.centuries || 0),
                 threew: (current.threew || 0) + (updates.threew || 0),
-                fivew: (current.fivew || 0) + (updates.fivew || 0)
+                fivew: (current.fivew || 0) + (updates.fivew || 0),
+                highscore: Math.max(current.highscore || 0, updates.highscore || 0),
+                ducks: (current.ducks || 0) + (updates.ducks || 0),
+                best_wickets: nextBestW,
+                best_runs_conceded: nextBestR,
+                batting_innings: (current.batting_innings || 0) + (updates.batting_innings || 0),
+                bowling_innings: (current.bowling_innings || 0) + (updates.bowling_innings || 0)
             };
             
             const { error: upsertErr } = await sb.supabase
@@ -182,10 +234,39 @@ async function incrementStats(userId, updates) {
             fifties: 0,
             centuries: 0,
             threew: 0,
-            fivew: 0
+            fivew: 0,
+            highscore: 0,
+            ducks: 0,
+            best_wickets: 0,
+            best_runs_conceded: 0,
+            batting_innings: 0,
+            bowling_innings: 0
         };
     }
     const s = data[key];
+    
+    const currentBestW = s.best_wickets || 0;
+    const currentBestR = s.best_runs_conceded || 0;
+    const matchW = updates.best_wickets || 0;
+    const matchR = updates.best_runs_conceded || 0;
+    const bowledThisMatch = (updates.balls_bowled || 0) > 0;
+
+    let nextBestW = currentBestW;
+    let nextBestR = currentBestR;
+
+    if (bowledThisMatch) {
+        if (currentBestW === 0 && currentBestR === 0) {
+            nextBestW = matchW;
+            nextBestR = matchR;
+        } else if (matchW > currentBestW) {
+            nextBestW = matchW;
+            nextBestR = matchR;
+        } else if (matchW === currentBestW && matchR < currentBestR) {
+            nextBestW = matchW;
+            nextBestR = matchR;
+        }
+    }
+
     s.runs = (s.runs || 0) + (updates.runs || 0);
     s.balls_faced = (s.balls_faced || 0) + (updates.balls_faced || 0);
     s.wickets = (s.wickets || 0) + (updates.wickets || 0);
@@ -201,6 +282,13 @@ async function incrementStats(userId, updates) {
     s.centuries = (s.centuries || 0) + (updates.centuries || 0);
     s.threew = (s.threew || 0) + (updates.threew || 0);
     s.fivew = (s.fivew || 0) + (updates.fivew || 0);
+    s.highscore = Math.max(s.highscore || 0, updates.highscore || 0);
+    s.ducks = (s.ducks || 0) + (updates.ducks || 0);
+    s.best_wickets = nextBestW;
+    s.best_runs_conceded = nextBestR;
+    s.batting_innings = (s.batting_innings || 0) + (updates.batting_innings || 0);
+    s.bowling_innings = (s.bowling_innings || 0) + (updates.bowling_innings || 0);
+    
     writeStats(data);
     return s;
 }
@@ -218,6 +306,7 @@ async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
             const isMotm = (motmPlayerId && (actualId === motmPlayerId || p.id === motmPlayerId));
             const runsScored = p.runs || 0;
             const wicketsTaken = p.wickets || 0;
+            const hasOut = outPlayers.some(id => id && id.toString() === p.id.toString());
 
             const updates = {
                 first_name: p.first_name,
@@ -228,14 +317,20 @@ async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
                 wickets: wicketsTaken,
                 runs_conceded: p.runsConceded || 0,
                 balls_bowled: p.ballsBowled || 0,
-                dismissals: outPlayers.some(id => id && id.toString() === p.id.toString()) ? 1 : 0,
+                dismissals: hasOut ? 1 : 0,
                 motm: isMotm ? 1 : 0,
                 wins: (!isTie && isWinnerTeam) ? 1 : 0,
                 losses: (!isTie && !isWinnerTeam) ? 1 : 0,
                 fifties: (runsScored >= 50 && runsScored < 100) ? 1 : 0,
                 centuries: (runsScored >= 100) ? 1 : 0,
                 threew: (wicketsTaken >= 3 && wicketsTaken < 5) ? 1 : 0,
-                fivew: (wicketsTaken >= 5) ? 1 : 0
+                fivew: (wicketsTaken >= 5) ? 1 : 0,
+                highscore: runsScored,
+                ducks: (runsScored === 0 && hasOut) ? 1 : 0,
+                best_wickets: wicketsTaken,
+                best_runs_conceded: p.runsConceded || 0,
+                batting_innings: (p.balls > 0 || runsScored > 0) ? 1 : 0,
+                bowling_innings: (p.ballsBowled > 0) ? 1 : 0
             };
 
             const participated = (updates.runs > 0 || updates.balls_faced > 0 || updates.balls_bowled > 0 || updates.wickets > 0);
@@ -253,8 +348,48 @@ async function recordMatchStats(tour, motmPlayerId, winnerTeamId) {
     ]);
 }
 
+async function getTopLists() {
+    let statsList = [];
+    if (sb.supabase) {
+        try {
+            const { data, error } = await sb.supabase
+                .from('cricket_career_stats')
+                .select('*');
+            if (!error && data) {
+                statsList = data;
+            }
+        } catch (e) {
+            console.error("Supabase getTopLists error, falling back to local JSON:", e);
+        }
+    }
+    
+    if (statsList.length === 0) {
+        const localData = readStats();
+        statsList = Object.entries(localData).map(([userId, stats]) => ({
+            user_id: userId,
+            first_name: stats.first_name || `Player ${userId}`,
+            ...stats
+        }));
+    }
+
+    const topRuns = [...statsList].sort((a, b) => (b.runs || 0) - (a.runs || 0)).slice(0, 10);
+    const topWickets = [...statsList].sort((a, b) => (b.wickets || 0) - (a.wickets || 0)).slice(0, 10);
+    const topMvps = [...statsList].sort((a, b) => (b.motm || 0) - (a.motm || 0)).slice(0, 10);
+    const topDucks = [...statsList].sort((a, b) => (b.ducks || 0) - (a.ducks || 0)).slice(0, 10);
+    const topHighscores = [...statsList].sort((a, b) => (b.highscore || 0) - (a.highscore || 0)).slice(0, 10);
+
+    return {
+        topRuns,
+        topWickets,
+        topMvps,
+        topDucks,
+        topHighscores
+    };
+}
+
 module.exports = {
     getStats,
     incrementStats,
-    recordMatchStats
+    recordMatchStats,
+    getTopLists
 };
