@@ -17,7 +17,7 @@ function escapeHtml(str) {
 }
 
 
-const GIF_EVENTS = ["0", "4", "6", "out", "50", "100"];
+const GIF_EVENTS = ["0", "4", "6", "out", "50", "100", "duck"];
 const CCL_GIFS = {};
 const COMMENTARY = {};
 
@@ -346,6 +346,16 @@ const MATCHED_SCENES = {
                 "💨 'Snicked it... and taken!'",
                 "☝️ GONE! The finger goes up! Bowler celebrates.",
                 "😢 Tragic end to the innings. Caught at the boundary."
+            ]
+        }
+    ],
+    "duck": [
+        {
+            "gif": "https://media.giphy.com/media/XxdrEjbDWnNhJsnWPE/giphy.gif",
+            "commentaries": [
+                "🦆 <b>DUCK!</b> <b>{batsman}</b> is dismissed for a duck! Back to the pavilion without scoring.",
+                "🥚 An absolute egg! <b>{batsman}</b> departs for a duck.",
+                "😭 A disappointing zero for <b>{batsman}</b>."
             ]
         }
     ]

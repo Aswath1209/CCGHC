@@ -828,7 +828,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               await sleep(1500);
           }
           if (res.hitDuck) {
-              await ctx.api.sendMessage(tour.chatId, `🦆 <b>DUCK!</b> <b>${cleanBatsmanName}</b> is dismissed for a duck! Back to the pavilion without scoring.`, { parse_mode: 'HTML' });
+              await sendEventUpdate(ctx, tour.chatId, "duck", cleanBatsmanName, cleanBowlerName);
               await sleep(1500);
           }
           if (res.hitHattrick) {
