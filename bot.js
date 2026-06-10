@@ -749,11 +749,21 @@ bot.command('profile', async (ctx) => {
   }
 });
 
+const cardCooldowns = new Map();
+const CARD_COOLDOWN_MS = 30000; // 30 seconds cooldown per user
+
 bot.command('generate', async (ctx) => {
   try {
       const arg = ctx.match ? ctx.match.trim().toLowerCase() : "";
       if (arg !== 'card') {
           return ctx.reply("⚠️ Usage: <code>/generate card</code>", { parse_mode: 'HTML' });
+      }
+
+      const now = Date.now();
+      const lastUsed = cardCooldowns.get(ctx.from.id) || 0;
+      if (now - lastUsed < CARD_COOLDOWN_MS) {
+          const remaining = Math.ceil((CARD_COOLDOWN_MS - (now - lastUsed)) / 1000);
+          return ctx.reply(`⏳ Please wait <b>${remaining}s</b> before generating another card.`, { parse_mode: 'HTML' });
       }
 
       await ctx.replyWithChatAction("upload_photo");
@@ -803,6 +813,7 @@ bot.command('generate', async (ctx) => {
           caption: `👤 <b>${user.first_name}'s Player Card</b>\n\n<i>This is a preview mockup of the Visual Profile card.</i>`,
           parse_mode: 'HTML'
       });
+      cardCooldowns.set(ctx.from.id, Date.now());
   } catch (err) {
       console.error("Error generating player card:", err);
       await ctx.reply("❌ Failed to generate player card.");
@@ -811,6 +822,13 @@ bot.command('generate', async (ctx) => {
 
 bot.command('mycard', async (ctx) => {
   try {
+      const now = Date.now();
+      const lastUsed = cardCooldowns.get(ctx.from.id) || 0;
+      if (now - lastUsed < CARD_COOLDOWN_MS) {
+          const remaining = Math.ceil((CARD_COOLDOWN_MS - (now - lastUsed)) / 1000);
+          return ctx.reply(`⏳ Please wait <b>${remaining}s</b> before generating another card.`, { parse_mode: 'HTML' });
+      }
+
       await ctx.replyWithChatAction("upload_photo");
 
       let targetUserId = ctx.from.id;
@@ -908,6 +926,7 @@ bot.command('mycard', async (ctx) => {
           caption: `👑 <b>${user.first_name}'s Official Player Card</b>\n\nUse <code>/mycard</code> to generate yours!`,
           parse_mode: 'HTML'
       });
+      cardCooldowns.set(ctx.from.id, Date.now());
   } catch (err) {
       console.error("Error generating player card:", err);
       await ctx.reply("❌ Failed to generate player card.");
