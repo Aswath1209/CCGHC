@@ -750,10 +750,14 @@ bot.command('profile', async (ctx) => {
 });
 
 const cardCooldowns = new Map();
-const CARD_COOLDOWN_MS = 30000; // 30 seconds cooldown per user
+const CARD_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes cooldown per user
 
 bot.command('generate', async (ctx) => {
   try {
+      if (ctx.chat.type !== 'private') {
+          return ctx.reply(`⚠️ This command can only be used in private DMs with the bot. Send it here: @${ctx.me.username}`);
+      }
+
       const arg = ctx.match ? ctx.match.trim().toLowerCase() : "";
       if (arg !== 'card') {
           return ctx.reply("⚠️ Usage: <code>/generate card</code>", { parse_mode: 'HTML' });
@@ -762,8 +766,11 @@ bot.command('generate', async (ctx) => {
       const now = Date.now();
       const lastUsed = cardCooldowns.get(ctx.from.id) || 0;
       if (now - lastUsed < CARD_COOLDOWN_MS) {
-          const remaining = Math.ceil((CARD_COOLDOWN_MS - (now - lastUsed)) / 1000);
-          return ctx.reply(`⏳ Please wait <b>${remaining}s</b> before generating another card.`, { parse_mode: 'HTML' });
+          const remainingMs = CARD_COOLDOWN_MS - (now - lastUsed);
+          const minutes = Math.floor(remainingMs / 60000);
+          const seconds = Math.ceil((remainingMs % 60000) / 1000);
+          const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+          return ctx.reply(`⏳ Please wait <b>${timeStr}</b> before generating another card.`, { parse_mode: 'HTML' });
       }
 
       await ctx.replyWithChatAction("upload_photo");
@@ -822,11 +829,18 @@ bot.command('generate', async (ctx) => {
 
 bot.command('mycard', async (ctx) => {
   try {
+      if (ctx.chat.type !== 'private') {
+          return ctx.reply(`⚠️ This command can only be used in private DMs with the bot. Send it here: @${ctx.me.username}`);
+      }
+
       const now = Date.now();
       const lastUsed = cardCooldowns.get(ctx.from.id) || 0;
       if (now - lastUsed < CARD_COOLDOWN_MS) {
-          const remaining = Math.ceil((CARD_COOLDOWN_MS - (now - lastUsed)) / 1000);
-          return ctx.reply(`⏳ Please wait <b>${remaining}s</b> before generating another card.`, { parse_mode: 'HTML' });
+          const remainingMs = CARD_COOLDOWN_MS - (now - lastUsed);
+          const minutes = Math.floor(remainingMs / 60000);
+          const seconds = Math.ceil((remainingMs % 60000) / 1000);
+          const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+          return ctx.reply(`⏳ Please wait <b>${timeStr}</b> before generating another card.`, { parse_mode: 'HTML' });
       }
 
       await ctx.replyWithChatAction("upload_photo");
