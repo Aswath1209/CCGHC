@@ -128,6 +128,36 @@ function drawWickets(ctx, x, y) {
   ctx.restore();
 }
 
+function drawGem(ctx, x, y, size, color) {
+  ctx.save();
+  // Base gem gradient
+  const grad = ctx.createRadialGradient(x - size * 0.2, y - size * 0.2, size * 0.1, x, y, size);
+  if (color === 'ruby') {
+    grad.addColorStop(0, '#fca5a5');
+    grad.addColorStop(0.5, '#dc2626');
+    grad.addColorStop(1, '#7f1d1d');
+  } else if (color === 'emerald') {
+    grad.addColorStop(0, '#6ee7b7');
+    grad.addColorStop(0.5, '#059669');
+    grad.addColorStop(1, '#064e3b');
+  } else { // sapphire
+    grad.addColorStop(0, '#7dd3fc');
+    grad.addColorStop(0.5, '#0284c7');
+    grad.addColorStop(1, '#0c4a6e');
+  }
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Facet white gleam dot
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(x - size * 0.3, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawGoldLeaf(ctx, x, y, rx, ry, rotation) {
   ctx.save();
   ctx.fillStyle = '#ffd700';
@@ -140,29 +170,28 @@ function drawGoldLeaf(ctx, x, y, rx, ry, rotation) {
   ctx.restore();
 }
 
-function drawOrnateCorner(ctx, cx, cy, dirX, dirY) {
+function drawDetailedCorner(ctx, cx, cy, dirX, dirY) {
   ctx.save();
   ctx.strokeStyle = '#ffd700';
   ctx.fillStyle = '#ffd700';
   ctx.lineWidth = 2;
 
-  // Corner L-line
+  // Corner bracket
   ctx.beginPath();
   ctx.moveTo(cx, cy + dirY * 45);
   ctx.lineTo(cx, cy);
   ctx.lineTo(cx + dirX * 45, cy);
   ctx.stroke();
 
-  // Center spiral arc
+  // Corner scroll loops
   ctx.beginPath();
   ctx.arc(cx + dirX * 18, cy + dirY * 18, 9, 0, Math.PI * 2);
   ctx.stroke();
 
-  ctx.beginPath();
-  ctx.arc(cx + dirX * 18, cy + dirY * 18, 3, 0, Math.PI * 2);
-  ctx.fill();
+  // Embed corner Ruby gem
+  drawGem(ctx, cx + dirX * 18, cy + dirY * 18, 4.5, 'ruby');
 
-  // Draw elegant gold leaves growing out
+  // Gold leaves
   const rotAngle = Math.atan2(dirY, dirX);
   drawGoldLeaf(ctx, cx + dirX * 6, cy + dirY * 32, 7, 3, rotAngle + Math.PI / 4);
   drawGoldLeaf(ctx, cx + dirX * 32, cy + dirY * 6, 7, 3, rotAngle - Math.PI / 4);
@@ -175,30 +204,22 @@ function drawCenterFlourish(ctx, x, y) {
   ctx.save();
   ctx.strokeStyle = '#ffd700';
   ctx.lineWidth = 1.5;
+  ctx.beginPath();
   
-  // Central diamond
-  ctx.fillStyle = '#ffd700';
-  ctx.beginPath();
-  ctx.moveTo(x, y - 5);
-  ctx.lineTo(x + 5, y);
-  ctx.lineTo(x, y + 5);
-  ctx.lineTo(x - 5, y);
-  ctx.closePath();
-  ctx.fill();
-
   // Left scroll curve
-  ctx.beginPath();
   ctx.moveTo(x - 6, y);
   ctx.bezierCurveTo(x - 22, y - 10, x - 38, y + 10, x - 58, y);
   ctx.stroke();
 
   // Right scroll curve
-  ctx.beginPath();
   ctx.moveTo(x + 6, y);
   ctx.bezierCurveTo(x + 22, y - 10, x + 38, y + 10, x + 58, y);
   ctx.stroke();
 
-  // Small leaf buds
+  // Center Ruby jewel medallion
+  drawGem(ctx, x, y, 5, 'ruby');
+
+  // Small gold leaf buds
   drawGoldLeaf(ctx, x - 30, y - 4, 5, 2, -Math.PI / 6);
   drawGoldLeaf(ctx, x + 30, y - 4, 5, 2, Math.PI / 6);
   ctx.restore();
@@ -213,13 +234,11 @@ function drawOrnateFlourish(ctx, x, y, direction) {
     ctx.moveTo(x, y);
     ctx.bezierCurveTo(x - 18, y - 8, x - 28, y + 8, x - 38, y);
     ctx.stroke();
-    // End leaf
     drawGoldLeaf(ctx, x - 38, y, 4, 1.8, -Math.PI / 4);
   } else {
     ctx.moveTo(x, y);
     ctx.bezierCurveTo(x + 18, y - 8, x + 28, y + 8, x + 38, y);
     ctx.stroke();
-    // End leaf
     drawGoldLeaf(ctx, x + 38, y, 4, 1.8, Math.PI / 4);
   }
   ctx.restore();
@@ -231,7 +250,6 @@ function drawCrown(ctx, x, y, width, height) {
   ctx.strokeStyle = '#8a6f27';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  // Crown shape points
   ctx.moveTo(x - width / 2, y + height / 2);
   ctx.lineTo(x + width / 2, y + height / 2);
   ctx.lineTo(x + width * 0.4, y - height * 0.1);
@@ -245,11 +263,15 @@ function drawCrown(ctx, x, y, width, height) {
   ctx.fill();
   ctx.stroke();
 
-  // Jewels
-  ctx.fillStyle = '#ffdf00';
-  ctx.beginPath(); ctx.arc(x - width * 0.5, y - height * 0.5, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x, y - height * 0.65, 4.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x + width * 0.5, y - height * 0.5, 3.5, 0, Math.PI * 2); ctx.fill();
+  // Gemstones on the peaks
+  drawGem(ctx, x - width * 0.5, y - height * 0.5, 3.5, 'sapphire');
+  drawGem(ctx, x, y - height * 0.65, 4.5, 'ruby');
+  drawGem(ctx, x + width * 0.5, y - height * 0.5, 3.5, 'sapphire');
+
+  // Base decorative gems
+  drawGem(ctx, x - 8, y + height / 2 - 3, 2.5, 'emerald');
+  drawGem(ctx, x, y + height / 2 - 3, 2.5, 'ruby');
+  drawGem(ctx, x + 8, y + height / 2 - 3, 2.5, 'emerald');
   ctx.restore();
 }
 
@@ -258,7 +280,7 @@ function drawAvatarFlourish(ctx, x, y, radius) {
   ctx.strokeStyle = '#ffd700';
   ctx.lineWidth = 1.5;
 
-  // Left wing scroll
+  // Left wing
   ctx.beginPath();
   ctx.arc(x - radius - 15, y, 12, Math.PI * 0.5, Math.PI * 1.5);
   ctx.stroke();
@@ -273,11 +295,10 @@ function drawAvatarFlourish(ctx, x, y, radius) {
   ctx.quadraticCurveTo(x - radius - 18, y + 22, x - radius - 6, y + 25);
   ctx.stroke();
 
-  // Left leaves
   drawGoldLeaf(ctx, x - radius - 20, y - 18, 6, 2.5, -Math.PI / 4);
   drawGoldLeaf(ctx, x - radius - 20, y + 18, 6, 2.5, Math.PI / 4);
 
-  // Right wing scroll
+  // Right wing
   ctx.beginPath();
   ctx.arc(x + radius + 15, y, 12, Math.PI * 1.5, Math.PI * 0.5);
   ctx.stroke();
@@ -292,7 +313,6 @@ function drawAvatarFlourish(ctx, x, y, radius) {
   ctx.quadraticCurveTo(x + radius + 18, y + 22, x + radius + 6, y + 25);
   ctx.stroke();
 
-  // Right leaves
   drawGoldLeaf(ctx, x + radius - 2, y - 24, 6, 2.5, Math.PI / 4);
   drawGoldLeaf(ctx, x + radius - 2, y + 24, 6, 2.5, -Math.PI / 4);
 
@@ -302,11 +322,7 @@ function drawAvatarFlourish(ctx, x, y, radius) {
   ctx.quadraticCurveTo(x, y + radius + 20, x + 25, y + radius + 10);
   ctx.stroke();
 
-  ctx.fillStyle = '#ffd700';
-  ctx.beginPath();
-  ctx.arc(x, y + radius + 17, 2.5, 0, Math.PI * 2);
-  ctx.fill();
-
+  drawGem(ctx, x, y + radius + 17, 3.5, 'ruby');
   ctx.restore();
 }
 
@@ -322,12 +338,12 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const cardW = 520;
   const cardH = 920;
 
-  // 1. Premium dark blue-black velvet backdrop
+  // 1. Imperial Velvet Gradient Backdrop (Purple, Burgundy, Black)
   ctx.save();
-  const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-  bgGrad.addColorStop(0, '#090a16');
-  bgGrad.addColorStop(0.5, '#030409');
-  bgGrad.addColorStop(1, '#000000');
+  const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 80, width / 2, height / 2, width / 2 + 200);
+  bgGrad.addColorStop(0, '#2d0714'); // Imperial Burgundy center
+  bgGrad.addColorStop(0.4, '#150624'); // Royal Purple mid
+  bgGrad.addColorStop(1, '#050209'); // Midnight Black edge
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
@@ -381,13 +397,13 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.stroke();
   ctx.restore();
 
-  // 3. Ornate Corner Filigrees
-  drawOrnateCorner(ctx, cardX + 12, cardY + 12, 1, 1);       // Top Left
-  drawOrnateCorner(ctx, cardX + cardW - 12, cardY + 12, -1, 1); // Top Right
-  drawOrnateCorner(ctx, cardX + 12, cardY + cardH - 12, 1, -1); // Bottom Left
-  drawOrnateCorner(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1); // Bottom Right
+  // 3. Ornate Corner Filigrees (Ruby embellished)
+  drawDetailedCorner(ctx, cardX + 12, cardY + 12, 1, 1);       // Top Left
+  drawDetailedCorner(ctx, cardX + cardW - 12, cardY + 12, -1, 1); // Top Right
+  drawDetailedCorner(ctx, cardX + 12, cardY + cardH - 12, 1, -1); // Bottom Left
+  drawDetailedCorner(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1); // Bottom Right
 
-  // Center border flourishes
+  // Center border flourishes (Ruby embellished)
   drawCenterFlourish(ctx, 300, cardY + 12);
   drawCenterFlourish(ctx, 300, cardY + cardH - 12);
 
@@ -396,7 +412,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const avatarY = cardY + 140;
   const avatarRadius = 60;
 
-  // Gold crown above avatar
+  // Gold crown above avatar (Gem embellished)
   drawCrown(ctx, avatarX, avatarY - avatarRadius - 18, 44, 28);
 
   // Gold avatar flourish wings
@@ -412,6 +428,15 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.arc(avatarX, avatarY, avatarRadius + 3, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
+
+  // Alternate Ruby and Emerald Gems around the Avatar Ring (12 gems total)
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * Math.PI) / 6;
+    const sx = avatarX + (avatarRadius + 7) * Math.cos(angle);
+    const sy = avatarY + (avatarRadius + 7) * Math.sin(angle);
+    const type = i % 2 === 0 ? 'ruby' : 'emerald';
+    drawGem(ctx, sx, sy, 3.5, type);
+  }
 
   // Avatar clip & draw
   ctx.save();
@@ -446,6 +471,10 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
+
+  // Ribbon corner Emeralds
+  drawGem(ctx, 160, avatarY + 95, 3.5, 'emerald');
+  drawGem(ctx, 440, avatarY + 95, 3.5, 'emerald');
   ctx.restore();
 
   // Username inside banner (centered in gold gradient, serif typeface)
@@ -458,26 +487,18 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.textAlign = 'center';
   const name = normalizeStyledText(user.first_name || 'PLAYER');
   drawTextWithEmojis(ctx, name.toUpperCase(), avatarX, avatarY + 102, 'bold 22px "DejaVu Serif"');
-
-  // Subtitle/Rank
-  ctx.fillStyle = '#94a3b8';
-  let tier = 'ROOKIE';
-  if (stats.wins >= 50) tier = 'ROYAL LEGEND';
-  else if (stats.wins >= 25) tier = 'ELITE PRO';
-  else if (stats.wins >= 10) tier = 'CHALLENGER';
-  drawTextWithEmojis(ctx, `👑 ${tier} • PLAYER CARD`, avatarX, avatarY + 138, 'bold 11px "DejaVu Serif"');
   ctx.restore();
 
   // Header separator gold line
   ctx.strokeStyle = 'rgba(212, 175, 55, 0.22)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cardX + 45, cardY + 295);
-  ctx.lineTo(cardX + cardW - 45, cardY + 295);
+  ctx.moveTo(cardX + 45, cardY + 285);
+  ctx.lineTo(cardX + cardW - 45, cardY + 285);
   ctx.stroke();
 
   // Section header draw helper
-  function drawSectionHeader(title, y) {
+  function drawSectionHeader(title, y, themeColor) {
     ctx.save();
     // Gold wings/lines flanking header
     ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
@@ -500,15 +521,15 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     drawOrnateFlourish(ctx, 390, y - 5, 'right');
 
     // Title text
-    ctx.fillStyle = '#ffd700';
+    ctx.fillStyle = themeColor;
     ctx.textAlign = 'center';
     drawTextWithEmojis(ctx, title, 300, y, 'bold 15px "DejaVu Serif"');
     ctx.restore();
   }
 
   // --- BATTING SECTION ---
-  const batStartY = cardY + 330;
-  drawSectionHeader('BATTING', batStartY);
+  const batStartY = cardY + 320;
+  drawSectionHeader('BATTING', batStartY, '#ffd700');
   drawCricketBat(ctx, 110, batStartY - 6);
 
   // 2-Column Batting Grid (3 rows)
@@ -534,7 +555,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ];
 
   battingItems.forEach((row, rowIndex) => {
-    const itemY = batRowY + rowIndex * 72;
+    const itemY = batRowY + rowIndex * 75;
     row.forEach(item => {
       ctx.save();
       // Label
@@ -557,13 +578,14 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.strokeStyle = 'rgba(212, 175, 55, 0.16)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cardX + 45, batRowY + 195);
-  ctx.lineTo(cardX + cardW - 45, batRowY + 195);
+  ctx.moveTo(cardX + 45, batRowY + 200);
+  ctx.lineTo(cardX + cardW - 45, batRowY + 200);
   ctx.stroke();
 
   // --- BOWLING SECTION ---
-  const bowlStartY = batRowY + 225;
-  drawSectionHeader('BOWLING', bowlStartY);
+  const bowlStartY = batRowY + 230;
+  // Theme Bowling header with Sapphire Blue/Ice color
+  drawSectionHeader('BOWLING', bowlStartY, '#38bdf8');
   drawWickets(ctx, 110, bowlStartY - 6);
 
   const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
@@ -581,16 +603,17 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ];
 
   bowlingItems.forEach((row, rowIndex) => {
-    const itemY = bowlStartY + 45 + rowIndex * 75;
+    const itemY = bowlStartY + 45 + rowIndex * 78;
     row.forEach(item => {
       ctx.save();
       ctx.fillStyle = '#94a3b8';
       ctx.textAlign = 'center';
       drawTextWithEmojis(ctx, item.label, item.x, itemY, 'bold 11px "DejaVu Serif"');
 
+      // Value (bold sapphire/cyan/ice-blue gradient)
       const valGrad = ctx.createLinearGradient(item.x - 50, itemY + 22, item.x + 50, itemY + 22);
-      valGrad.addColorStop(0, '#fbbf24');
-      valGrad.addColorStop(1, '#fef08a');
+      valGrad.addColorStop(0, '#38bdf8');
+      valGrad.addColorStop(1, '#bae6fd');
       ctx.fillStyle = valGrad;
       ctx.textAlign = 'center';
       drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 20px "DejaVu Serif"');
@@ -602,16 +625,9 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.strokeStyle = 'rgba(212, 175, 55, 0.16)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cardX + 45, cardY + cardH - 55);
-  ctx.lineTo(cardX + cardW - 45, cardY + cardH - 55);
+  ctx.moveTo(cardX + 45, cardY + cardH - 35);
+  ctx.lineTo(cardX + cardW - 45, cardY + cardH - 35);
   ctx.stroke();
-
-  // 5. Footer credits
-  ctx.save();
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.4)';
-  ctx.textAlign = 'center';
-  drawTextWithEmojis(ctx, 'CRICKET LEAGUE COLLECTIBLES • ELITE GOLD SERIES', width / 2, cardY + cardH - 32, 'bold 10px "DejaVu Serif"');
-  ctx.restore();
 
   // 6. Premium Glossy Card overlay reflection shine
   ctx.save();
