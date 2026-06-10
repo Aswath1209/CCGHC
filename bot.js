@@ -816,14 +816,47 @@ bot.command('mycard', async (ctx) => {
       let targetUserId = ctx.from.id;
       let targetFirstName = ctx.from.first_name;
 
+      const { normalizeStyledText } = require('./game/profileCardGenerator');
+
       if (ctx.message.reply_to_message && ctx.message.reply_to_message.from) {
           targetUserId = ctx.message.reply_to_message.from.id;
           targetFirstName = ctx.message.reply_to_message.from.first_name;
       } else {
-          const args = ctx.match ? ctx.match.trim().split(/\s+/) : [];
-          if (args.length > 0 && /^\d+$/.test(args[0])) {
-              targetUserId = parseInt(args[0]);
-              targetFirstName = null;
+          const text = ctx.message.text || "";
+          const parts = text.trim().split(/\s+/);
+          if (parts.length > 1) {
+              const arg = parts.slice(1).join(' ');
+              if (/^\d+$/.test(arg)) {
+                  targetUserId = parseInt(arg);
+                  targetFirstName = null;
+              } else {
+                  // Search user by normalized first_name
+                  const { data: allUsers } = await sb.supabase
+                      .from('cricket_users')
+                      .select('*');
+                  
+                  if (allUsers && allUsers.length > 0) {
+                      const query = arg.toLowerCase();
+                      let matched = allUsers.find(u => {
+                          const norm = normalizeStyledText(u.first_name || '').toLowerCase();
+                          return norm === query;
+                      });
+                      if (!matched) {
+                          matched = allUsers.find(u => {
+                              const norm = normalizeStyledText(u.first_name || '').toLowerCase();
+                              return norm.includes(query);
+                          });
+                      }
+                      if (matched) {
+                          targetUserId = matched.user_id;
+                          targetFirstName = matched.first_name;
+                      } else {
+                          return ctx.reply(`⚠️ No user found with name matching "${arg}"`);
+                      }
+                  } else {
+                      return ctx.reply(`⚠️ No user found with name matching "${arg}"`);
+                  }
+              }
           }
       }
 
