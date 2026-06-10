@@ -83,16 +83,16 @@ function drawTextWithEmojis(ctx, text, x, y, fontSpec, emojiFontFamily = 'Noto C
 }
 
 async function generateProfileCard(user, stats, avatarBuffer) {
-  const width = 800;
-  const height = 1200; // Vertical card aspect ratio
+  const width = 600;
+  const height = 1000; // Vertical trading card ratio
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Card Boundary Dimensions
-  const cardX = 40;
-  const cardY = 40;
-  const cardW = 720;
-  const cardH = 1120;
+  // Card boundary dimensions
+  const cardX = 30;
+  const cardY = 30;
+  const cardW = 540;
+  const cardH = 940;
 
   // 1. Draw blurred stadium backdrop
   const bgPath = '/home/home/ReactNative/Telegram/undercover-bot/assets/stadium_bg.png';
@@ -105,20 +105,20 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     ctx.fillRect(0, 0, width, height);
   }
 
-  // Cinematic dark radial vignette overlay with gold/bronze hues
-  const vignette = ctx.createRadialGradient(width / 2, height / 2, 80, width / 2, height / 2, width / 2 + 150);
+  // Cinematic dark radial vignette overlay
+  const vignette = ctx.createRadialGradient(width / 2, height / 2, 80, width / 2, height / 2, width / 2 + 100);
   vignette.addColorStop(0, 'rgba(12, 6, 18, 0.25)');
-  vignette.addColorStop(0.7, 'rgba(6, 3, 9, 0.82)');
+  vignette.addColorStop(0.7, 'rgba(6, 3, 9, 0.85)');
   vignette.addColorStop(1, 'rgba(0, 0, 0, 0.98)');
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 
   // Ornate glowing background dust particle overlay
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.05)';
-  for (let i = 0; i < 35; i++) {
+  ctx.fillStyle = 'rgba(212, 175, 55, 0.04)';
+  for (let i = 0; i < 20; i++) {
     const px = Math.random() * width;
     const py = Math.random() * height;
-    const pr = Math.random() * 4 + 1;
+    const pr = Math.random() * 3 + 1;
     ctx.beginPath();
     ctx.arc(px, py, pr, 0, Math.PI * 2);
     ctx.fill();
@@ -131,18 +131,18 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   cardGrad.addColorStop(0.5, '#060309');
   cardGrad.addColorStop(1, '#0e0804');
   ctx.fillStyle = cardGrad;
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 36);
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28);
   ctx.fill();
   ctx.restore();
 
-  // Subtle diagonal gold carbon pattern lines inside card
+  // Subtle diagonal carbon fiber texture lines inside card
   ctx.save();
   ctx.beginPath();
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 36);
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28);
   ctx.clip();
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.03)';
+  ctx.strokeStyle = 'rgba(212, 175, 55, 0.025)';
   ctx.lineWidth = 1;
-  for (let i = -width; i < width; i += 30) {
+  for (let i = -width; i < width; i += 25) {
     ctx.beginPath();
     ctx.moveTo(i, 0);
     ctx.lineTo(i + height, height);
@@ -153,24 +153,24 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   // 3. Ornate Double Gold Framing Borders
   ctx.save();
   ctx.strokeStyle = '#d4af37'; // Ornate metallic gold
-  ctx.shadowColor = 'rgba(212, 175, 55, 0.7)';
-  ctx.shadowBlur = 18;
-  ctx.lineWidth = 5.5;
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 36);
+  ctx.shadowColor = 'rgba(212, 175, 55, 0.65)';
+  ctx.shadowBlur = 15;
+  ctx.lineWidth = 5;
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28);
   ctx.stroke();
   ctx.restore();
 
   // Inner gold line border
   ctx.save();
-  ctx.strokeStyle = 'rgba(252, 211, 77, 0.35)'; // Light gold line
-  ctx.lineWidth = 1.5;
-  drawRoundedRect(ctx, cardX + 11, cardY + 11, cardW - 22, cardH - 22, 26);
+  ctx.strokeStyle = 'rgba(252, 211, 77, 0.3)';
+  ctx.lineWidth = 1;
+  drawRoundedRect(ctx, cardX + 9, cardY + 9, cardW - 18, cardH - 18, 20);
   ctx.stroke();
   ctx.restore();
 
-  // Ornate decorative corners (small circles at intersection points)
+  // Ornate decorative corner circles
   ctx.fillStyle = '#d4af37';
-  const cornerOffset = 22;
+  const cornerOffset = 18;
   const corners = [
     [cardX + cornerOffset, cardY + cornerOffset],
     [cardX + cardW - cornerOffset, cardY + cornerOffset],
@@ -179,21 +179,21 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ];
   corners.forEach(([cx, cy]) => {
     ctx.beginPath();
-    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // 4. Header Section (Avatar + Username)
-  const avatarX = cardX + 90;
-  const avatarY = cardY + 100;
-  const avatarRadius = 65;
+  // 4. Header Section (Avatar + Username centered)
+  const avatarX = 300;
+  const avatarY = cardY + 110;
+  const avatarRadius = 60;
 
-  // Avatar thick gold framing ring
+  // Avatar gold framing ring
   ctx.save();
   ctx.strokeStyle = '#d4af37';
-  ctx.shadowColor = 'rgba(212, 175, 55, 0.6)';
-  ctx.shadowBlur = 12;
-  ctx.lineWidth = 3.5;
+  ctx.shadowColor = 'rgba(212, 175, 55, 0.5)';
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.arc(avatarX, avatarY, avatarRadius + 3, 0, Math.PI * 2);
   ctx.stroke();
@@ -217,197 +217,135 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   }
   ctx.restore();
 
-  // Username (uppercase in Gold gradient)
+  // Username (centered in Gold gradient)
   ctx.save();
-  const nameGrad = ctx.createLinearGradient(cardX + 175, avatarY - 20, cardX + 500, avatarY - 20);
+  const nameGrad = ctx.createLinearGradient(width / 2 - 150, avatarY + 80, width / 2 + 150, avatarY + 80);
   nameGrad.addColorStop(0, '#f59e0b');
   nameGrad.addColorStop(0.5, '#fbbf24');
   nameGrad.addColorStop(1, '#fef08a');
   ctx.fillStyle = nameGrad;
+  ctx.textAlign = 'center';
   const name = normalizeStyledText(user.first_name || 'PLAYER');
-  drawTextWithEmojis(ctx, name.toUpperCase(), cardX + 175, avatarY - 10, 'bold 36px sans-serif');
+  drawTextWithEmojis(ctx, name.toUpperCase(), avatarX, avatarY + 95, 'bold 28px sans-serif');
 
   // Subtitle/Rank
-  ctx.fillStyle = '#e2e8f0';
+  ctx.fillStyle = '#94a3b8';
   let tier = 'ROOKIE';
   if (stats.wins >= 50) tier = 'ROYAL LEGEND';
   else if (stats.wins >= 25) tier = 'ELITE PRO';
   else if (stats.wins >= 10) tier = 'CHALLENGER';
-  drawTextWithEmojis(ctx, `👑 ${tier} • ROYAL CLUB`, cardX + 175, avatarY + 24, 'bold 13px sans-serif');
-
-  // Record summary label
-  ctx.fillStyle = '#fca5a5';
-  drawTextWithEmojis(ctx, `RECORD: ${stats.wins} WINS / ${stats.losses} LOSSES / ${stats.motm} MVPS`, cardX + 175, avatarY + 48, 'bold 12px sans-serif');
+  drawTextWithEmojis(ctx, `👑 ${tier} • PLAYER CARD`, avatarX, avatarY + 120, 'bold 12px sans-serif');
   ctx.restore();
 
   // Header separator gold line
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.22)';
+  ctx.strokeStyle = 'rgba(212, 175, 55, 0.2)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cardX + 30, cardY + 195);
-  ctx.lineTo(cardX + cardW - 30, cardY + 195);
+  ctx.moveTo(cardX + 30, cardY + 260);
+  ctx.lineTo(cardX + cardW - 30, cardY + 260);
   ctx.stroke();
 
-  // Helper function to draw structured, labeled stat boxes
-  function drawStatBox(title, x, y, width, height, rows) {
-    // Stat Box Card Container
+  // 5. Stat Column Division Boxes
+  const colY = cardY + 285;
+  const colW = 230;
+  const colH = 550;
+
+  function drawDivisionCard(title, xPos, items, rowGap) {
+    // Column Card Background
     ctx.save();
-    const boxGrad = ctx.createLinearGradient(x, y, x, y + height);
-    boxGrad.addColorStop(0, '#0c0714');
-    boxGrad.addColorStop(1, '#050208');
-    ctx.fillStyle = boxGrad;
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.25)';
+    const grad = ctx.createLinearGradient(xPos, colY, xPos, colY + colH);
+    grad.addColorStop(0, '#0c0714');
+    grad.addColorStop(1, '#050208');
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.22)';
     ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, x, y, width, height, 16);
+    drawRoundedRect(ctx, xPos, colY, colW, colH, 14);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
 
-    // Box Header Title (gold/yellow text)
-    ctx.save();
+    // Section title (gold/yellow text)
     ctx.fillStyle = '#d4af37';
     ctx.textAlign = 'center';
-    drawTextWithEmojis(ctx, title, x + width / 2, y + 28, 'bold 13px sans-serif');
-    ctx.restore();
+    drawTextWithEmojis(ctx, title, xPos + colW / 2, colY + 28, 'bold 13px sans-serif');
 
-    // Box divider line
+    // Title divider line
     ctx.strokeStyle = 'rgba(212, 175, 55, 0.1)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x + 20, y + 38);
-    ctx.lineTo(x + width - 20, y + 38);
+    ctx.moveTo(xPos + 20, colY + 38);
+    ctx.lineTo(xPos + colW - 20, colY + 38);
     ctx.stroke();
 
-    // Draw multi-column stats
-    const colW = (width - 40) / rows.length;
-    rows.forEach((col, colIndex) => {
-      const colX = x + 20 + colIndex * colW;
-      
-      col.items.forEach((item, rowIndex) => {
-        const itemY = y + 72 + rowIndex * 55;
+    // Draw Stats Rows
+    const rowStartY = colY + 75;
 
-        // Label
-        ctx.save();
-        ctx.fillStyle = '#94a3b8';
-        ctx.textAlign = 'left';
-        drawTextWithEmojis(ctx, item.label, colX, itemY, 'bold 11px sans-serif');
+    items.forEach((item, index) => {
+      const itemY = rowStartY + index * rowGap;
 
-        // Value (bold yellow/gold)
-        ctx.fillStyle = '#fbbf24';
-        drawTextWithEmojis(ctx, item.value, colX, itemY + 23, 'bold 18px sans-serif');
-        ctx.restore();
-      });
+      ctx.save();
+      // Label (centered)
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      drawTextWithEmojis(ctx, item.label, xPos + colW / 2, itemY, 'bold 11px sans-serif');
+
+      // Value (bold gold/yellow, centered)
+      ctx.fillStyle = '#fbbf24';
+      ctx.textAlign = 'center';
+      drawTextWithEmojis(ctx, item.value, xPos + colW / 2, itemY + 24, 'bold 18px sans-serif');
+      ctx.restore();
+
+      // Divider line
+      if (index < items.length - 1) {
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.05)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(xPos + 30, itemY + 38);
+        ctx.lineTo(xPos + colW - 30, itemY + 38);
+        ctx.stroke();
+      }
     });
   }
 
-  // 5. BATTING DISCIPLINE Box (from Y = 250 to Y = 560, height 310)
+  // Batting stats (6 items, rowGap = 78)
   const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs}*` : '0.00');
-  const sr = stats.balls_faced > 0 ? ((stats.runs / stats.balls_faced) * 100).toFixed(2) : '0.00';
-  
-  drawStatBox(
-    '🏏 BATTING DISCIPLINE',
+  drawDivisionCard(
+    '🏏 BATTING',
     cardX + 30,
-    cardY + 215,
-    cardW - 60,
-    305,
     [
-      {
-        items: [
-          { label: 'Runs Scored', value: stats.runs },
-          { label: 'Balls Faced', value: stats.balls_faced },
-          { label: 'Strike Rate', value: sr }
-        ]
-      },
-      {
-        items: [
-          { label: 'Batting Avg', value: avgStr },
-          { label: 'High Score', value: stats.highscore },
-          { label: 'Innings/Outs', value: `${stats.batting_innings} / ${stats.dismissals}` }
-        ]
-      },
-      {
-        items: [
-          { label: 'Centuries/50s', value: `${stats.centuries} / ${stats.fifties}` },
-          { label: 'Fours / Sixes', value: `${stats.fours} / ${stats.sixes}` },
-          { label: 'Ducks Count', value: stats.ducks }
-        ]
-      }
-    ]
+      { label: 'Runs Scored', value: stats.runs },
+      { label: 'Batting Average', value: avgStr },
+      { label: 'Fours / Sixes', value: `${stats.fours} / ${stats.sixes}` },
+      { label: '50s / 100s', value: `${stats.fifties} / ${stats.centuries}` },
+      { label: 'Highest Score', value: stats.highscore },
+      { label: 'Ducks Count', value: stats.ducks }
+    ],
+    78
   );
 
-  // 6. BOWLING DISCIPLINE Box (from Y = 540 to Y = 850, height 310)
+  // Bowling stats (4 items, rowGap = 120)
   const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
-  const ov = `${Math.floor(stats.balls_bowled / 6)}.${stats.balls_bowled % 6}`;
   const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
-
-  drawStatBox(
-    '🥎 BOWLING DISCIPLINE',
-    cardX + 30,
-    cardY + 540,
-    cardW - 60,
-    305,
+  drawDivisionCard(
+    '🥎 BOWLING',
+    cardX + 275,
     [
-      {
-        items: [
-          { label: 'Wickets Taken', value: stats.wickets },
-          { label: 'Overs Bowled', value: `${ov} ov` },
-          { label: 'Economy Rate', value: econ }
-        ]
-      },
-      {
-        items: [
-          { label: 'Best Bowling', value: bestBowling },
-          { label: 'Runs Conceded', value: stats.runs_conceded },
-          { label: 'Bowling Innings', value: stats.bowling_innings }
-        ]
-      },
-      {
-        items: [
-          { label: '3 Wicket Hauls', value: stats.threew },
-          { label: '5 Wicket Hauls', value: stats.fivew },
-          { label: 'Bowler Status', value: stats.wickets > 20 ? 'ELITE' : 'ACTIVE' }
-        ]
-      }
-    ]
+      { label: 'Wickets Taken', value: stats.wickets },
+      { label: 'Economy Rate', value: econ },
+      { label: '3w / 5w Hauls', value: `${stats.threew} / ${stats.fivew}` },
+      { label: 'Best Bowling', value: bestBowling }
+    ],
+    120
   );
 
-  // 7. RECORD & PURSE BOX (from Y = 865 to Y = 1005, height 140)
-  drawStatBox(
-    '🏆 TOUR ARCHIVES & WALLET',
-    cardX + 30,
-    cardY + 865,
-    cardW - 60,
-    155,
-    [
-      {
-        items: [
-          { label: 'Matches Won', value: `${stats.wins} W` },
-          { label: 'Matches Lost', value: `${stats.losses} L` }
-        ]
-      },
-      {
-        items: [
-          { label: 'MOTM Awards', value: `${stats.motm} 🏅` },
-          { label: 'Win Rate Ratio', value: stats.wins + stats.losses > 0 ? `${((stats.wins / (stats.wins + stats.losses)) * 100).toFixed(1)}%` : '0.0%' }
-        ]
-      },
-      {
-        items: [
-          { label: 'Vault Coins Balance', value: `${user.coins || 0} 🪙` },
-          { label: 'Collector Status', value: 'ROYAL member' }
-        ]
-      }
-    ]
-  );
-
-  // 8. Footer credits
+  // 6. Footer credits
   ctx.save();
   ctx.fillStyle = 'rgba(212, 175, 55, 0.4)';
   ctx.textAlign = 'center';
-  drawTextWithEmojis(ctx, 'CRICKET LEAGUE COLLECTIBLES • ROYAL SERIES', width / 2, cardY + cardH - 35, 'bold 11px sans-serif');
+  drawTextWithEmojis(ctx, 'CRICKET LEAGUE COLLECTIBLES • ELITE GOLD SERIES', width / 2, cardY + cardH - 30, 'bold 10px sans-serif');
   ctx.restore();
 
-  // 9. Premium Glossy Card overlay reflection shine
+  // 7. Premium Glossy Card overlay reflection shine
   ctx.save();
   const glossGrad = ctx.createLinearGradient(0, 0, width, height);
   glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
@@ -416,7 +354,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   glossGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = glossGrad;
   ctx.beginPath();
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 36);
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28);
   ctx.fill();
   ctx.restore();
 
