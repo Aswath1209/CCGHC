@@ -7,11 +7,48 @@ try {
   console.error("Failed to load system fonts in profile generator:", e);
 }
 
+const unicodeMap = {
+  // Small Caps
+  0x1d00: 'A', 0x299: 'B', 0x1d04: 'C', 0x1d05: 'D', 0x1d07: 'E', 0xa730: 'F',
+  0x262: 'G', 0x29c: 'H', 0x26a: 'I', 0x1d0a: 'J', 0x1d0b: 'K', 0x29f: 'L',
+  0x1d0d: 'M', 0x274: 'N', 0x1d0f: 'O', 0x1d18: 'P', 0x280: 'R', 0xa731: 'S',
+  0x1d1b: 'T', 0x1d1c: 'U', 0x1d20: 'V', 0x1d21: 'W', 0x28f: 'Y', 0x1d22: 'Z',
+  // Lowercase Superscripts
+  0x1d43: 'a', 0x1d47: 'b', 0x1d9c: 'c', 0x1d48: 'd', 0x1d49: 'e', 0x1da0: 'f',
+  0x1d4d: 'g', 0x02b0: 'h', 0x2071: 'i', 0x02b2: 'j', 0x1d4f: 'k', 0x02e1: 'l',
+  0x1d50: 'm', 0x207f: 'n', 0x1d52: 'o', 0x1d56: 'p', 0x02b3: 'r', 0x02e2: 's',
+  0x1d57: 't', 0x1d58: 'u', 0x1d5b: 'v', 0x02b7: 'w', 0x02e3: 'x', 0x02b8: 'y',
+  0x1dbb: 'z',
+  // Uppercase Superscripts
+  0x1d2c: 'A', 0x1d2e: 'B', 0x1d30: 'D', 0x1d31: 'E', 0x1d33: 'G', 0x1d34: 'H',
+  0x1d35: 'I', 0x1d36: 'J', 0x1d37: 'K', 0x1d38: 'L', 0x1d39: 'M', 0x1d3a: 'N',
+  0x1d3c: 'O', 0x1d3e: 'P', 0x1d3f: 'R', 0x1d40: 'T', 0x1d41: 'U', 0x2c7d: 'V',
+  0x1d42: 'W',
+  // Superscript Numbers/Symbols
+  0x2070: '0', 0x00b9: '1', 0x00b2: '2', 0x00b3: '3', 0x2074: '4', 0x2075: '5',
+  0x2076: '6', 0x2077: '7', 0x2078: '8', 0x2079: '9', 0x207a: '+', 0x207b: '-',
+  0x207c: '=', 0x207d: '(', 0x207e: ')',
+  // Lowercase Subscripts
+  0x2090: 'a', 0x2091: 'e', 0x2095: 'h', 0x1d62: 'i', 0x2c7c: 'j', 0x2096: 'k',
+  0x2097: 'l', 0x2098: 'm', 0x2099: 'n', 0x2092: 'o', 0x209a: 'p', 0x1d63: 'r',
+  0x209b: 's', 0x209c: 't', 0x1d64: 'u', 0x1d65: 'v', 0x2093: 'x',
+  // Subscript Numbers/Symbols
+  0x2080: '0', 0x2081: '1', 0x2082: '2', 0x2083: '3', 0x2084: '4', 0x2085: '5',
+  0x2086: '6', 0x2087: '7', 0x2088: '8', 0x2089: '9', 0x208a: '+', 0x208b: '-',
+  0x208c: '=', 0x208d: '(', 0x208e: ')',
+  // BMP Script/Fraktur/Double-struck Exceptions
+  0x212c: 'B', 0x2130: 'E', 0x2131: 'F', 0x210b: 'H', 0x2110: 'I', 0x2112: 'L',
+  0x2133: 'M', 0x211b: 'R', 0x210a: 'g', 0x2134: 'o', 0x212f: 'e', 0x2113: 'l',
+  0x2102: 'C', 0x210d: 'H', 0x2115: 'N', 0x2119: 'P', 0x211a: 'Q', 0x211d: 'R',
+  0x2124: 'Z'
+};
+
 function normalizeStyledText(str) {
   if (!str) return '';
   return [...str].map(char => {
     const cp = char.codePointAt(0);
     if (!cp) return char;
+    if (unicodeMap[cp]) return unicodeMap[cp];
 
     // Mathematical Alphanumeric Blocks (1D400 - 1D7FF)
     // Mathematical Bold Capital (1D400 - 1D419) -> A-Z (65 - 90)
@@ -104,28 +141,6 @@ function normalizeStyledText(str) {
     // Circled Numbers (2460 - 2468) -> 1-9
     if (cp >= 0x2460 && cp <= 0x2468) return String.fromCharCode(cp - 0x2460 + 49);
     if (cp === 0x24ea) return '0';
-
-    // BMP Script Exceptions
-    if (cp === 0x212c) return 'B';
-    if (cp === 0x2130) return 'E';
-    if (cp === 0x2131) return 'F';
-    if (cp === 0x210b) return 'H';
-    if (cp === 0x2110) return 'I';
-    if (cp === 0x2112) return 'L';
-    if (cp === 0x2133) return 'M';
-    if (cp === 0x211b) return 'R';
-    if (cp === 0x210a) return 'g';
-    if (cp === 0x2134) return 'o';
-    if (cp === 0x212f) return 'e';
-    if (cp === 0x2113) return 'l';
-    // BMP Double-Struck Exceptions
-    if (cp === 0x2102) return 'C';
-    if (cp === 0x210d) return 'H';
-    if (cp === 0x2115) return 'N';
-    if (cp === 0x2119) return 'P';
-    if (cp === 0x211a) return 'Q';
-    if (cp === 0x211d) return 'R';
-    if (cp === 0x2124) return 'Z';
 
     return char;
   }).join('');
