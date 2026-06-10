@@ -351,7 +351,7 @@ const MATCHED_SCENES = {
     ],
     "duck": [
         {
-            "gif": "https://media.giphy.com/media/XxdrEjbDWnNhJsnWPE/giphy.gif",
+            "gif": "https://i.giphy.com/XxdrEjbDWnNhJsnWPE.gif",
             "commentaries": [
                 "🦆 <b>DUCK!</b> <b>{batsman}</b> is dismissed for a duck! Back to the pavilion without scoring.",
                 "🥚 An absolute egg! <b>{batsman}</b> departs for a duck.",
@@ -359,7 +359,7 @@ const MATCHED_SCENES = {
             ]
         },
         {
-            "gif": "https://media.giphy.com/media/LO8yQjlRoBQaxCgPT0/giphy.gif",
+            "gif": "https://i.giphy.com/LO8yQjlRoBQaxCgPT0.gif",
             "commentaries": [
                 "🦆 Oh dear! <b>{batsman}</b> walks back with a duck!",
                 "🚪 No runs scored, straight back to the bench.",
@@ -367,7 +367,7 @@ const MATCHED_SCENES = {
             ]
         },
         {
-            "gif": "https://media.giphy.com/media/kFiDBSmVOYCkuPDgec/giphy.gif",
+            "gif": "https://i.giphy.com/kFiDBSmVOYCkuPDgec.gif",
             "commentaries": [
                 "🥚 <b>{batsman}</b> got a big fat zero!",
                 "🤫 Silence in the ground as the batter departs without scoring.",
@@ -375,7 +375,7 @@ const MATCHED_SCENES = {
             ]
         },
         {
-            "gif": "https://media.giphy.com/media/OoDsb7FHoRTO0OMz2k/giphy.gif",
+            "gif": "https://i.giphy.com/OoDsb7FHoRTO0OMz2k.gif",
             "commentaries": [
                 "🦆 Cheerio! <b>{batsman}</b> got a duck!",
                 "🤦‍♂️ An innings to forget for <b>{batsman}</b>.",
