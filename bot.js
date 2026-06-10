@@ -351,7 +351,7 @@ const MATCHED_SCENES = {
     ],
     "duck": [
         {
-            "gif": "https://i.giphy.com/XxdrEjbDWnNhJsnWPE.gif",
+            "gif": "https://i.giphy.com/XxdrEjbDWnNHJsnWPE.gif",
             "commentaries": [
                 "🦆 <b>DUCK!</b> <b>{batsman}</b> is dismissed for a duck! Back to the pavilion without scoring.",
                 "🥚 An absolute egg! <b>{batsman}</b> departs for a duck.",
@@ -359,7 +359,7 @@ const MATCHED_SCENES = {
             ]
         },
         {
-            "gif": "https://i.giphy.com/LO8yQjlRoBQaxCgPT0.gif",
+            "gif": "https://i.giphy.com/LO8yQjIRoBQaxCgPT0.gif",
             "commentaries": [
                 "🦆 Oh dear! <b>{batsman}</b> walks back with a duck!",
                 "🚪 No runs scored, straight back to the bench.",
