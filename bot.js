@@ -748,6 +748,67 @@ bot.command('profile', async (ctx) => {
   }
 });
 
+bot.command('generate', async (ctx) => {
+  try {
+      const arg = ctx.match ? ctx.match.trim().toLowerCase() : "";
+      if (arg !== 'card') {
+          return ctx.reply("⚠️ Usage: <code>/generate card</code>", { parse_mode: 'HTML' });
+      }
+
+      await ctx.replyWithChatAction("upload_photo");
+
+      const user = await sb.getUser(ctx.from.id);
+      if (!user) return ctx.reply("⚠️ You need to register first! Send /register");
+      
+      const careerStats = require('./db/careerStats');
+      const stats = await careerStats.getStats(ctx.from.id);
+
+      let avatarBuffer = null;
+      try {
+          const photos = await ctx.api.getUserProfilePhotos(ctx.from.id, { limit: 1 });
+          if (photos && photos.total_count > 0) {
+              const fileId = photos.photos[0][0].file_id;
+              const file = await ctx.api.getFile(fileId);
+              const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+              
+              const https = require('https');
+              avatarBuffer = await new Promise((resolve, reject) => {
+                  const req = https.get(fileUrl, { timeout: 2000 }, (res) => {
+                      if (res.statusCode !== 200) {
+                          reject(new Error(`Status code: ${res.statusCode}`));
+                          return;
+                      }
+                      const chunks = [];
+                      res.on('data', chunk => chunks.push(chunk));
+                      res.on('end', () => resolve(Buffer.concat(chunks)));
+                      res.on('error', err => reject(err));
+                  });
+                  req.on('timeout', () => {
+                      req.destroy();
+                      reject(new Error('Timeout'));
+                  });
+                  req.on('error', err => reject(err));
+              });
+          }
+      } catch (err) {
+          console.error("Failed to download avatar, falling back to silhouette:", err.message);
+      }
+
+      const { generateProfileCard } = require('./game/profileCardGenerator');
+      const cardBuffer = await generateProfileCard(user, stats, avatarBuffer);
+
+      const { InputFile } = require('grammy');
+      await ctx.replyWithPhoto(new InputFile(cardBuffer), {
+          caption: `👤 <b>${user.first_name}'s Player Card</b>\n\n<i>This is a preview mockup of the Visual Profile card.</i>`,
+          parse_mode: 'HTML'
+      });
+  } catch (err) {
+      console.error("Error generating player card:", err);
+      await ctx.reply("❌ Failed to generate player card.");
+  }
+});
+
+
 function getTopMenuKeyboard() {
   return new InlineKeyboard()
     .text("🏏 Most Runs", "top_runs").text("🥎 Most Wickets", "top_wickets")
