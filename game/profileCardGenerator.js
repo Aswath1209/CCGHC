@@ -84,7 +84,7 @@ function drawTextWithEmojis(ctx, text, x, y, fontSpec, emojiFontFamily = 'Noto C
 
 async function generateProfileCard(user, stats, avatarBuffer) {
   const width = 600;
-  const height = 1000; // Vertical trading card ratio
+  const height = 1000;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
@@ -113,7 +113,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 
-  // Ornate glowing background dust particle overlay
+  // Ornate glowing gold dust particle overlay
   ctx.fillStyle = 'rgba(212, 175, 55, 0.04)';
   for (let i = 0; i < 20; i++) {
     const px = Math.random() * width;
@@ -135,7 +135,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.fill();
   ctx.restore();
 
-  // Subtle diagonal carbon fiber texture lines inside card
+  // Subtle diagonal gold lines texture inside card
   ctx.save();
   ctx.beginPath();
   drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 28);
@@ -245,102 +245,159 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.lineTo(cardX + cardW - 30, cardY + 260);
   ctx.stroke();
 
-  // 5. Stat Column Division Boxes
-  const colY = cardY + 285;
-  const colW = 230;
-  const colH = 550;
-
-  function drawDivisionCard(title, xPos, items, rowGap) {
-    // Column Card Background
+  // 5. Draw Stat Division Sections
+  function drawSectionHeader(title, y) {
     ctx.save();
-    const grad = ctx.createLinearGradient(xPos, colY, xPos, colY + colH);
-    grad.addColorStop(0, '#0c0714');
-    grad.addColorStop(1, '#050208');
-    ctx.fillStyle = grad;
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.22)';
+    // Gold wings/lines flanking header
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.35)';
     ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, xPos, colY, colW, colH, 14);
-    ctx.fill();
+    
+    // Left Wing
+    ctx.beginPath();
+    ctx.moveTo(100, y - 5);
+    ctx.lineTo(210, y - 5);
     ctx.stroke();
-    ctx.restore();
 
-    // Section title (gold/yellow text)
+    // Right Wing
+    ctx.beginPath();
+    ctx.moveTo(390, y - 5);
+    ctx.lineTo(500, y - 5);
+    ctx.stroke();
+
+    // Small diamond in center
+    ctx.fillStyle = '#d4af37';
+    ctx.beginPath();
+    ctx.arc(300, y - 5, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Title text
     ctx.fillStyle = '#d4af37';
     ctx.textAlign = 'center';
-    drawTextWithEmojis(ctx, title, xPos + colW / 2, colY + 28, 'bold 13px sans-serif');
-
-    // Title divider line
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(xPos + 20, colY + 38);
-    ctx.lineTo(xPos + colW - 20, colY + 38);
-    ctx.stroke();
-
-    // Draw Stats Rows
-    const rowStartY = colY + 75;
-
-    items.forEach((item, index) => {
-      const itemY = rowStartY + index * rowGap;
-
-      ctx.save();
-      // Label (centered)
-      ctx.fillStyle = '#94a3b8';
-      ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.label, xPos + colW / 2, itemY, 'bold 11px sans-serif');
-
-      // Value (bold gold/yellow, centered)
-      ctx.fillStyle = '#fbbf24';
-      ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.value, xPos + colW / 2, itemY + 24, 'bold 18px sans-serif');
-      ctx.restore();
-
-      // Divider line
-      if (index < items.length - 1) {
-        ctx.strokeStyle = 'rgba(212, 175, 55, 0.05)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(xPos + 30, itemY + 38);
-        ctx.lineTo(xPos + colW - 30, itemY + 38);
-        ctx.stroke();
-      }
-    });
+    drawTextWithEmojis(ctx, title, 300, y, 'bold 15px sans-serif');
+    ctx.restore();
   }
 
-  // Batting stats (6 items, rowGap = 78)
-  const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs}*` : '0.00');
-  drawDivisionCard(
-    '🏏 BATTING',
-    cardX + 30,
-    [
-      { label: 'Runs Scored', value: stats.runs },
-      { label: 'Batting Average', value: avgStr },
-      { label: 'Fours / Sixes', value: `${stats.fours} / ${stats.sixes}` },
-      { label: '50s / 100s', value: `${stats.fifties} / ${stats.centuries}` },
-      { label: 'Highest Score', value: stats.highscore },
-      { label: 'Ducks Count', value: stats.ducks }
-    ],
-    78
-  );
+  // --- BATTING SECTION ---
+  const batStartY = cardY + 295;
+  drawSectionHeader('BATTING', batStartY);
 
-  // Bowling stats (4 items, rowGap = 120)
+  // 2-Column Batting Stats Layout
+  const batRowY = batStartY + 45;
+  const col1X = 170;
+  const col2X = 430;
+  
+  const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs}*` : '0.00');
+
+  const battingItems = [
+    [
+      { label: 'Runs Scored', value: stats.runs, x: col1X },
+      { label: 'Batting Average', value: avgStr, x: col2X }
+    ],
+    [
+      { label: 'Fours / Sixes', value: `${stats.fours} / ${stats.sixes}`, x: col1X },
+      { label: '50s / 100s', value: `${stats.fifties} / ${stats.centuries}`, x: col2X }
+    ],
+    [
+      { label: 'Highest Score', value: stats.highscore, x: col1X },
+      { label: 'Ducks Count', value: stats.ducks, x: col2X }
+    ]
+  ];
+
+  battingItems.forEach((row, rowIndex) => {
+    const itemY = batRowY + rowIndex * 72;
+    row.forEach(item => {
+      ctx.save();
+      // Label
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      drawTextWithEmojis(ctx, item.label, item.x, itemY, 'bold 11px sans-serif');
+
+      // Value
+      // Gold text gradient
+      const valGrad = ctx.createLinearGradient(item.x - 50, itemY + 22, item.x + 50, itemY + 22);
+      valGrad.addColorStop(0, '#fbbf24');
+      valGrad.addColorStop(1, '#fef08a');
+      ctx.fillStyle = valGrad;
+      ctx.textAlign = 'center';
+      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 19px sans-serif');
+      ctx.restore();
+    });
+  });
+
+  // Section Divider Line
+  ctx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX + 45, batRowY + 195);
+  ctx.lineTo(cardX + cardW - 45, batRowY + 195);
+  ctx.stroke();
+
+  // --- BOWLING SECTION ---
+  const bowlStartY = batRowY + 230;
+  drawSectionHeader('BOWLING', bowlStartY);
+
   const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
   const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
-  drawDivisionCard(
-    '🥎 BOWLING',
-    cardX + 275,
+
+  const bowlingItems = [
     [
-      { label: 'Wickets Taken', value: stats.wickets },
-      { label: 'Economy Rate', value: econ },
-      { label: '3w / 5w Hauls', value: `${stats.threew} / ${stats.fivew}` },
-      { label: 'Best Bowling', value: bestBowling }
+      { label: 'Wickets Taken', value: stats.wickets, x: col1X },
+      { label: 'Economy Rate', value: econ, x: col2X }
     ],
-    120
-  );
+    [
+      { label: '3w / 5w Hauls', value: `${stats.threew} / ${stats.fivew}`, x: col1X },
+      { label: 'Best Bowling', value: bestBowling, x: col2X }
+    ]
+  ];
+
+  bowlingItems.forEach((row, rowIndex) => {
+    const itemY = bowlStartY + 45 + rowIndex * 75;
+    row.forEach(item => {
+      ctx.save();
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      drawTextWithEmojis(ctx, item.label, item.x, itemY, 'bold 11px sans-serif');
+
+      const valGrad = ctx.createLinearGradient(item.x - 50, itemY + 22, item.x + 50, itemY + 22);
+      valGrad.addColorStop(0, '#fbbf24');
+      valGrad.addColorStop(1, '#fef08a');
+      ctx.fillStyle = valGrad;
+      ctx.textAlign = 'center';
+      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 19px sans-serif');
+      ctx.restore();
+    });
+  });
+
+  // Section Divider Line
+  ctx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX + 45, bowlStartY + 180);
+  ctx.lineTo(cardX + cardW - 45, bowlStartY + 180);
+  ctx.stroke();
+
+  // --- CLUB OVERVIEW ---
+  const clubStartY = bowlStartY + 215;
+  drawSectionHeader('CLUB OVERVIEW', clubStartY);
+
+  ctx.save();
+  // Wins / Losses
+  ctx.fillStyle = '#94a3b8';
+  ctx.textAlign = 'center';
+  drawTextWithEmojis(ctx, 'Tour Record', col1X, clubStartY + 40, 'bold 11px sans-serif');
+  ctx.fillStyle = '#fbbf24';
+  drawTextWithEmojis(ctx, `${stats.wins}W - ${stats.losses}L`, col1X, clubStartY + 64, 'bold 19px sans-serif');
+
+  // Vault Coins
+  ctx.fillStyle = '#94a3b8';
+  drawTextWithEmojis(ctx, 'Purse Balance', col2X, clubStartY + 40, 'bold 11px sans-serif');
+  ctx.fillStyle = '#fbbf24';
+  drawTextWithEmojis(ctx, `${user.coins || 0} 🪙`, col2X, clubStartY + 64, 'bold 19px sans-serif');
+  ctx.restore();
 
   // 6. Footer credits
   ctx.save();
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.4)';
+  ctx.fillStyle = 'rgba(212, 175, 55, 0.35)';
   ctx.textAlign = 'center';
   drawTextWithEmojis(ctx, 'CRICKET LEAGUE COLLECTIBLES • ELITE GOLD SERIES', width / 2, cardY + cardH - 30, 'bold 10px sans-serif');
   ctx.restore();
