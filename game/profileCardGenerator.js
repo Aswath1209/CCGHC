@@ -1,4 +1,5 @@
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+const path = require('path');
 
 try {
   GlobalFonts.loadSystemFonts();
@@ -503,6 +504,18 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     ctx.arc(px, py, pr, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Draw logo watermark in background layer
+  ctx.save();
+  ctx.globalAlpha = 0.05;
+  try {
+    const logoImg = await loadImage(path.join(__dirname, 'assets', 'logo.png'));
+    const logoSize = 340;
+    ctx.drawImage(logoImg, width / 2 - logoSize / 2, height / 2 - logoSize / 2 + 100, logoSize, logoSize);
+  } catch (e) {
+    console.error("Failed to draw logo watermark:", e);
+  }
+  ctx.restore();
 
   // 2. Main Gold Card Frame
   ctx.save();
