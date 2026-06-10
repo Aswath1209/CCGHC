@@ -464,6 +464,7 @@ try {
     { command: 'endtour', description: 'Forcibly end Tour match' },
     { command: 'tourhelp', description: 'Show Tour guide' },
     { command: 'profile', description: 'View your stats' },
+    { command: 'mycard', description: 'Show premium player card' },
     { command: 'top', description: 'Show global leaderboards (Runs, Wickets, MVPs, Ducks, Highscores)' },
     { command: 'help', description: 'Commands list' }
   ]).catch(e => console.error("setMyCommands error (non-blocking):", e.message));
@@ -808,6 +809,78 @@ bot.command('generate', async (ctx) => {
   }
 });
 
+bot.command('mycard', async (ctx) => {
+  try {
+      await ctx.replyWithChatAction("upload_photo");
+
+      let targetUserId = ctx.from.id;
+      let targetFirstName = ctx.from.first_name;
+
+      if (ctx.message.reply_to_message && ctx.message.reply_to_message.from) {
+          targetUserId = ctx.message.reply_to_message.from.id;
+          targetFirstName = ctx.message.reply_to_message.from.first_name;
+      } else {
+          const args = ctx.match ? ctx.match.trim().split(/\s+/) : [];
+          if (args.length > 0 && /^\d+$/.test(args[0])) {
+              targetUserId = parseInt(args[0]);
+              targetFirstName = null;
+          }
+      }
+
+      // Sync name with TG first_name if available, otherwise just fetch
+      const user = await sb.getUser(targetUserId, targetFirstName);
+      if (!user) {
+          return ctx.reply("⚠️ User not found in database! They need to register first by sending /register");
+      }
+
+      const careerStats = require('./db/careerStats');
+      const stats = await careerStats.getStats(targetUserId);
+
+      let avatarBuffer = null;
+      try {
+          const photos = await ctx.api.getUserProfilePhotos(targetUserId, { limit: 1 });
+          if (photos && photos.total_count > 0) {
+              const fileId = photos.photos[0][0].file_id;
+              const file = await ctx.api.getFile(fileId);
+              const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+              
+              const https = require('https');
+              avatarBuffer = await new Promise((resolve, reject) => {
+                  const req = https.get(fileUrl, { timeout: 2000 }, (res) => {
+                      if (res.statusCode !== 200) {
+                          reject(new Error(`Status code: ${res.statusCode}`));
+                          return;
+                      }
+                      const chunks = [];
+                      res.on('data', chunk => chunks.push(chunk));
+                      res.on('end', () => resolve(Buffer.concat(chunks)));
+                      res.on('error', err => reject(err));
+                  });
+                  req.on('timeout', () => {
+                      req.destroy();
+                      reject(new Error('Timeout'));
+                  });
+                  req.on('error', err => reject(err));
+              });
+          }
+      } catch (err) {
+          console.error("Failed to download avatar, falling back to silhouette:", err.message);
+      }
+
+      const { generateProfileCard } = require('./game/profileCardGenerator');
+      const cardBuffer = await generateProfileCard(user, stats, avatarBuffer);
+
+      const { InputFile } = require('grammy');
+      await ctx.replyWithPhoto(new InputFile(cardBuffer), {
+          caption: `👑 <b>${user.first_name}'s Official Player Card</b>\n\nUse <code>/mycard</code> to generate yours!`,
+          parse_mode: 'HTML'
+      });
+  } catch (err) {
+      console.error("Error generating player card:", err);
+      await ctx.reply("❌ Failed to generate player card.");
+  }
+});
+
 
 function getTopMenuKeyboard() {
   return new InlineKeyboard()
@@ -887,6 +960,7 @@ bot.command('help', async (ctx) => {
     "🏆 /tour - Start a Team Tour match\n" +
     "⚙️ /tourconfig - Configure Tour Match\n" +
     "👤 /profile - Your stats\n" +
+    "🎴 /mycard - Show premium player card\n" +
     "🔄 /daily - Claim 2000 coins\n" +
     "🏆 /leaderboard - Top players\n" +
     "📜 /rules - Game Rules\n" +
