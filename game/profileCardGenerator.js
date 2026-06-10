@@ -462,12 +462,12 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const cardW = 520;
   const cardH = 920;
 
-  // 1. Imperial Velvet Gradient Backdrop (Purple, Burgundy, Black)
+  // 1. Logo-Matched Velvet Gradient Backdrop (Fire Amber, Crimson Red, Charcoal Black)
   ctx.save();
   const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 80, width / 2, height / 2, width / 2 + 200);
-  bgGrad.addColorStop(0, '#2d0714'); // Imperial Burgundy center
-  bgGrad.addColorStop(0.4, '#150624'); // Royal Purple mid
-  bgGrad.addColorStop(1, '#050209'); // Midnight Black edge
+  bgGrad.addColorStop(0, '#3a0e05'); // Deep Fire Amber center
+  bgGrad.addColorStop(0.45, '#1b0507'); // Dark Crimson mid
+  bgGrad.addColorStop(1, '#050203'); // Charcoal Black edge
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
