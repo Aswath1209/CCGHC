@@ -19,6 +19,10 @@ async function registerUser(userId, firstName) {
   
   const { data: existing } = await supabase.from('cricket_users').select('*').eq('user_id', userId).single();
   if (existing) {
+    if (firstName && existing.first_name !== firstName) {
+      await supabase.from('cricket_users').update({ first_name: firstName }).eq('user_id', userId);
+      existing.first_name = firstName;
+    }
     return { success: false, error: 'Already registered', user: existing };
   }
 
@@ -38,9 +42,18 @@ async function registerUser(userId, firstName) {
   return { success: true, user: data };
 }
 
-async function getUser(userId) {
+async function getUser(userId, currentFirstName = null) {
   if (!supabase) return null;
   const { data } = await supabase.from('cricket_users').select('*').eq('user_id', userId).single();
+  if (data && currentFirstName && data.first_name !== currentFirstName) {
+    // Asynchronously update name in the background
+    supabase.from('cricket_users').update({ first_name: currentFirstName }).eq('user_id', userId)
+      .then(() => {
+        console.log(`Updated user ${userId} name to "${currentFirstName}"`);
+      })
+      .catch(err => console.error("Error updating user first name:", err));
+    data.first_name = currentFirstName;
+  }
   return data;
 }
 
@@ -60,7 +73,7 @@ async function updateCoins(userId, amount) {
 
 const userLocks = new Map();
 
-async function claimDaily(userId) {
+async function claimDaily(userId, currentFirstName = null) {
   if (!supabase) return { success: false, error: 'Database disabled' };
   
   while (userLocks.get(userId)) {
@@ -69,7 +82,7 @@ async function claimDaily(userId) {
   userLocks.set(userId, true);
   
   try {
-      const user = await getUser(userId);
+      const user = await getUser(userId, currentFirstName);
       if (!user) return { success: false, error: 'User not found. Please /register first.' };
 
       const now = new Date();

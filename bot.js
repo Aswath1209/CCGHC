@@ -708,7 +708,7 @@ bot.command('removeachievement', async (ctx) => {
 
 bot.command('profile', async (ctx) => {
   try {
-      const user = await sb.getUser(ctx.from.id);
+      const user = await sb.getUser(ctx.from.id, ctx.from.first_name);
       if (!user) return ctx.reply("⚠️ You need to register first! Send /register");
       
       const careerStats = require('./db/careerStats');
@@ -757,7 +757,7 @@ bot.command('generate', async (ctx) => {
 
       await ctx.replyWithChatAction("upload_photo");
 
-      const user = await sb.getUser(ctx.from.id);
+      const user = await sb.getUser(ctx.from.id, ctx.from.first_name);
       if (!user) return ctx.reply("⚠️ You need to register first! Send /register");
       
       const careerStats = require('./db/careerStats');
@@ -927,7 +927,7 @@ bot.command('rules', async (ctx) => {
 });
 
 bot.command('daily', async (ctx) => {
-  const result = await sb.claimDaily(ctx.from.id);
+  const result = await sb.claimDaily(ctx.from.id, ctx.from.first_name);
   if (result.success) await ctx.reply(`✅ 2000🪙 added to your account!`);
   else await ctx.reply(`⏳ ${result.error}`);
 });
@@ -936,7 +936,7 @@ bot.command('cricket', async (ctx) => {
     if (ctx.chat.type === 'private') return ctx.reply("Hand Cricket must be played in group chats.");
     
     const user = { id: ctx.from.id, first_name: ctx.from.first_name };
-    const dbUser = await sb.getUser(user.id);
+    const dbUser = await sb.getUser(user.id, user.first_name);
     if (!dbUser) return ctx.reply("⚠️ You need to /register first!");
 
     const lobby = handCricketManager.createLobby(ctx.chat.id, user);
@@ -962,7 +962,7 @@ bot.command('ccl', async (ctx) => {
       return ctx.reply("⚠️ Bet amount cannot be negative!");
   }
   
-  const user = await sb.getUser(ctx.from.id);
+  const user = await sb.getUser(ctx.from.id, ctx.from.first_name);
   if (!user) return ctx.reply("⚠️ You need to /register first!");
   if (user.coins < bet) return ctx.reply(`⚠️ Insufficient coins! You have ${user.coins}🪙`);
 
@@ -1246,7 +1246,7 @@ bot.on('callback_query:data', async (ctx) => {
 
   if (data.startsWith('ccl_join_')) {
     const gameId = data.split('_')[2];
-    const user = await sb.getUser(userId);
+    const user = await sb.getUser(userId, ctx.from.first_name);
     if (!user) return ctx.answerCallbackQuery({ text: "Register first using /register", show_alert: true });
     
     const tmpGame = gameManager.getGame(gameId);
