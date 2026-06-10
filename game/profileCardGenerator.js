@@ -666,7 +666,46 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.fillStyle = nameGrad;
   ctx.textAlign = 'center';
   const name = normalizeStyledText(user.first_name || 'PLAYER');
-  drawTextWithEmojis(ctx, name.toUpperCase(), avatarX, avatarY + 102, 'bold 22px "DejaVu Serif"');
+  const nameUpper = name.toUpperCase();
+  const maxNameWidth = 230;
+  let fontSize = 22;
+  let fontSpec = `bold ${fontSize}px "DejaVu Serif"`;
+
+  function measureNameWidth(fs) {
+    const fontParts = fs.split(/\s+/);
+    const familyIndex = fontParts.findIndex(part => part.includes('sans-serif') || part.includes('Arial') || part.includes('DejaVu'));
+    let sizeAndStyle = '14px';
+    let primaryFamily = 'DejaVu Serif';
+    if (familyIndex !== -1) {
+      sizeAndStyle = fontParts.slice(0, familyIndex).join(' ');
+    } else {
+      sizeAndStyle = fontParts.slice(0, -1).join(' ');
+    }
+    const primaryFont = `${sizeAndStyle} "${primaryFamily}"`;
+    const emojiFont = `${sizeAndStyle} "Noto Color Emoji"`;
+    
+    const segments = nameUpper.split(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/gu);
+    const activeSegments = segments.filter(seg => seg !== '');
+    
+    let w = 0;
+    for (const seg of activeSegments) {
+      const isEmoji = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/u.test(seg);
+      ctx.save();
+      ctx.font = isEmoji ? emojiFont : primaryFont;
+      w += ctx.measureText(seg).width;
+      ctx.restore();
+    }
+    return w;
+  }
+
+  while (fontSize > 10 && measureNameWidth(fontSpec) > maxNameWidth) {
+    fontSize--;
+    fontSpec = `bold ${fontSize}px "DejaVu Serif"`;
+  }
+
+  // Adjust vertical alignment slightly to account for smaller font size centering
+  const textY = avatarY + 102 + (22 - fontSize) * 0.25;
+  drawTextWithEmojis(ctx, nameUpper, avatarX, textY, fontSpec);
   ctx.restore();
 
   // Header separator gold line
