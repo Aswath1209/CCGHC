@@ -14,7 +14,8 @@ function normalizeStyledText(str) {
   return [...str].map(char => {
     const cp = char.codePointAt(0);
     if (!cp) return char;
-    
+
+    // Mathematical Alphanumeric Blocks (1D400 - 1D7FF)
     // Mathematical Bold Capital (1D400 - 1D419) -> A-Z (65 - 90)
     if (cp >= 0x1d400 && cp <= 0x1d419) return String.fromCharCode(cp - 0x1d400 + 65);
     // Mathematical Bold Lowercase (1D41A - 1D433) -> a-z (97 - 122)
@@ -45,16 +46,16 @@ function normalizeStyledText(str) {
     // Mathematical Fraktur Lowercase (1D51e - 1D537)
     if (cp >= 0x1d51e && cp <= 0x1d537) return String.fromCharCode(cp - 0x1d51e + 97);
     
-    // Mathematical Fraktur Bold Capital (1D56c - 1D585)
-    if (cp >= 0x1d56c && cp <= 0x1d585) return String.fromCharCode(cp - 0x1d56c + 65);
-    // Mathematical Fraktur Bold Lowercase (1D586 - 1D59f)
-    if (cp >= 0x1d586 && cp <= 0x1d59f) return String.fromCharCode(cp - 0x1d586 + 97);
-    
     // Mathematical Double-Struck Capital (1D538 - 1D551)
     if (cp >= 0x1d538 && cp <= 0x1d551) return String.fromCharCode(cp - 0x1d538 + 65);
     // Mathematical Double-Struck Lowercase (1D552 - 1D56b)
     if (cp >= 0x1d552 && cp <= 0x1d56b) return String.fromCharCode(cp - 0x1d552 + 97);
-    
+
+    // Mathematical Fraktur Bold Capital (1D56c - 1D585)
+    if (cp >= 0x1d56c && cp <= 0x1d585) return String.fromCharCode(cp - 0x1d56c + 65);
+    // Mathematical Fraktur Bold Lowercase (1D586 - 1D59f)
+    if (cp >= 0x1d586 && cp <= 0x1d59f) return String.fromCharCode(cp - 0x1d586 + 97);
+
     // Mathematical Sans-Serif Capital (1D5a0 - 1D5b9)
     if (cp >= 0x1d5a0 && cp <= 0x1d5b9) return String.fromCharCode(cp - 0x1d5a0 + 65);
     // Mathematical Sans-Serif Lowercase (1D5ba - 1D5d3)
@@ -65,14 +66,14 @@ function normalizeStyledText(str) {
     // Mathematical Sans-Serif Bold Lowercase (1D5ee - 1D607)
     if (cp >= 0x1d5ee && cp <= 0x1d607) return String.fromCharCode(cp - 0x1d5ee + 97);
     
-    // Mathematical Sans-Serif Italic Capital (1D608 - 0x1D621)
+    // Mathematical Sans-Serif Italic Capital (1D608 - 1D621)
     if (cp >= 0x1d608 && cp <= 0x1d621) return String.fromCharCode(cp - 0x1d608 + 65);
-    // Mathematical Sans-Serif Italic Lowercase (1D622 - 0x1D63b)
+    // Mathematical Sans-Serif Italic Lowercase (1D622 - 1D63b)
     if (cp >= 0x1d622 && cp <= 0x1d63b) return String.fromCharCode(cp - 0x1d622 + 97);
     
     // Mathematical Sans-Serif Bold Italic Capital (1D63c - 0x1D655)
     if (cp >= 0x1d63c && cp <= 0x1d655) return String.fromCharCode(cp - 0x1d63c + 65);
-    // Mathematical Sans-Serif Bold Italic Lowercase (1D656 - 0x1D66f)
+    // Mathematical Sans-Serif Bold Italic Lowercase (1D656 - 1D66f)
     if (cp >= 0x1d656 && cp <= 0x1d66f) return String.fromCharCode(cp - 0x1d656 + 97);
     
     // Mathematical Monospace Capital (1D670 - 1D689)
@@ -80,7 +81,7 @@ function normalizeStyledText(str) {
     // Mathematical Monospace Lowercase (1D68a - 1D6a3)
     if (cp >= 0x1d68a && cp <= 0x1d6a3) return String.fromCharCode(cp - 0x1d68a + 97);
 
-    // Mathematical Bold Numbers (1D7CE - 1D7D7) -> 0-9 (48 - 57)
+    // Mathematical Bold Numbers (1D7CE - 1D7D7) -> 0-9
     if (cp >= 0x1d7ce && cp <= 0x1d7d7) return String.fromCharCode(cp - 0x1d7ce + 48);
     // Double-struck Numbers (1D7D8 - 1D7E1) -> 0-9
     if (cp >= 0x1d7d8 && cp <= 0x1d7e1) return String.fromCharCode(cp - 0x1d7d8 + 48);
@@ -90,6 +91,43 @@ function normalizeStyledText(str) {
     if (cp >= 0x1d7ec && cp <= 0x1d7f5) return String.fromCharCode(cp - 0x1d7ec + 48);
     // Monospace Numbers (1D7F6 - 1D7FF) -> 0-9
     if (cp >= 0x1d7f6 && cp <= 0x1d7ff) return String.fromCharCode(cp - 0x1d7f6 + 48);
+
+    // Fullwidth Capital (FF21 - FF3A) -> A-Z
+    if (cp >= 0xff21 && cp <= 0xff3a) return String.fromCharCode(cp - 0xff21 + 65);
+    // Fullwidth Lowercase (FF41 - FF5A) -> a-z
+    if (cp >= 0xff41 && cp <= 0xff5a) return String.fromCharCode(cp - 0xff41 + 97);
+    // Fullwidth Numbers (FF10 - FF19) -> 0-9
+    if (cp >= 0xff10 && cp <= 0xff19) return String.fromCharCode(cp - 0xff10 + 48);
+
+    // Circled Capital (24B6 - 24CF) -> A-Z
+    if (cp >= 0x24b6 && cp <= 0x24cf) return String.fromCharCode(cp - 0x24b6 + 65);
+    // Circled Lowercase (24D0 - 24E9) -> a-z
+    if (cp >= 0x24d0 && cp <= 0x24e9) return String.fromCharCode(cp - 0x24d0 + 97);
+    // Circled Numbers (2460 - 2468) -> 1-9
+    if (cp >= 0x2460 && cp <= 0x2468) return String.fromCharCode(cp - 0x2460 + 49);
+    if (cp === 0x24ea) return '0';
+
+    // BMP Script Exceptions
+    if (cp === 0x212c) return 'B';
+    if (cp === 0x2130) return 'E';
+    if (cp === 0x2131) return 'F';
+    if (cp === 0x210b) return 'H';
+    if (cp === 0x2110) return 'I';
+    if (cp === 0x2112) return 'L';
+    if (cp === 0x2133) return 'M';
+    if (cp === 0x211b) return 'R';
+    if (cp === 0x210a) return 'g';
+    if (cp === 0x2134) return 'o';
+    if (cp === 0x212f) return 'e';
+    if (cp === 0x2113) return 'l';
+    // BMP Double-Struck Exceptions
+    if (cp === 0x2102) return 'C';
+    if (cp === 0x210d) return 'H';
+    if (cp === 0x2115) return 'N';
+    if (cp === 0x2119) return 'P';
+    if (cp === 0x211a) return 'Q';
+    if (cp === 0x211d) return 'R';
+    if (cp === 0x2124) return 'Z';
 
     return char;
   }).join('');

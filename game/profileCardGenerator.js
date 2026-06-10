@@ -1,10 +1,133 @@
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
-const { normalizeStyledText } = require('./scoreboardGenerator');
 
 try {
   GlobalFonts.loadSystemFonts();
 } catch (e) {
   console.error("Failed to load system fonts in profile generator:", e);
+}
+
+function normalizeStyledText(str) {
+  if (!str) return '';
+  return [...str].map(char => {
+    const cp = char.codePointAt(0);
+    if (!cp) return char;
+
+    // Mathematical Alphanumeric Blocks (1D400 - 1D7FF)
+    // Mathematical Bold Capital (1D400 - 1D419) -> A-Z (65 - 90)
+    if (cp >= 0x1d400 && cp <= 0x1d419) return String.fromCharCode(cp - 0x1d400 + 65);
+    // Mathematical Bold Lowercase (1D41A - 1D433) -> a-z (97 - 122)
+    if (cp >= 0x1d41a && cp <= 0x1d433) return String.fromCharCode(cp - 0x1d41a + 97);
+    
+    // Mathematical Italic Capital (1D434 - 1D44D) -> A-Z (65 - 90)
+    if (cp >= 0x1d434 && cp <= 0x1d44d) return String.fromCharCode(cp - 0x1d434 + 65);
+    // Mathematical Italic Lowercase (1D44E - 1D467) -> a-z (97 - 122)
+    if (cp >= 0x1d44e && cp <= 0x1d467) return String.fromCharCode(cp - 0x1d44e + 97);
+    
+    // Mathematical Bold Italic Capital (1D468 - 1D481)
+    if (cp >= 0x1d468 && cp <= 0x1d481) return String.fromCharCode(cp - 0x1d468 + 65);
+    // Mathematical Bold Italic Lowercase (1D482 - 1D49B)
+    if (cp >= 0x1d482 && cp <= 0x1d49b) return String.fromCharCode(cp - 0x1d482 + 97);
+    
+    // Mathematical Script Capital (1D49c - 1D4b5)
+    if (cp >= 0x1d49c && cp <= 0x1d4b5) return String.fromCharCode(cp - 0x1d49c + 65);
+    // Mathematical Script Lowercase (1D4b6 - 1D4cf)
+    if (cp >= 0x1d4b6 && cp <= 0x1d4cf) return String.fromCharCode(cp - 0x1d4b6 + 97);
+    
+    // Mathematical Script Bold Capital (1D4d0 - 1D4e9)
+    if (cp >= 0x1d4d0 && cp <= 0x1d4e9) return String.fromCharCode(cp - 0x1d4d0 + 65);
+    // Mathematical Script Bold Lowercase (1D4ea - 1D503)
+    if (cp >= 0x1d4ea && cp <= 0x1d503) return String.fromCharCode(cp - 0x1d4ea + 97);
+    
+    // Mathematical Fraktur Capital (1D504 - 1D51d)
+    if (cp >= 0x1d504 && cp <= 0x1d51d) return String.fromCharCode(cp - 0x1d504 + 65);
+    // Mathematical Fraktur Lowercase (1D51e - 1D537)
+    if (cp >= 0x1d51e && cp <= 0x1d537) return String.fromCharCode(cp - 0x1d51e + 97);
+    
+    // Mathematical Double-Struck Capital (1D538 - 1D551)
+    if (cp >= 0x1d538 && cp <= 0x1d551) return String.fromCharCode(cp - 0x1d538 + 65);
+    // Mathematical Double-Struck Lowercase (1D552 - 1D56b)
+    if (cp >= 0x1d552 && cp <= 0x1d56b) return String.fromCharCode(cp - 0x1d552 + 97);
+
+    // Mathematical Fraktur Bold Capital (1D56c - 1D585)
+    if (cp >= 0x1d56c && cp <= 0x1d585) return String.fromCharCode(cp - 0x1d56c + 65);
+    // Mathematical Fraktur Bold Lowercase (1D586 - 1D59f)
+    if (cp >= 0x1d586 && cp <= 0x1d59f) return String.fromCharCode(cp - 0x1d586 + 97);
+
+    // Mathematical Sans-Serif Capital (1D5a0 - 1D5b9)
+    if (cp >= 0x1d5a0 && cp <= 0x1d5b9) return String.fromCharCode(cp - 0x1d5a0 + 65);
+    // Mathematical Sans-Serif Lowercase (1D5ba - 1D5d3)
+    if (cp >= 0x1d5ba && cp <= 0x1d5d3) return String.fromCharCode(cp - 0x1d5ba + 97);
+    
+    // Mathematical Sans-Serif Bold Capital (1D5d4 - 1D5ed)
+    if (cp >= 0x1d5d4 && cp <= 0x1d5ed) return String.fromCharCode(cp - 0x1d5d4 + 65);
+    // Mathematical Sans-Serif Bold Lowercase (1D5ee - 1D607)
+    if (cp >= 0x1d5ee && cp <= 0x1d607) return String.fromCharCode(cp - 0x1d5ee + 97);
+    
+    // Mathematical Sans-Serif Italic Capital (1D608 - 1D621)
+    if (cp >= 0x1d608 && cp <= 0x1d621) return String.fromCharCode(cp - 0x1d608 + 65);
+    // Mathematical Sans-Serif Italic Lowercase (1D622 - 1D63b)
+    if (cp >= 0x1d622 && cp <= 0x1d63b) return String.fromCharCode(cp - 0x1d622 + 97);
+    
+    // Mathematical Sans-Serif Bold Italic Capital (1D63c - 0x1D655)
+    if (cp >= 0x1d63c && cp <= 0x1d655) return String.fromCharCode(cp - 0x1d63c + 65);
+    // Mathematical Sans-Serif Bold Italic Lowercase (1D656 - 1D66f)
+    if (cp >= 0x1d656 && cp <= 0x1d66f) return String.fromCharCode(cp - 0x1d656 + 97);
+    
+    // Mathematical Monospace Capital (1D670 - 1D689)
+    if (cp >= 0x1d670 && cp <= 0x1d689) return String.fromCharCode(cp - 0x1d670 + 65);
+    // Mathematical Monospace Lowercase (1D68a - 1D6a3)
+    if (cp >= 0x1d68a && cp <= 0x1d6a3) return String.fromCharCode(cp - 0x1d68a + 97);
+
+    // Mathematical Bold Numbers (1D7CE - 1D7D7) -> 0-9
+    if (cp >= 0x1d7ce && cp <= 0x1d7d7) return String.fromCharCode(cp - 0x1d7ce + 48);
+    // Double-struck Numbers (1D7D8 - 1D7E1) -> 0-9
+    if (cp >= 0x1d7d8 && cp <= 0x1d7e1) return String.fromCharCode(cp - 0x1d7d8 + 48);
+    // Sans-serif Bold Numbers (1D7E2 - 1D7EB) -> 0-9
+    if (cp >= 0x1d7e2 && cp <= 0x1d7eb) return String.fromCharCode(cp - 0x1d7e2 + 48);
+    // Sans-serif Double-struck Numbers (1D7EC - 1D7F5) -> 0-9
+    if (cp >= 0x1d7ec && cp <= 0x1d7f5) return String.fromCharCode(cp - 0x1d7ec + 48);
+    // Monospace Numbers (1D7F6 - 1D7FF) -> 0-9
+    if (cp >= 0x1d7f6 && cp <= 0x1d7ff) return String.fromCharCode(cp - 0x1d7f6 + 48);
+
+    // Fullwidth Capital (FF21 - FF3A) -> A-Z
+    if (cp >= 0xff21 && cp <= 0xff3a) return String.fromCharCode(cp - 0xff21 + 65);
+    // Fullwidth Lowercase (FF41 - FF5A) -> a-z
+    if (cp >= 0xff41 && cp <= 0xff5a) return String.fromCharCode(cp - 0xff41 + 97);
+    // Fullwidth Numbers (FF10 - FF19) -> 0-9
+    if (cp >= 0xff10 && cp <= 0xff19) return String.fromCharCode(cp - 0xff10 + 48);
+
+    // Circled Capital (24B6 - 24CF) -> A-Z
+    if (cp >= 0x24b6 && cp <= 0x24cf) return String.fromCharCode(cp - 0x24b6 + 65);
+    // Circled Lowercase (24D0 - 24E9) -> a-z
+    if (cp >= 0x24d0 && cp <= 0x24e9) return String.fromCharCode(cp - 0x24d0 + 97);
+    // Circled Numbers (2460 - 2468) -> 1-9
+    if (cp >= 0x2460 && cp <= 0x2468) return String.fromCharCode(cp - 0x2460 + 49);
+    if (cp === 0x24ea) return '0';
+
+    // BMP Script Exceptions
+    if (cp === 0x212c) return 'B';
+    if (cp === 0x2130) return 'E';
+    if (cp === 0x2131) return 'F';
+    if (cp === 0x210b) return 'H';
+    if (cp === 0x2110) return 'I';
+    if (cp === 0x2112) return 'L';
+    if (cp === 0x2133) return 'M';
+    if (cp === 0x211b) return 'R';
+    if (cp === 0x210a) return 'g';
+    if (cp === 0x2134) return 'o';
+    if (cp === 0x212f) return 'e';
+    if (cp === 0x2113) return 'l';
+    // BMP Double-Struck Exceptions
+    if (cp === 0x2102) return 'C';
+    if (cp === 0x210d) return 'H';
+    if (cp === 0x2115) return 'N';
+    if (cp === 0x2119) return 'P';
+    if (cp === 0x211a) return 'Q';
+    if (cp === 0x211d) return 'R';
+    if (cp === 0x2124) return 'Z';
+
+    return char;
+  }).join('');
 }
 
 function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -418,11 +541,44 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   // Gold avatar flourish wings
   drawAvatarFlourish(ctx, avatarX, avatarY, avatarRadius);
 
-  // Avatar circular gold ring
+  // Dynamic Avatar Backglow Extraction
+  let glowColor = 'rgba(212, 175, 55, 0.55)'; // Fallback gold glow
+  let loadedImg = null;
+  if (avatarBuffer) {
+    try {
+      loadedImg = await loadImage(avatarBuffer);
+      // Average color extraction via tiny 8x8 canvas
+      const tempCanvas = createCanvas(8, 8);
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(loadedImg, 0, 0, 8, 8);
+      const imgData = tempCtx.getImageData(0, 0, 8, 8).data;
+      
+      let rSum = 0, gSum = 0, bSum = 0, count = 0;
+      for (let i = 0; i < imgData.length; i += 4) {
+        const a = imgData[i + 3];
+        if (a > 30) {
+          rSum += imgData[i];
+          gSum += imgData[i + 1];
+          bSum += imgData[i + 2];
+          count++;
+        }
+      }
+      if (count > 0) {
+        const rAvg = Math.round(rSum / count);
+        const gAvg = Math.round(gSum / count);
+        const bAvg = Math.round(bSum / count);
+        glowColor = `rgba(${rAvg}, ${gAvg}, ${bAvg}, 0.7)`;
+      }
+    } catch (e) {
+      console.error("Failed to extract color tone from avatar:", e);
+    }
+  }
+
+  // Avatar circular gold ring with dynamic backglow
   ctx.save();
   ctx.strokeStyle = '#ffd700';
-  ctx.shadowColor = 'rgba(212, 175, 55, 0.55)';
-  ctx.shadowBlur = 10;
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = 18;
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.arc(avatarX, avatarY, avatarRadius + 3, 0, Math.PI * 2);
@@ -444,13 +600,8 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
   ctx.clip();
 
-  if (avatarBuffer) {
-    try {
-      const img = await loadImage(avatarBuffer);
-      ctx.drawImage(img, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
-    } catch (e) {
-      drawSilhouette(ctx, avatarX, avatarY, avatarRadius);
-    }
+  if (loadedImg) {
+    ctx.drawImage(loadedImg, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
   } else {
     drawSilhouette(ctx, avatarX, avatarY, avatarRadius);
   }
@@ -477,7 +628,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawGem(ctx, 440, avatarY + 95, 3.5, 'emerald');
   ctx.restore();
 
-  // Username inside banner (centered in gold gradient, serif typeface)
+  // Username inside banner (centered in gold gradient, normalized serif typeface)
   ctx.save();
   const nameGrad = ctx.createLinearGradient(180, avatarY + 95, 420, avatarY + 95);
   nameGrad.addColorStop(0, '#f59e0b');
@@ -662,5 +813,6 @@ function drawSilhouette(ctx, x, y, radius) {
 }
 
 module.exports = {
-  generateProfileCard
+  generateProfileCard,
+  normalizeStyledText
 };
