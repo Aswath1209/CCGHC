@@ -130,41 +130,84 @@ function drawWickets(ctx, x, y) {
   ctx.restore();
 }
 
-function drawOrnateCorner(ctx, cx, cy, dirX, dirY) {
+function drawDetailedCorner(ctx, cx, cy, dirX, dirY) {
   ctx.save();
   ctx.strokeStyle = '#ffd700';
   ctx.fillStyle = '#ffd700';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.8;
 
-  // L-Bracket corner lines
+  // Outer corner border line
   ctx.beginPath();
-  ctx.moveTo(cx, cy + dirY * 35);
+  ctx.moveTo(cx, cy + dirY * 40);
   ctx.lineTo(cx, cy);
-  ctx.lineTo(cx + dirX * 35, cy);
+  ctx.lineTo(cx + dirX * 40, cy);
   ctx.stroke();
 
-  // Outer scroll circle
+  // Ornate curves
   ctx.beginPath();
-  ctx.arc(cx + dirX * 16, cy + dirY * 16, 9, 0, Math.PI * 2);
+  ctx.moveTo(cx, cy + dirY * 30);
+  ctx.bezierCurveTo(cx + dirX * 12, cy + dirY * 24, cx + dirX * 24, cy + dirY * 12, cx + dirX * 30, cy);
   ctx.stroke();
 
-  // Inner center dot
+  // Corner center medallion
   ctx.beginPath();
-  ctx.arc(cx + dirX * 16, cy + dirY * 16, 3, 0, Math.PI * 2);
+  ctx.arc(cx + dirX * 18, cy + dirY * 18, 5, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx + dirX * 18, cy + dirY * 18, 2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Minor flourishes
-  ctx.lineWidth = 1.2;
+  // Small gold leaf buds
+  ctx.beginPath(); ctx.arc(cx + dirX * 8, cy + dirY * 34, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + dirX * 34, cy + dirY * 8, 2, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCenterFlourish(ctx, x, y) {
+  ctx.save();
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(cx + dirX * 6, cy + dirY * 20);
-  ctx.quadraticCurveTo(cx + dirX * 12, cy + dirY * 26, cx + dirX * 6, cy + dirY * 30);
+  
+  // Central dot
+  ctx.fillStyle = '#ffd700';
+  ctx.beginPath();
+  ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Left scroll curve
+  ctx.beginPath();
+  ctx.moveTo(x - 4, y);
+  ctx.bezierCurveTo(x - 20, y - 8, x - 35, y + 8, x - 55, y);
   ctx.stroke();
 
+  // Right scroll curve
   ctx.beginPath();
-  ctx.moveTo(cx + dirX * 20, cy + dirY * 6);
-  ctx.quadraticCurveTo(cx + dirX * 26, cy + dirY * 12, cx + dirX * 30, cy + dirY * 6);
+  ctx.moveTo(x + 4, y);
+  ctx.bezierCurveTo(x + 20, y - 8, x + 35, y + 8, x + 55, y);
   ctx.stroke();
+  ctx.restore();
+}
 
+function drawOrnateFlourish(ctx, x, y, direction) {
+  ctx.save();
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  if (direction === 'left') {
+    ctx.moveTo(x, y);
+    ctx.bezierCurveTo(x - 15, y - 8, x - 25, y + 8, x - 35, y);
+    ctx.stroke();
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(x - 35, y, 2.5, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.moveTo(x, y);
+    ctx.bezierCurveTo(x + 15, y - 8, x + 25, y + 8, x + 35, y);
+    ctx.stroke();
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.arc(x + 35, y, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -224,19 +267,31 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const ctx = canvas.getContext('2d');
 
   // Card boundary dimensions
-  const cardX = 30;
-  const cardY = 30;
-  const cardW = 540;
-  const cardH = 940;
+  const cardX = 40;
+  const cardY = 40;
+  const cardW = 520;
+  const cardH = 920;
 
-  // 1. Premium dark blue-black velvet backdrop
+  // 1. Premium dark blue-black gradient backdrop
   ctx.save();
   const bgGrad = ctx.createLinearGradient(0, 0, width, height);
-  bgGrad.addColorStop(0, '#070811');
+  bgGrad.addColorStop(0, '#090a14');
   bgGrad.addColorStop(0.5, '#030409');
   bgGrad.addColorStop(1, '#000000');
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+
+  // Linen grid backdrop texture (fine matte texture overlay)
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.012)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < width; x += 3.5) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+  }
+  for (let y = 0; y < height; y += 3.5) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+  }
   ctx.restore();
 
   // Glowing gold radial highlight centered behind the avatar
@@ -263,8 +318,8 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   // 2. Main Gold Card Frame
   ctx.save();
   ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 3.5;
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 12);
+  ctx.lineWidth = 3;
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
   ctx.stroke();
   ctx.restore();
 
@@ -272,20 +327,24 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.save();
   ctx.strokeStyle = 'rgba(252, 211, 77, 0.35)';
   ctx.lineWidth = 1;
-  drawRoundedRect(ctx, cardX + 6, cardY + 6, cardW - 12, cardH - 12, 8);
+  drawRoundedRect(ctx, cardX + 6, cardY + 6, cardW - 12, cardH - 12, 11);
   ctx.stroke();
   ctx.restore();
 
   // 3. Ornate Corner Filigrees
-  drawOrnateCorner(ctx, cardX + 12, cardY + 12, 1, 1);       // Top Left
-  drawOrnateCorner(ctx, cardX + cardW - 12, cardY + 12, -1, 1); // Top Right
-  drawOrnateCorner(ctx, cardX + 12, cardY + cardH - 12, 1, -1); // Bottom Left
-  drawOrnateCorner(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1); // Bottom Right
+  drawDetailedCorner(ctx, cardX + 12, cardY + 12, 1, 1);       // Top Left
+  drawDetailedCorner(ctx, cardX + cardW - 12, cardY + 12, -1, 1); // Top Right
+  drawDetailedCorner(ctx, cardX + 12, cardY + cardH - 12, 1, -1); // Bottom Left
+  drawDetailedCorner(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1); // Bottom Right
+
+  // Center border flourishes
+  drawCenterFlourish(ctx, 300, cardY + 12);
+  drawCenterFlourish(ctx, 300, cardY + cardH - 12);
 
   // 4. Header Section
   const avatarX = 300;
   const avatarY = cardY + 130;
-  const avatarRadius = 55;
+  const avatarRadius = 60;
 
   // Gold avatar flourish wings
   drawAvatarFlourish(ctx, avatarX, avatarY, avatarRadius);
@@ -330,17 +389,22 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const name = normalizeStyledText(user.first_name || 'PLAYER');
   drawTextWithEmojis(ctx, name.toUpperCase(), avatarX, avatarY + 95, 'bold 26px sans-serif');
 
-  // Subtitle flourish line
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
-  ctx.lineWidth = 1;
+  // Subtitle scroll flourish
+  ctx.strokeStyle = '#ffd700';
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(width / 2 - 60, avatarY + 110);
-  ctx.lineTo(width / 2 + 60, avatarY + 110);
+  ctx.moveTo(width / 2 - 70, avatarY + 112);
+  ctx.lineTo(width / 2 + 70, avatarY + 112);
   ctx.stroke();
 
+  // Center diamond below username
   ctx.fillStyle = '#ffd700';
   ctx.beginPath();
-  ctx.arc(width / 2, avatarY + 110, 2.5, 0, Math.PI * 2);
+  ctx.moveTo(width / 2, avatarY + 108);
+  ctx.lineTo(width / 2 + 4, avatarY + 112);
+  ctx.lineTo(width / 2, avatarY + 116);
+  ctx.lineTo(width / 2 - 4, avatarY + 112);
+  ctx.closePath();
   ctx.fill();
 
   // Rank Subtitle
@@ -352,45 +416,43 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawTextWithEmojis(ctx, `👑 ${tier} • MEMBER`, avatarX, avatarY + 132, 'bold 11px sans-serif');
   ctx.restore();
 
-  // Helper to draw clean sections flanking headers with wings
+  // Section header draw helper
   function drawSectionHeader(title, y) {
     ctx.save();
     // Gold wings/lines flanking header
     ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
     ctx.lineWidth = 1.2;
     
-    // Left Wing
+    // Left Wing line
     ctx.beginPath();
     ctx.moveTo(110, y - 5);
     ctx.lineTo(210, y - 5);
     ctx.stroke();
 
-    // Right Wing
+    // Right Wing line
     ctx.beginPath();
     ctx.moveTo(390, y - 5);
     ctx.lineTo(490, y - 5);
     ctx.stroke();
 
-    // Small diamond/dot in center
-    ctx.fillStyle = '#ffd700';
-    ctx.beginPath();
-    ctx.arc(300, y - 5, 2.5, 0, Math.PI * 2);
-    ctx.fill();
+    // Scroll wings
+    drawOrnateFlourish(ctx, 210, y - 5, 'left');
+    drawOrnateFlourish(ctx, 390, y - 5, 'right');
 
     // Title text
     ctx.fillStyle = '#ffd700';
     ctx.textAlign = 'center';
-    drawTextWithEmojis(ctx, title, 300, y, 'bold 14px sans-serif');
+    drawTextWithEmojis(ctx, title, 300, y, 'bold 15px sans-serif');
     ctx.restore();
   }
 
   // --- BATTING SECTION ---
   const batStartY = cardY + 315;
   drawSectionHeader('BATTING', batStartY);
-  drawCricketBat(ctx, 105, batStartY - 6);
+  drawCricketBat(ctx, 110, batStartY - 6);
 
   // 2-Column Batting Grid (3 rows)
-  const batRowY = batStartY + 40;
+  const batRowY = batStartY + 45;
   const col1X = 170;
   const col2X = 430;
   
@@ -412,7 +474,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ];
 
   battingItems.forEach((row, rowIndex) => {
-    const itemY = batRowY + rowIndex * 70;
+    const itemY = batRowY + rowIndex * 72;
     row.forEach(item => {
       ctx.save();
       // Label
@@ -426,7 +488,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
       valGrad.addColorStop(1, '#fef08a');
       ctx.fillStyle = valGrad;
       ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 19px sans-serif');
+      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 20px sans-serif');
       ctx.restore();
     });
   });
@@ -435,14 +497,14 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.strokeStyle = 'rgba(212, 175, 55, 0.16)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cardX + 45, batRowY + 185);
-  ctx.lineTo(cardX + cardW - 45, batRowY + 185);
+  ctx.moveTo(cardX + 45, batRowY + 195);
+  ctx.lineTo(cardX + cardW - 45, batRowY + 195);
   ctx.stroke();
 
   // --- BOWLING SECTION ---
-  const bowlStartY = batRowY + 215;
+  const bowlStartY = batRowY + 225;
   drawSectionHeader('BOWLING', bowlStartY);
-  drawWickets(ctx, 105, bowlStartY - 6);
+  drawWickets(ctx, 110, bowlStartY - 6);
 
   const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
   const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
@@ -459,7 +521,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ];
 
   bowlingItems.forEach((row, rowIndex) => {
-    const itemY = bowlStartY + 40 + rowIndex * 72;
+    const itemY = bowlStartY + 45 + rowIndex * 75;
     row.forEach(item => {
       ctx.save();
       ctx.fillStyle = '#94a3b8';
@@ -471,43 +533,24 @@ async function generateProfileCard(user, stats, avatarBuffer) {
       valGrad.addColorStop(1, '#fef08a');
       ctx.fillStyle = valGrad;
       ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 19px sans-serif');
+      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 20px sans-serif');
       ctx.restore();
     });
   });
 
-  // Section Divider Line
+  // Footer separator gold line
   ctx.strokeStyle = 'rgba(212, 175, 55, 0.16)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cardX + 45, bowlStartY + 165);
-  ctx.lineTo(cardX + cardW - 45, bowlStartY + 165);
+  ctx.moveTo(cardX + 45, cardY + cardH - 55);
+  ctx.lineTo(cardX + cardW - 45, cardY + cardH - 55);
   ctx.stroke();
-
-  // --- CLUB OVERVIEW SECTION ---
-  const clubStartY = bowlStartY + 195;
-  drawSectionHeader('CLUB OVERVIEW', clubStartY);
-
-  ctx.save();
-  // Wins / Losses
-  ctx.fillStyle = '#94a3b8';
-  ctx.textAlign = 'center';
-  drawTextWithEmojis(ctx, 'Tour Record', col1X, clubStartY + 35, 'bold 11px sans-serif');
-  ctx.fillStyle = '#fbbf24';
-  drawTextWithEmojis(ctx, `${stats.wins}W - ${stats.losses}L`, col1X, clubStartY + 59, 'bold 19px sans-serif');
-
-  // Vault Coins
-  ctx.fillStyle = '#94a3b8';
-  drawTextWithEmojis(ctx, 'Purse Balance', col2X, clubStartY + 35, 'bold 11px sans-serif');
-  ctx.fillStyle = '#fbbf24';
-  drawTextWithEmojis(ctx, `${user.coins || 0} 🪙`, col2X, clubStartY + 59, 'bold 19px sans-serif');
-  ctx.restore();
 
   // 5. Footer credits
   ctx.save();
   ctx.fillStyle = 'rgba(212, 175, 55, 0.4)';
   ctx.textAlign = 'center';
-  drawTextWithEmojis(ctx, 'CRICKET LEAGUE COLLECTIBLES • ELITE GOLD SERIES', width / 2, cardY + cardH - 25, 'bold 10px sans-serif');
+  drawTextWithEmojis(ctx, 'CRICKET LEAGUE COLLECTIBLES • ELITE GOLD SERIES', width / 2, cardY + cardH - 32, 'bold 10px sans-serif');
   ctx.restore();
 
   // 6. Premium Glossy Card overlay reflection shine
@@ -519,7 +562,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   glossGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = glossGrad;
   ctx.beginPath();
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 12);
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
   ctx.fill();
   ctx.restore();
 
