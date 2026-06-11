@@ -7,6 +7,58 @@ try {
   console.error("Failed to load system fonts in profile generator:", e);
 }
 
+const themes = [
+  {
+    name: 'red',
+    themeColor: '#ef4444',
+    borderBaseColor: '#1e293b',
+    glowColorRadial: 'rgba(239, 68, 68, 0.12)',
+    editionName: 'REDLINE SPORT EDITION'
+  },
+  {
+    name: 'blue',
+    themeColor: '#38bdf8',
+    borderBaseColor: '#0f172a',
+    glowColorRadial: 'rgba(56, 189, 248, 0.12)',
+    editionName: 'SAPPHIRE STRIKE EDITION'
+  },
+  {
+    name: 'green',
+    themeColor: '#22c55e',
+    borderBaseColor: '#062f17',
+    glowColorRadial: 'rgba(34, 197, 94, 0.12)',
+    editionName: 'TOXIC HAZARD EDITION'
+  },
+  {
+    name: 'purple',
+    themeColor: '#a855f7',
+    borderBaseColor: '#1e1b4b',
+    glowColorRadial: 'rgba(168, 85, 247, 0.12)',
+    editionName: 'NEON HELIX EDITION'
+  },
+  {
+    name: 'gold',
+    themeColor: '#fbbf24',
+    borderBaseColor: '#1c1917',
+    glowColorRadial: 'rgba(251, 191, 36, 0.12)',
+    editionName: 'CENTURION GOLD EDITION'
+  },
+  {
+    name: 'cyan',
+    themeColor: '#06b6d4',
+    borderBaseColor: '#083344',
+    glowColorRadial: 'rgba(6, 182, 212, 0.12)',
+    editionName: 'GLACIER PEAK EDITION'
+  },
+  {
+    name: 'pink',
+    themeColor: '#ec4899',
+    borderBaseColor: '#31102f',
+    glowColorRadial: 'rgba(236, 72, 153, 0.12)',
+    editionName: 'ROSE COPPER EDITION'
+  }
+];
+
 const unicodeMap = {
   // Small Caps
   0x1d00: 'A', 0x299: 'B', 0x1d04: 'C', 0x1d05: 'D', 0x1d07: 'E', 0xa730: 'F',
@@ -483,22 +535,30 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const avY = 210;
   const avRadius = 65;
 
+  // Select theme dynamically
+  const themeName = user.card_theme || 'red';
+  let theme = themes.find(t => t.name === themeName) || themes[0];
+  if (!user.card_theme && user.id) {
+    const themeIndex = (parseInt(user.id) || 0) % themes.length;
+    theme = themes[themeIndex];
+  }
+
   // 1. Matte Charcoal Background
   ctx.fillStyle = '#060608';
   ctx.fillRect(0, 0, width, height);
 
-  // Red radial core glow around avatar
+  // Background radial core glow
   ctx.save();
   const glow = ctx.createRadialGradient(avX, avY, 10, avX, avY, 340);
-  glow.addColorStop(0, 'rgba(239, 68, 68, 0.12)');
+  glow.addColorStop(0, theme.glowColorRadial);
   glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
 
-  // Diagonal racing red pinstripes
+  // Diagonal pinstripes
   ctx.save();
-  ctx.strokeStyle = 'rgba(239, 68, 68, 0.015)';
+  ctx.strokeStyle = theme.glowColorRadial.replace('0.12', '0.02');
   ctx.lineWidth = 1.5;
   for (let i = -100; i < width + height; i += 60) {
     ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 400, height); ctx.stroke();
@@ -524,18 +584,27 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     ctx.closePath();
   }
 
+  // Outer frame
   ctx.save();
-  ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 4.5;
+  ctx.strokeStyle = theme.borderBaseColor; ctx.lineWidth = 4.5;
   drawChassisOutline(0); ctx.stroke();
+  ctx.restore();
 
-  ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5;
+  // Glowing inner frame outline
+  ctx.save();
+  ctx.strokeStyle = theme.themeColor;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = theme.themeColor;
+  ctx.shadowBlur = 14;
   drawChassisOutline(8); ctx.stroke();
   ctx.restore();
 
   // 3. Avatar Section
   ctx.save();
-  ctx.strokeStyle = '#ef4444';
+  ctx.strokeStyle = theme.themeColor;
   ctx.lineWidth = 2.5;
+  ctx.shadowColor = theme.themeColor;
+  ctx.shadowBlur = 14;
   ctx.beginPath(); ctx.arc(avX, avY, avRadius + 4, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
 
@@ -642,11 +711,17 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   // 6. Batting & Bowling Stats Grid
   function drawSectionHeader(title, y) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(80, y); ctx.lineTo(210, y); ctx.moveTo(390, y); ctx.lineTo(520, y); ctx.stroke();
     ctx.fillStyle = '#060608'; ctx.fillRect(215, y - 12, 170, 24);
-    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 11px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
+    
+    // Glowing Section text
+    ctx.fillStyle = theme.themeColor;
+    ctx.font = 'bold 11px "DejaVu Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = theme.themeColor;
+    ctx.shadowBlur = 8;
     drawTextWithEmojis(ctx, title, 300, y + 4, 'bold 11px "DejaVu Sans"');
     ctx.restore();
   }
@@ -674,7 +749,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.save();
   battingItems.forEach(item => {
     ctx.fillStyle = '#0d0b0e';
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.roundRect(item.x - 90, item.y, 180, 56, 4);
@@ -702,7 +777,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.save();
   bowlingItems.forEach(item => {
     ctx.fillStyle = '#0d0b0e';
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.roundRect(item.x - 90, item.y, 180, 56, 4);
@@ -719,7 +794,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.save();
   ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
   ctx.font = 'bold 10px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
-  drawTextWithEmojis(ctx, "HANDCRICKET PRO COLLECTIBLE  //  REDLINE SPORT EDITION", 300, 940, 'bold 10px "DejaVu Sans"');
+  drawTextWithEmojis(ctx, `HANDCRICKET PRO COLLECTIBLE  //  ${theme.editionName}`, 300, 940, 'bold 10px "DejaVu Sans"');
   ctx.restore();
 
   // 8. Card Gloss Overlay
