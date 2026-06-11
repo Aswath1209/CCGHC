@@ -526,744 +526,478 @@ function drawAvatarFlourish(ctx, x, y, radius) {
   ctx.restore();
 }
 
+// ─── Icon Drawers ──────────────────────────────────────────────────────────
+
+function iconCalendar(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 1.5;
+  ctx.strokeRect(x-9, y-9, 18, 17);
+  ctx.fillRect(x-5, y-13, 3, 6); ctx.fillRect(x+2, y-13, 3, 6);
+  ctx.beginPath(); ctx.moveTo(x-9, y-3); ctx.lineTo(x+9, y-3); ctx.stroke();
+  ctx.restore();
+}
+function iconBat(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 1.8;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI/4);
+  ctx.fillRect(-2, -14, 4, 6); 
+  ctx.beginPath(); ctx.moveTo(-4,-8); ctx.lineTo(4,-8); ctx.lineTo(5,8); ctx.quadraticCurveTo(0,12,-5,8); ctx.closePath(); ctx.fill();
+  ctx.restore(); ctx.restore();
+}
+function iconChart(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(x-9, y+7); ctx.lineTo(x-3, y-2); ctx.lineTo(x+2, y+3); ctx.lineTo(x+9, y-7); ctx.stroke();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x+9, y-7, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function iconSpeedometer(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.arc(x, y+2, 9, Math.PI, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y+2); ctx.lineTo(x+6, y-5); ctx.stroke();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y+2, 2, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function iconWickets(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x-6,y-8); ctx.lineTo(x-6,y+8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x,y-8); ctx.lineTo(x,y+8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+6,y-8); ctx.lineTo(x+6,y+8); ctx.stroke();
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x-8,y-9); ctx.lineTo(x-1,y-9); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+1,y-9); ctx.lineTo(x+8,y-9); ctx.stroke();
+  ctx.restore();
+}
+function iconTarget(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function iconStar(ctx, x, y, c) {
+  ctx.save(); ctx.fillStyle = c;
+  ctx.beginPath();
+  for (let i=0; i<5; i++) {
+    const a1 = (Math.PI/2)*3 + i*(Math.PI*2/5);
+    const a2 = a1 + Math.PI/5;
+    if (i===0) ctx.moveTo(x+Math.cos(a1)*9, y+Math.sin(a1)*9);
+    else ctx.lineTo(x+Math.cos(a1)*9, y+Math.sin(a1)*9);
+    ctx.lineTo(x+Math.cos(a2)*4, y+Math.sin(a2)*4);
+  }
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function iconCircle50(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = c; ctx.font = 'bold 8px "DejaVu Sans"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('50', x, y+0.5); ctx.restore();
+}
+function iconCircle100(ctx, x, y, c) {
+  ctx.save(); ctx.strokeStyle = c; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = c; ctx.font = 'bold 7px "DejaVu Sans"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('100', x, y+0.5); ctx.restore();
+}
+function iconMedal(ctx, x, y, c) {
+  ctx.save(); ctx.fillStyle = c;
+  ctx.beginPath(); ctx.arc(x, y+3, 7, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#0a0a0a';
+  ctx.beginPath(); ctx.arc(x, y+3, 4, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.moveTo(x-4, y-4); ctx.lineTo(x, y+0); ctx.lineTo(x+4, y-4); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ─── Stadium Background ────────────────────────────────────────────────────
+
+function drawStadiumBg(ctx, theme) {
+  const W = 600, H = 1000;
+  const tc = theme.themeColor;
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H*0.55);
+  sky.addColorStop(0, '#060408');
+  sky.addColorStop(0.5, '#0d0810');
+  sky.addColorStop(1, '#180d05');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+
+  // Ground glow
+  const ground = ctx.createLinearGradient(0, H*0.45, 0, H);
+  ground.addColorStop(0, '#0a0600');
+  ground.addColorStop(0.4, '#130900');
+  ground.addColorStop(1, '#050300');
+  ctx.fillStyle = ground; ctx.fillRect(0, H*0.45, W, H*0.55);
+
+  // Turf lines
+  ctx.save(); ctx.globalAlpha = 0.05;
+  ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i++) {
+    const yy = H*0.55 + i*30;
+    const fade = 1 - i/10;
+    ctx.globalAlpha = 0.04 * fade;
+    ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Perspective pitch lines from center
+  ctx.save(); ctx.globalAlpha = 0.07; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+  const hor = H * 0.52, cx = W/2;
+  for (let dx = -200; dx <= 200; dx += 50) {
+    ctx.beginPath(); ctx.moveTo(cx+dx*0.15, hor); ctx.lineTo(cx+dx, H); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Crowd glow banks (left + right stadium lights)
+  const lightPositions = [[80, 120], [520, 120], [30, 200], [570, 200]];
+  for (const [lx, ly] of lightPositions) {
+    const r = ctx.createRadialGradient(lx, ly, 5, lx, ly, 120);
+    r.addColorStop(0, 'rgba(255,200,80,0.22)');
+    r.addColorStop(0.4, 'rgba(255,140,20,0.07)');
+    r.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = r; ctx.fillRect(0, 0, W, H);
+  }
+
+  // Ember / spark particles
+  ctx.save();
+  const embers = [
+    [120,280,2],[200,150,1.5],[80,400,2],[160,320,1],[480,200,2.5],
+    [530,300,1.5],[440,160,2],[350,120,1],[250,350,1.5],[500,380,1.8],
+    [70,480,1.2],[560,450,2],[130,180,1.8],[490,140,1.5],[320,90,1]
+  ];
+  for (const [ex, ey, er] of embers) {
+    const rg = ctx.createRadialGradient(ex, ey, 0, ex, ey, er*3);
+    rg.addColorStop(0, tc);
+    rg.addColorStop(0.5, tc+'88');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(ex, ey, er*3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(ex, ey, er*0.6, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+
+  // Theme color bottom pulse
+  const pulse = ctx.createRadialGradient(W/2, H, 0, W/2, H, 350);
+  pulse.addColorStop(0, tc+'25');
+  pulse.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = pulse; ctx.fillRect(0, 0, W, H);
+}
+
+// ─── CCG Logo ──────────────────────────────────────────────────────────────
+
+function drawCCGLogo(ctx, x, y, theme) {
+  ctx.save();
+  // Background hexagon-ish badge
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.strokeStyle = theme.themeColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y-32); ctx.lineTo(x+28, y-18); ctx.lineTo(x+28, y+10);
+  ctx.lineTo(x, y+24); ctx.lineTo(x-28, y+10); ctx.lineTo(x-28, y-18);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // Flame icon
+  ctx.fillStyle = theme.themeColor;
+  ctx.shadowColor = theme.themeColor; ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(x-6, y-5); ctx.bezierCurveTo(x-8, y-14, x, y-20, x+1, y-12);
+  ctx.bezierCurveTo(x+5, y-18, x+4, y-10, x+6, y-5);
+  ctx.bezierCurveTo(x+9, y+2, x+4, y+8, x, y+6);
+  ctx.bezierCurveTo(x-4, y+8, x-9, y+2, x-6, y-5);
+  ctx.closePath(); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // "CCG" text
+  ctx.fillStyle = theme.themeColor;
+  ctx.font = 'bold 10px "DejaVu Sans"'; ctx.textAlign = 'center';
+  ctx.fillText('CCG', x, y+21);
+  ctx.restore();
+}
+
+// ─── Card Frame ────────────────────────────────────────────────────────────
+
+function drawCardFrame(ctx, theme) {
+  const x=20, y=20, w=560, h=960, r=18, tc=theme.themeColor, sc=theme.secondaryColor;
+
+  // Outer glow
+  ctx.save();
+  ctx.shadowColor = tc; ctx.shadowBlur = 28;
+  ctx.strokeStyle = tc; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.stroke();
+  ctx.shadowBlur = 0; ctx.restore();
+
+  // Inner second track
+  ctx.save();
+  ctx.shadowColor = sc; ctx.shadowBlur = 10;
+  ctx.strokeStyle = sc; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(x+8, y+8, w-16, h-16, r-4); ctx.stroke();
+  ctx.shadowBlur = 0; ctx.restore();
+
+  // Corner notches
+  const corners = [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]];
+  ctx.save(); ctx.strokeStyle = tc; ctx.lineWidth = 3; ctx.shadowColor = tc; ctx.shadowBlur = 12;
+  for (const [cx2,cy2,dx,dy] of corners) {
+    ctx.beginPath();
+    ctx.moveTo(cx2+dx*5, cy2); ctx.lineTo(cx2+dx*32, cy2);
+    ctx.moveTo(cx2, cy2+dy*5); ctx.lineTo(cx2, cy2+dy*32);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─── Stat Panel ────────────────────────────────────────────────────────────
+
+function drawStatPanel(ctx, title, items, panelX, panelY, panelW, panelH, theme) {
+  const tc = theme.themeColor;
+  ctx.save();
+
+  // Panel bg
+  ctx.fillStyle = 'rgba(5,3,2,0.88)';
+  ctx.strokeStyle = tc+'aa';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(panelX, panelY, panelW, panelH, 6); ctx.fill(); ctx.stroke();
+
+  // Title bar
+  const titleGrad = ctx.createLinearGradient(panelX, panelY, panelX+panelW, panelY);
+  titleGrad.addColorStop(0, tc+'00');
+  titleGrad.addColorStop(0.3, tc+'44');
+  titleGrad.addColorStop(0.7, tc+'44');
+  titleGrad.addColorStop(1, tc+'00');
+  ctx.fillStyle = titleGrad;
+  ctx.fillRect(panelX+2, panelY+2, panelW-4, 22);
+
+  ctx.fillStyle = tc;
+  ctx.font = 'bold 9.5px "DejaVu Sans"'; ctx.textAlign = 'center';
+  ctx.fillText(title, panelX + panelW/2, panelY + 16);
+
+  // Items
+  const cols = items.length;
+  const colW = panelW / cols;
+  items.forEach((item, i) => {
+    const cx2 = panelX + colW*i + colW/2;
+    const iy = panelY + 34;
+
+    // Icon
+    item.icon(ctx, cx2, iy + 10, tc);
+
+    // Label
+    ctx.fillStyle = '#aaa'; ctx.font = 'bold 8px "DejaVu Sans"'; ctx.textAlign = 'center';
+    ctx.fillText(item.label, cx2, iy + 28);
+
+    // Value
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 17px "DejaVu Sans"'; ctx.textAlign = 'center';
+    ctx.shadowColor = tc; ctx.shadowBlur = 6;
+    ctx.fillText(String(item.val), cx2, iy + 48);
+    ctx.shadowBlur = 0;
+
+    // Divider
+    if (i < cols-1) {
+      ctx.strokeStyle = tc+'55'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(panelX+colW*(i+1), panelY+28);
+      ctx.lineTo(panelX+colW*(i+1), panelY+panelH-8);
+      ctx.stroke();
+    }
+  });
+
+  ctx.restore();
+}
+
+// ─── Main Generator ────────────────────────────────────────────────────────
+
 async function generateProfileCard(user, stats, avatarBuffer) {
-  const width = 800;
-  const height = 1000;
+  const width = 800, height = 1000;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Fill entire 800x1000 canvas with the deep obsidian black
-  ctx.fillStyle = '#050507';
-  ctx.fillRect(0, 0, width, height);
+  // Black outer fill
+  ctx.fillStyle = '#020101'; ctx.fillRect(0, 0, width, height);
 
-  // Translate 100px horizontally to center the 600px wide card
-  ctx.save();
-  ctx.translate(100, 0);
+  // Translate to center 600px card
+  ctx.save(); ctx.translate(100, 0);
 
-  // Card boundary dimensions (relative to the 600px card width)
-  const cardX = 35;
-  const cardY = 35;
-  const cardW = 530;
-  const cardH = 930;
-
-  const avX = 300;
-  const avY = 210;
-  const avRadius = 65;
-
-  // Select theme dynamically
   const themeName = user.card_theme || 'red';
   let theme = themes.find(t => t.name === themeName) || themes[0];
   if (!user.card_theme && user.id) {
-    const themeIndex = (parseInt(user.id) || 0) % themes.length;
-    theme = themes[themeIndex];
+    theme = themes[(parseInt(user.id)||0) % themes.length];
   }
 
-  // 1. Sleek luxury brushed metal background texture
-  drawBackgroundTexture(ctx, theme);
+  const tc = theme.themeColor;
+  const sc = theme.secondaryColor;
 
-  // Background radial core glow
+  // ── 1. Stadium Background
+  drawStadiumBg(ctx, theme);
+
+  // ── 2. Card frame
+  drawCardFrame(ctx, theme);
+
+  // ── 3. CCG Logo (top-left)
+  drawCCGLogo(ctx, 60, 68, theme);
+
+  // ── 4. Season badge (top-right)
   ctx.save();
-  const glow = ctx.createRadialGradient(avX, avY, 10, avX, avY, 340);
-  glow.addColorStop(0, theme.glowColorRadial);
-  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, 600, height);
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.strokeStyle = tc; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(390, 45, 170, 34, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px "DejaVu Sans"'; ctx.textAlign = 'left';
+  ctx.fillText('SEASON 3', 408, 67);
+  ctx.fillStyle = tc; ctx.font = 'bold 13px "DejaVu Sans"';
+  ctx.fillText('  ///', 480, 67);
   ctx.restore();
 
-  // 2. Theme-specific Outlines / Chassis Shapes
-  function drawChassisOutline(offset) {
-    const cx = cardX + offset;
-    const cy = cardY + offset;
-    const cw = cardW - (offset * 2);
-    const ch = cardH - (offset * 2);
+  // ── 5. Avatar with glowing ring
+  const avX = 300, avY = 270, avR = 90;
 
-    if (theme.name === 'blue') {
-      ctx.beginPath();
-      ctx.roundRect(cx, cy, cw, ch, 24);
-    } else if (theme.name === 'green') {
-      const cut = 16;
-      ctx.beginPath();
-      ctx.moveTo(cx + cut, cy);
-      ctx.lineTo(cx + cw - cut, cy);
-      ctx.lineTo(cx + cw, cy + cut);
-      ctx.lineTo(cx + cw, cy + ch - cut);
-      ctx.lineTo(cx + cw - cut, cy + ch);
-      ctx.lineTo(cx + cut, cy + ch);
-      ctx.lineTo(cx, cy + ch - cut);
-      ctx.lineTo(cx, cy + cut);
-      ctx.closePath();
-    } else if (theme.name === 'purple') {
-      const step = 14;
-      ctx.beginPath();
-      ctx.moveTo(cx + step, cy);
-      ctx.lineTo(cx + cw - step, cy);
-      ctx.lineTo(cx + cw - step, cy + step);
-      ctx.lineTo(cx + cw, cy + step);
-      ctx.lineTo(cx + cw, cy + ch - step);
-      ctx.lineTo(cx + cw - step, cy + ch - step);
-      ctx.lineTo(cx + cw - step, cy + ch);
-      ctx.lineTo(cx + step, cy + ch);
-      ctx.lineTo(cx + step, cy + ch - step);
-      ctx.lineTo(cx, cy + ch - step);
-      ctx.lineTo(cx, cy + step);
-      ctx.lineTo(cx + step, cy + step);
-      ctx.closePath();
-    } else if (theme.name === 'gold') {
-      ctx.beginPath();
-      ctx.moveTo(cx + cw / 2, cy); // Top center peak
-      ctx.lineTo(cx + cw - 16, cy + 12);
-      ctx.lineTo(cx + cw, cy + 32);
-      ctx.lineTo(cx + cw, cy + ch - 32);
-      ctx.lineTo(cx + cw - 16, cy + ch - 12);
-      ctx.lineTo(cx + cw / 2, cy + ch); // Bottom center peak
-      ctx.lineTo(cx + 16, cy + ch - 12);
-      ctx.lineTo(cx, cy + ch - 32);
-      ctx.lineTo(cx, cy + 32);
-      ctx.lineTo(cx + 16, cy + 12);
-      ctx.closePath();
-    } else if (theme.name === 'cyan') {
-      const cutX = 32;
-      const cutY = 20;
-      ctx.beginPath();
-      ctx.moveTo(cx + cutX, cy);
-      ctx.lineTo(cx + cw - cutX, cy);
-      ctx.lineTo(cx + cw, cy + cutY);
-      ctx.lineTo(cx + cw, cy + ch - cutY);
-      ctx.lineTo(cx + cw - cutX, cy + ch);
-      ctx.lineTo(cx + cutX, cy + ch);
-      ctx.lineTo(cx, cy + ch - cutY);
-      ctx.lineTo(cx, cy + cutY);
-      ctx.closePath();
-    } else if (theme.name === 'pink') {
-      const cut = 24;
-      ctx.beginPath();
-      ctx.moveTo(cx + cut, cy);
-      ctx.lineTo(cx + cw - cut, cy);
-      ctx.lineTo(cx + cw, cy + cut);
-      ctx.lineTo(cx + cw, cy + ch - cut);
-      ctx.lineTo(cx + cw - cut, cy + ch);
-      ctx.lineTo(cx + cut, cy + ch);
-      ctx.lineTo(cx, cy + ch - cut);
-      ctx.lineTo(cx, cy + cut);
-      ctx.closePath();
-    } else {
-      // Default / Red (Redline Sport) asymmetric chamfer
-      const cut = 24;
-      ctx.beginPath();
-      ctx.moveTo(cx + 12, cy);
-      ctx.lineTo(cx + cw - cut, cy);
-      ctx.lineTo(cx + cw, cy + cut);
-      ctx.lineTo(cx + cw, cy + ch - 12);
-      ctx.lineTo(cx + cw - 12, cy + ch);
-      ctx.lineTo(cx + cut, cy + ch);
-      ctx.lineTo(cx, cy + ch - cut);
-      ctx.lineTo(cx, cy + 12);
-      ctx.closePath();
-    }
+  // Outer wide glow ring
+  ctx.save();
+  for (let i = 3; i >= 1; i--) {
+    ctx.strokeStyle = tc + (i===3?'30': i===2?'60':'bb');
+    ctx.lineWidth = i * 6;
+    ctx.shadowColor = tc; ctx.shadowBlur = 20*i;
+    ctx.beginPath(); ctx.arc(avX, avY, avR + 10 + i*5, 0, Math.PI*2); ctx.stroke();
   }
-
-  // Outer frame
-  ctx.save();
-  ctx.strokeStyle = theme.borderBaseColor; ctx.lineWidth = 4.5;
-  drawChassisOutline(0); ctx.stroke();
+  // Crisp bright ring
+  ctx.strokeStyle = tc; ctx.lineWidth = 3; ctx.shadowColor = tc; ctx.shadowBlur = 25;
+  ctx.beginPath(); ctx.arc(avX, avY, avR+10, 0, Math.PI*2); ctx.stroke();
+  // White core
+  ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 1; ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(avX, avY, avR+10, 0, Math.PI*2); ctx.stroke();
   ctx.restore();
 
-  // Multi-pass laser neon glow for OUTER track
+  // Spark orbits
   ctx.save();
-  ctx.shadowColor = theme.themeColor;
-  
-  // Pass 1: Wide neon emission
-  ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 3.5;
-  ctx.shadowBlur = 18;
-  drawChassisOutline(8); ctx.stroke();
-  
-  // Pass 2: High intensity center core
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.shadowBlur = 4;
-  drawChassisOutline(8); ctx.stroke();
-  ctx.restore();
-
-  // Multi-pass laser neon glow for INNER track (Secondary theme color)
-  ctx.save();
-  ctx.shadowColor = theme.secondaryColor;
-  
-  // Pass 1: Wide neon emission
-  ctx.strokeStyle = theme.secondaryColor;
-  ctx.lineWidth = 2.5;
-  ctx.shadowBlur = 12;
-  drawChassisOutline(18); ctx.stroke();
-  
-  // Pass 2: High intensity center core
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 0.8;
-  ctx.shadowBlur = 3;
-  drawChassisOutline(18); ctx.stroke();
-  ctx.restore();
-
-  // Corner brackets conditionally matching theme geometry
-  if (theme.name === 'red' || theme.name === 'green' || theme.name === 'pink') {
-    drawCornerBracket(ctx, cardX + 12, cardY + 12, 1, 1, theme.themeColor);
-    drawCornerBracket(ctx, cardX + cardW - 12, cardY + 12, -1, 1, theme.themeColor);
-    drawCornerBracket(ctx, cardX + 12, cardY + cardH - 12, 1, -1, theme.themeColor);
-    drawCornerBracket(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1, theme.themeColor);
+  const sparkAngles = [0.3, 1.1, 1.9, 3.0, 4.2, 5.1];
+  for (const ang of sparkAngles) {
+    const sx = avX + Math.cos(ang) * (avR+22);
+    const sy = avY + Math.sin(ang) * (avR+22);
+    const rg = ctx.createRadialGradient(sx,sy,0,sx,sy,6);
+    rg.addColorStop(0,'#ffffff');
+    rg.addColorStop(0.3, tc);
+    rg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(sx,sy,6,0,Math.PI*2); ctx.fill();
   }
-
-  // 2.5. Top Header Badges and Serials
-  ctx.save();
-  ctx.font = 'bold 8px "DejaVu Sans", sans-serif';
-  
-  // Left: "ULTRA-PREMIUM COLLECTIBLE"
-  ctx.fillStyle = theme.secondaryColor;
-  ctx.textAlign = 'left';
-  drawTextWithEmojis(ctx, "ULTRA-PREMIUM COLLECTIBLE", cardX + 25, 65, 'bold 8px "DejaVu Sans"');
-
-  // Right: "SERIALIZED NO. XXX/100"
-  ctx.fillStyle = '#94a3b8';
-  ctx.textAlign = 'right';
-  const displayId = String((parseInt(user.id) || 0) % 100).padStart(3, '0');
-  drawTextWithEmojis(ctx, `SERIALIZED NO. ${displayId}/100`, cardX + cardW - 25, 65, 'bold 8px "DejaVu Sans"');
-  
-  // Center badge backing: "CYBERNETIC ATHLETE" / theme.editionName
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-  ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(200, 50, 200, 22, 6);
-  ctx.fill(); ctx.stroke();
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 9px "DejaVu Sans", sans-serif';
-  ctx.textAlign = 'center';
-  drawTextWithEmojis(ctx, theme.editionName, 300, 64, 'bold 9px "DejaVu Sans"');
   ctx.restore();
 
-  // Glowing shards around the avatar
-  ctx.save();
-  ctx.fillStyle = theme.themeColor;
-  ctx.shadowColor = theme.themeColor;
-  ctx.shadowBlur = 8;
-  
-  // Shard A (top-left of avatar)
-  ctx.beginPath();
-  ctx.moveTo(avX - avRadius - 15, avY - 20);
-  ctx.lineTo(avX - avRadius - 5, avY - 35);
-  ctx.lineTo(avX - avRadius - 8, avY - 10);
-  ctx.closePath(); ctx.fill();
-
-  // Shard B (bottom-right of avatar)
-  ctx.beginPath();
-  ctx.moveTo(avX + avRadius + 12, avY + 15);
-  ctx.lineTo(avX + avRadius + 22, avY + 5);
-  ctx.lineTo(avX + avRadius + 18, avY + 28);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
-
-  // 3. Avatar Section with multi-pass glow ring
-  ctx.save();
-  ctx.shadowColor = theme.themeColor;
-  // Pass 1: Wide neon ring
-  ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 4;
-  ctx.shadowBlur = 16;
-  ctx.beginPath(); ctx.arc(avX, avY, avRadius + 4, 0, Math.PI * 2); ctx.stroke();
-
-  // Pass 2: White core ring
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 1;
-  ctx.shadowBlur = 4;
-  ctx.beginPath(); ctx.arc(avX, avY, avRadius + 4, 0, Math.PI * 2); ctx.stroke();
-  ctx.restore();
-
+  // Load and draw avatar
   let loadedImg = null;
   if (avatarBuffer) {
-    try {
-      loadedImg = await loadImage(avatarBuffer);
-    } catch (e) {
-      console.error("Failed to load avatar image in profile generator:", e);
-    }
+    try { loadedImg = await loadImage(avatarBuffer); } catch(e) {}
   }
-
   ctx.save();
-  ctx.beginPath();
-  ctx.arc(avX, avY, avRadius, 0, Math.PI * 2);
-  ctx.clip();
+  ctx.beginPath(); ctx.arc(avX, avY, avR, 0, Math.PI*2); ctx.clip();
   if (loadedImg) {
-    ctx.drawImage(loadedImg, avX - avRadius, avY - avRadius, avRadius * 2, avRadius * 2);
+    ctx.drawImage(loadedImg, avX-avR, avY-avR, avR*2, avR*2);
   } else {
-    drawSilhouette(ctx, avX, avY, avRadius);
+    drawSilhouette(ctx, avX, avY, avR);
   }
   ctx.restore();
 
-  // 4. Dynamic Username Capsule with Emoji Support
-  const name = normalizeStyledText(user.first_name || 'PLAYER');
-  const displayName = name.toUpperCase();
+  // ── 6. Nameplate
+  const name = normalizeStyledText(user.first_name || 'PLAYER').toUpperCase();
+  const handle = `@${(user.username || user.first_name || 'player').toLowerCase().replace(/\s+/g,'_')}`;
 
-  let fontSize = 21;
-  let fontSpec = `bold ${fontSize}px "DejaVu Sans"`;
-
-  function measureNameWidth(fs) {
-    ctx.save();
-    const fontParts = fs.split(/\s+/);
-    const familyIndex = fontParts.findIndex(part => part.includes('sans-serif') || part.includes('Arial') || part.includes('DejaVu'));
-    let sizeAndStyle = '21px';
-    let primaryFamily = 'DejaVu Sans';
-    if (familyIndex !== -1) {
-      sizeAndStyle = fontParts.slice(0, familyIndex).join(' ');
-      const familyPart = fontParts.slice(familyIndex).join(' ').replace(/['"]/g, '');
-      if (familyPart) primaryFamily = familyPart;
-    } else {
-      sizeAndStyle = fontParts.slice(0, -1).join(' ');
-    }
-    const primaryFont = `${sizeAndStyle} "${primaryFamily}"`;
-    const emojiFont = `${sizeAndStyle} "Noto Color Emoji"`;
-
-    const segments = displayName.split(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/gu);
-    const activeSegments = segments.filter(seg => seg !== '');
-
-    let w = 0;
-    for (const seg of activeSegments) {
-      const isEmoji = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/u.test(seg);
-      ctx.font = isEmoji ? emojiFont : primaryFont;
-      w += ctx.measureText(seg).width;
-    }
-    ctx.restore();
-    return w;
+  // Measure name for adaptive font
+  let fs = 34;
+  ctx.font = `bold italic ${fs}px "DejaVu Sans"`;
+  while (fs > 16 && ctx.measureText(name).width > 400) {
+    fs--;
+    ctx.font = `bold italic ${fs}px "DejaVu Sans"`;
   }
 
-  while (fontSize > 11 && measureNameWidth(fontSpec) > 260) {
-    fontSize--;
-    fontSpec = `bold ${fontSize}px "DejaVu Sans"`;
-  }
-
-  const textW = measureNameWidth(fontSpec);
-  const nameplateW = Math.max(160, Math.min(320, textW + 36));
-  const nameplateX = 300 - nameplateW / 2;
-  const nameplateY = avY + 95;
-  const nameplateH = 38;
-  const nCut = 8;
+  const npY = avY + avR + 28;
+  const npH = 68;
+  const npX = 70, npW = 460;
 
   ctx.save();
+  // Dark bg
+  ctx.fillStyle = 'rgba(4,2,1,0.92)';
+  ctx.strokeStyle = tc; ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(nameplateX + nCut, nameplateY);
-  ctx.lineTo(nameplateX + nameplateW - nCut, nameplateY);
-  ctx.lineTo(nameplateX + nameplateW, nameplateY + nCut);
-  ctx.lineTo(nameplateX + nameplateW, nameplateY + nameplateH - nCut);
-  ctx.lineTo(nameplateX + nameplateW - nCut, nameplateY + nameplateH);
-  ctx.lineTo(nameplateX + nCut, nameplateY + nameplateH);
-  ctx.lineTo(nameplateX, nameplateY + nameplateH - nCut);
-  ctx.lineTo(nameplateX, nameplateY + nCut);
-  ctx.closePath();
+  ctx.moveTo(npX+16, npY); ctx.lineTo(npX+npW-16, npY);
+  ctx.lineTo(npX+npW, npY+16); ctx.lineTo(npX+npW, npY+npH-8);
+  ctx.lineTo(npX+npW-8, npY+npH); ctx.lineTo(npX+8, npY+npH);
+  ctx.lineTo(npX, npY+npH-8); ctx.lineTo(npX, npY+16);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  // Dark brushed finish
-  const nameplateGrad = ctx.createLinearGradient(nameplateX, nameplateY, nameplateX, nameplateY + nameplateH);
-  nameplateGrad.addColorStop(0, '#151419');
-  nameplateGrad.addColorStop(1, '#0c0b0f');
-  ctx.fillStyle = nameplateGrad;
-  ctx.fill();
-  ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
- 
-  // Bi-color glowing accent corners
-  ctx.strokeStyle = theme.secondaryColor;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  // Top-left corner bracket
-  ctx.moveTo(nameplateX + 10, nameplateY);
-  ctx.lineTo(nameplateX, nameplateY);
-  ctx.lineTo(nameplateX, nameplateY + 10);
-  // Bottom-right corner bracket
-  ctx.moveTo(nameplateX + nameplateW - 10, nameplateY + nameplateH);
-  ctx.lineTo(nameplateX + nameplateW, nameplateY + nameplateH);
-  ctx.lineTo(nameplateX + nameplateW, nameplateY + nameplateH - 10);
-  ctx.stroke();
-  ctx.restore();
+  // Accent slashes left
+  ctx.fillStyle = tc; ctx.font = 'bold 14px "DejaVu Sans"'; ctx.textAlign = 'left';
+  ctx.globalAlpha = 0.9;
+  ctx.fillText('///  ', npX+12, npY+npH/2+6);
+  // Accent slashes right
+  ctx.textAlign = 'right';
+  ctx.fillText('  ///', npX+npW-12, npY+npH/2+6);
+  ctx.globalAlpha = 1;
 
-  ctx.save();
+  // Name
   ctx.fillStyle = '#ffffff';
-  ctx.textAlign = 'center';
-  const textY = avY + 95 + 19 + (fontSize * 0.35);
-  drawTextWithEmojis(ctx, displayName, 300, textY, fontSpec);
+  ctx.font = `bold italic ${fs}px "DejaVu Sans"`;
+  ctx.textAlign = 'center'; ctx.shadowColor = tc; ctx.shadowBlur = 8;
+  drawTextWithEmojis(ctx, name, 300, npY+38, `bold italic ${fs}px "DejaVu Sans"`);
+  ctx.shadowBlur = 0;
+
+  // Handle
+  ctx.fillStyle = tc; ctx.font = '12px "DejaVu Sans"'; ctx.textAlign = 'center';
+  ctx.fillText(handle, 300, npY+56);
   ctx.restore();
 
-  // 5. Compact MOTM Star Capsule
+  // ── 7. Stat panels
+  const avgStr = stats.dismissals>0 ? (stats.runs/stats.dismissals).toFixed(1) : (stats.runs>0?`${stats.runs}*`:'0.0');
+  const srStr  = stats.balls_faced>0 ? ((stats.runs/stats.balls_faced)*100).toFixed(1) : '0.0';
+  const econ   = stats.balls_bowled>0 ? ((stats.runs_conceded*6)/stats.balls_bowled).toFixed(1) : '0.0';
+  const bAvg   = stats.wickets>0 ? (stats.runs_conceded/stats.wickets).toFixed(1) : '0.0';
+  const bestBowl = `${stats.best_wickets||0}/${stats.best_runs_conceded||0}`;
+  const matches= (stats.wins||0)+(stats.losses||0);
+  const totalInnings = stats.batting_innings || matches || 0;
+
+  const panelX = 40, panelW = 520;
+  const p1Y = npY + npH + 18;
+
+  drawStatPanel(ctx, 'BATTING STATS', [
+    { label:'MATCHES',     val: matches,          icon: iconCalendar },
+    { label:'RUNS',        val: stats.runs||0,    icon: iconBat },
+    { label:'AVERAGE',     val: avgStr,            icon: iconChart },
+    { label:'STRIKE RATE', val: srStr,             icon: iconSpeedometer },
+  ], panelX, p1Y, panelW, 90, theme);
+
+  const p2Y = p1Y + 100;
+  drawStatPanel(ctx, 'BOWLING STATS', [
+    { label:'WICKETS',     val: stats.wickets||0, icon: iconWickets },
+    { label:'ECONOMY',     val: econ,              icon: iconSpeedometer },
+    { label:'AVERAGE',     val: bAvg,              icon: iconChart },
+    { label:'BEST BOWLING',val: bestBowl,          icon: iconTarget },
+  ], panelX, p2Y, panelW, 90, theme);
+
+  const p3Y = p2Y + 100;
+  drawStatPanel(ctx, '', [
+    { label:'HIGHEST SCORE', val: stats.highscore>0 ? `${stats.highscore}*` : '0',  icon: iconStar },
+    { label:'50s',           val: stats.fifties||0,   icon: iconCircle50 },
+    { label:'100s',          val: stats.centuries||0, icon: iconCircle100 },
+    { label:'MOTM',          val: stats.motm||0,      icon: iconMedal },
+  ], panelX, p3Y, panelW, 90, theme);
+
+  // ── 8. Bottom brand text
   ctx.save();
-  ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
-  ctx.strokeStyle = 'rgba(251, 191, 36, 0.25)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.roundRect(260, avY + 140, 80, 20, 4);
-  ctx.fill(); ctx.stroke();
-
-  // Draw gold vector star
-  drawVectorStar(ctx, 274, avY + 150, 5, 4.5, 2, '#fbbf24');
-
-  // Text
-  ctx.fillStyle = '#fbbf24';
-  ctx.font = 'bold 10px "DejaVu Sans", sans-serif';
-  ctx.textAlign = 'left';
-  drawTextWithEmojis(ctx, `${stats.motm || 0} MOTM`, 285, avY + 154, 'bold 10px "DejaVu Sans"');
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.font = 'bold 9px "DejaVu Sans"'; ctx.textAlign = 'center';
+  ctx.fillText('CCG · HANDCRICKET PRO COLLECTIBLE CARD', 300, 960);
   ctx.restore();
 
-  // 6. Batting & Bowling Sleek Dashboard Panels
-  function drawDashboardPanel(title, startY, items, isBatting) {
-    const pX = 65;
-    const pW = 470;
-    const pH = 205;
-    const pCut = 12;
-
-    ctx.save();
-    // 1. Draw chamfered panel backing
-    ctx.beginPath();
-    ctx.moveTo(pX + pCut, startY);
-    ctx.lineTo(pX + pW - pCut, startY);
-    ctx.lineTo(pX + pW, startY + pCut);
-    ctx.lineTo(pX + pW, startY + pH - pCut);
-    ctx.lineTo(pX + pW - pCut, startY + pH);
-    ctx.lineTo(pX + pCut, startY + pH);
-    ctx.lineTo(pX, startY + pH - pCut);
-    ctx.lineTo(pX, startY + pCut);
-    ctx.closePath();
-
-    // Dark technical gradient
-    const panelGrad = ctx.createLinearGradient(pX, startY, pX, startY + pH);
-    panelGrad.addColorStop(0, '#100f13');
-    panelGrad.addColorStop(1, '#070608');
-    ctx.fillStyle = panelGrad;
-    ctx.fill();
-
-    // Panel border
-    ctx.strokeStyle = '#1e1d24';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Glowing corner bracket ticks on the panel
-    ctx.strokeStyle = theme.themeColor;
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    // Top-left bracket
-    ctx.moveTo(pX + 16, startY); ctx.lineTo(pX + pCut, startY); ctx.lineTo(pX, startY + pCut); ctx.lineTo(pX, startY + 16);
-    // Bottom-right bracket
-    ctx.moveTo(pX + pW - 16, startY + pH); ctx.lineTo(pX + pW - pCut, startY + pH); ctx.lineTo(pX + pW, startY + pH - pCut); ctx.lineTo(pX + pW, startY + pH - 16);
-    ctx.stroke();
-
-    // Header label text floating in top-left
-    ctx.fillStyle = '#656370';
-    ctx.font = 'bold 9.5px "DejaVu Sans", sans-serif';
-    ctx.textAlign = 'left';
-    drawTextWithEmojis(ctx, title, pX + 18, startY + 20, 'bold 9.5px "DejaVu Sans"');
-
-    // 2. Division lines inside panel
-    ctx.strokeStyle = '#1b1a20';
-    ctx.lineWidth = 1.2;
-    
-    // Vertical split: Left (visuals) / Right (stats)
-    ctx.beginPath();
-    ctx.moveTo(pX + 145, startY + 28);
-    ctx.lineTo(pX + 145, startY + pH - 12);
-    ctx.stroke();
-
-    // Vertical line between stats columns
-    ctx.beginPath();
-    ctx.moveTo(375, startY + 28);
-    ctx.lineTo(375, startY + pH - 12);
-    ctx.stroke();
-
-    // Horizontal division lines for stats rows
-    ctx.beginPath();
-    ctx.moveTo(pX + 145, startY + 86);
-    ctx.lineTo(pX + pW - 15, startY + 86);
-    ctx.moveTo(pX + 145, startY + 144);
-    ctx.lineTo(pX + pW - 15, startY + 144);
-    ctx.stroke();
-
-    // 3. Render left tech visuals
-    if (isBatting) {
-      drawLineGraph(ctx, pX + 15, startY + 40, 115, 62, theme.themeColor);
-      drawRadarScanner(ctx, pX + 72, startY + 152, 26, theme.secondaryColor);
-    } else {
-      drawWaveform(ctx, pX + 15, startY + 40, 115, 62, theme.themeColor);
-      drawRadarScanner(ctx, pX + 72, startY + 152, 26, theme.secondaryColor);
-    }
-
-    // 4. Render grid items
-    items.forEach(item => {
-      // Label
-      ctx.fillStyle = '#8e8b9e';
-      ctx.font = 'bold 9px "DejaVu Sans", sans-serif';
-      ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.label.toUpperCase(), item.x, item.y, 'bold 9px "DejaVu Sans"');
-
-      // Value
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 18.5px "DejaVu Sans", sans-serif';
-      drawTextWithEmojis(ctx, String(item.val), item.x, item.y + 23, 'bold 18.5px "DejaVu Sans"');
-    });
-
-    ctx.restore();
-  }
-
-  const col1 = 292;
-  const col2 = 452;
-  const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs}*` : '0.00');
-  const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
-  const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
-  const bowlAvg = stats.wickets > 0 ? (stats.runs_conceded / stats.wickets).toFixed(2) : '0.00';
-  const overs = (stats.balls_bowled / 6).toFixed(1);
-
-  const batStartY = avY + 195;
-  const battingItems = [
-    { label: "Runs Scored", val: stats.runs || 0, x: col1, y: batStartY + 50 },
-    { label: "Batting Avg", val: avgStr, x: col2, y: batStartY + 50 },
-    { label: "Highest Score", val: stats.highscore || 0, x: col1, y: batStartY + 108 },
-    { label: "Fours / Sixes", val: `${stats.fours || 0} / ${stats.sixes || 0}`, x: col2, y: batStartY + 108 },
-    { label: "50s / 100s", val: `${stats.fifties || 0} / ${stats.centuries || 0}`, x: col1, y: batStartY + 166 },
-    { label: "Ducks Count", val: stats.ducks || 0, x: col2, y: batStartY + 166 }
-  ];
-  drawDashboardPanel("BATTING INSTRUMENTS", batStartY, battingItems, true);
-
-  const bowlStartY = batStartY + 235;
-  const bowlingItems = [
-    { label: "Wickets Taken", val: stats.wickets || 0, x: col1, y: bowlStartY + 50 },
-    { label: "Economy Rate", val: econ, x: col2, y: bowlStartY + 50 },
-    { label: "Best Bowling", val: bestBowling, x: col1, y: bowlStartY + 108 },
-    { label: "3w / 5w Hauls", val: `${stats.threew || 0} / ${stats.fivew || 0}`, x: col2, y: bowlStartY + 108 },
-    { label: "Bowling Avg", val: bowlAvg, x: col1, y: bowlStartY + 166 },
-    { label: "Overs Bowled", val: overs, x: col2, y: bowlStartY + 166 }
-  ];
-  drawDashboardPanel("BOWLING INSTRUMENTS", bowlStartY, bowlingItems, false);
-
-  // 7. Bottom Brand Stamp
-  ctx.save();
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-  ctx.font = 'bold 10px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
-  drawTextWithEmojis(ctx, `HANDCRICKET PRO COLLECTIBLE  //  ${theme.editionName}`, 300, 940, 'bold 10px "DejaVu Sans"');
-  ctx.restore();
-
-  // 8. Card Gloss Overlay
-  ctx.save();
-  const glossGrad = ctx.createLinearGradient(0, 0, 600, height);
-  glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
-  glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.02)');
-  glossGrad.addColorStop(0.31, 'rgba(255, 255, 255, 0)');
-  glossGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.fillStyle = glossGrad;
-  ctx.beginPath();
-  drawChassisOutline(0);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.restore(); // Restore card translation
-
+  ctx.restore(); // translate
   return canvas.toBuffer('image/png');
 }
 
 function drawSilhouette(ctx, x, y, radius) {
   ctx.fillStyle = '#1e1b18';
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#4a443e';
-  ctx.beginPath();
-  ctx.arc(x, y - 8, radius * 0.4, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(x, y + radius + 8, radius * 0.8, Math.PI, 0, false);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y-radius*0.15, radius*0.38, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y+radius*1.05, radius*0.75, Math.PI, 0, false); ctx.fill();
 }
 
 function drawVectorStar(ctx, cx, cy, spikes, outerRadius, innerRadius, color) {
-  let rot = (Math.PI / 2) * 3;
-  let x = cx;
-  let y = cy;
-  const step = Math.PI / spikes;
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - outerRadius);
-  for (let i = 0; i < spikes; i++) {
-    x = cx + Math.cos(rot) * outerRadius;
-    y = cy + Math.sin(rot) * outerRadius;
-    ctx.lineTo(x, y);
-    rot += step;
-
-    x = cx + Math.cos(rot) * innerRadius;
-    y = cy + Math.sin(rot) * innerRadius;
-    ctx.lineTo(x, y);
-    rot += step;
+  let rot = (Math.PI/2)*3; ctx.save(); ctx.beginPath();
+  ctx.moveTo(cx, cy-outerRadius);
+  for (let i=0; i<spikes; i++) {
+    ctx.lineTo(cx+Math.cos(rot)*outerRadius, cy+Math.sin(rot)*outerRadius); rot += Math.PI/spikes;
+    ctx.lineTo(cx+Math.cos(rot)*innerRadius, cy+Math.sin(rot)*innerRadius); rot += Math.PI/spikes;
   }
-  ctx.lineTo(cx, cy - outerRadius);
-  ctx.closePath();
-  ctx.fillStyle = color || '#fbbf24';
-  ctx.fill();
-  ctx.restore();
+  ctx.closePath(); ctx.fillStyle = color||'#fbbf24'; ctx.fill(); ctx.restore();
 }
 
-function drawCornerBracket(ctx, x, y, rx, ry, color) {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(x + rx * 20, y);
-  ctx.lineTo(x, y);
-  ctx.lineTo(x, y + ry * 20);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawLineGraph(ctx, x, y, w, h, themeColor) {
-  ctx.save();
-  // Draw grid lines
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-  ctx.lineWidth = 1;
-  for (let gx = x; gx <= x + w; gx += w / 4) {
-    ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y + h); ctx.stroke();
-  }
-  for (let gy = y; gy <= y + h; gy += h / 4) {
-    ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke();
-  }
-
-  // Draw plot line
-  ctx.strokeStyle = themeColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x, y + h * 0.7);
-  ctx.lineTo(x + w * 0.25, y + h * 0.45);
-  ctx.lineTo(x + w * 0.5, y + h * 0.6);
-  ctx.lineTo(x + w * 0.75, y + h * 0.25);
-  ctx.lineTo(x + w, y + h * 0.35);
-  ctx.stroke();
-
-  // Glow points
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(x + w * 0.75, y + h * 0.25, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function drawRadarScanner(ctx, x, y, radius, themeColor) {
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-  ctx.lineWidth = 1;
-  // Concentric circles
-  ctx.beginPath(); ctx.arc(x, y, radius * 0.4, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(x, y, radius * 0.7, 0, Math.PI * 2); ctx.stroke();
-  
-  // Outer glowing circle
-  ctx.strokeStyle = themeColor;
-  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
-
-  // Crosshairs
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-  ctx.beginPath(); ctx.moveTo(x - radius - 5, y); ctx.lineTo(x + radius + 5, y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x, y - radius - 5); ctx.lineTo(x, y + radius + 5); ctx.stroke();
-
-  // Blips/Scanner line
-  ctx.strokeStyle = themeColor;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  const scanX = x + Math.cos(1.2) * radius;
-  const scanY = y + Math.sin(1.2) * radius;
-  ctx.lineTo(scanX, scanY);
-  ctx.stroke();
-
-  // Target dots
-  ctx.fillStyle = themeColor;
-  ctx.beginPath(); ctx.arc(x + radius * 0.4, y - radius * 0.3, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath(); ctx.arc(x - radius * 0.2, y + radius * 0.5, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}
-
-function drawWaveform(ctx, x, y, w, h, themeColor) {
-  ctx.save();
-  ctx.fillStyle = themeColor;
-  const barCount = 12;
-  const barW = w / barCount - 2;
-  const heights = [0.3, 0.5, 0.8, 0.4, 0.6, 0.9, 0.7, 0.4, 0.2, 0.5, 0.8, 0.3];
-  for (let i = 0; i < barCount; i++) {
-    const barH = h * heights[i];
-    ctx.fillRect(x + i * (barW + 2), y + h - barH, barW, barH);
-  }
-  ctx.restore();
-}
-
-function drawBackgroundTexture(ctx, theme) {
-  ctx.save();
-  
-  // Base dark gradient
-  const baseGrad = ctx.createLinearGradient(0, 0, 600, 1000);
-  baseGrad.addColorStop(0, '#0a0a0c');
-  baseGrad.addColorStop(0.5, '#060608');
-  baseGrad.addColorStop(1, '#020203');
-  ctx.fillStyle = baseGrad;
-  ctx.fillRect(0, 0, 600, 1000);
-  
-  // Cybernetic perspective grid lines
-  const themeColor = theme.themeColor || '#ef4444';
-  ctx.strokeStyle = themeColor + '0d'; // ~5% opacity
-  ctx.lineWidth = 1.5;
-  const horizonY = 320;
-  const centerX = 300;
-
-  // Perspective vertical lines
-  for (let angle = -Math.PI / 1.5; angle <= Math.PI / 1.5; angle += Math.PI / 16) {
-    ctx.beginPath();
-    ctx.moveTo(centerX, horizonY);
-    const endX = centerX + Math.sin(angle) * 1200;
-    const endY = horizonY + Math.cos(angle) * 1200;
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
-  }
-
-  // Perspective horizontal lines
-  let yOffset = 0;
-  let mult = 15;
-  for (let i = 0; i < 20; i++) {
-    const gridY = horizonY + yOffset;
-    if (gridY > 1000) break;
-    ctx.beginPath();
-    ctx.moveTo(0, gridY);
-    ctx.lineTo(600, gridY);
-    ctx.stroke();
-    yOffset += mult;
-    mult *= 1.25; // exponential spacing
-  }
-
-  // Floating digital shards
-  ctx.fillStyle = themeColor + '1a'; // ~10% opacity
-  // Shard 1
-  ctx.beginPath();
-  ctx.moveTo(80, 200); ctx.lineTo(110, 180); ctx.lineTo(130, 220); ctx.closePath(); ctx.fill();
-  // Shard 2
-  ctx.beginPath();
-  ctx.moveTo(500, 160); ctx.lineTo(520, 140); ctx.lineTo(510, 190); ctx.closePath(); ctx.fill();
-  // Shard 3
-  ctx.beginPath();
-  ctx.moveTo(70, 750); ctx.lineTo(95, 730); ctx.lineTo(80, 780); ctx.closePath(); ctx.fill();
-  // Shard 4
-  ctx.beginPath();
-  ctx.moveTo(520, 800); ctx.lineTo(540, 770); ctx.lineTo(510, 820); ctx.closePath(); ctx.fill();
-
-  // Smooth 3D Metallic lighting reflection
-  const metalGrad = ctx.createLinearGradient(0, 0, 600, 1000);
-  metalGrad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
-  metalGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0)');
-  metalGrad.addColorStop(0.7, 'rgba(255, 255, 255, 0.015)');
-  metalGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.fillStyle = metalGrad;
-  ctx.fillRect(0, 0, 600, 1000);
-  
-  ctx.restore();
-}
-
-module.exports = {
-  generateProfileCard,
-  normalizeStyledText
-};
+module.exports = { generateProfileCard, normalizeStyledText };
