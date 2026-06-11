@@ -168,10 +168,12 @@ function drawTextWithEmojis(ctx, text, x, y, fontSpec, emojiFontFamily = 'Noto C
   const familyIndex = fontParts.findIndex(part => part.includes('sans-serif') || part.includes('Arial') || part.includes('DejaVu'));
   
   let sizeAndStyle = '14px';
-  let primaryFamily = 'DejaVu Serif';
+  let primaryFamily = 'DejaVu Sans';
   
   if (familyIndex !== -1) {
     sizeAndStyle = fontParts.slice(0, familyIndex).join(' ');
+    const familyPart = fontParts.slice(familyIndex).join(' ').replace(/['"]/g, '');
+    if (familyPart) primaryFamily = familyPart;
   } else {
     sizeAndStyle = fontParts.slice(0, -1).join(' ');
   }
@@ -472,392 +474,264 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const ctx = canvas.getContext('2d');
 
   // Card boundary dimensions
-  const cardX = 40;
-  const cardY = 40;
-  const cardW = 520;
-  const cardH = 920;
+  const cardX = 35;
+  const cardY = 35;
+  const cardW = 530;
+  const cardH = 930;
 
-  // 1. Imperial Velvet Gradient Backdrop (Crimson Red, Burgundy, Purple, Black)
+  const avX = 300;
+  const avY = 210;
+  const avRadius = 65;
+
+  // 1. Matte Charcoal Background
+  ctx.fillStyle = '#060608';
+  ctx.fillRect(0, 0, width, height);
+
+  // Red radial core glow around avatar
   ctx.save();
-  const bgGrad = ctx.createRadialGradient(width / 2, height / 2, 80, width / 2, height / 2, width / 2 + 200);
-  bgGrad.addColorStop(0, '#4c0512'); // Rich Crimson Red center
-  bgGrad.addColorStop(0.35, '#2d0714'); // Imperial Burgundy
-  bgGrad.addColorStop(0.65, '#150624'); // Royal Purple
-  bgGrad.addColorStop(1, '#050209'); // Midnight Black edge
-  ctx.fillStyle = bgGrad;
+  const glow = ctx.createRadialGradient(avX, avY, 10, avX, avY, 340);
+  glow.addColorStop(0, 'rgba(239, 68, 68, 0.12)');
+  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, width, height);
   ctx.restore();
 
-  // Linen grid backdrop texture (fine matte texture overlay)
+  // Diagonal racing red pinstripes
   ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.012)';
-  ctx.lineWidth = 0.5;
-  for (let x = 0; x < width; x += 3.5) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
-  }
-  for (let y = 0; y < height; y += 3.5) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+  ctx.strokeStyle = 'rgba(239, 68, 68, 0.015)';
+  ctx.lineWidth = 1.5;
+  for (let i = -100; i < width + height; i += 60) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 400, height); ctx.stroke();
   }
   ctx.restore();
 
-  // Glowing gold radial highlight centered behind the avatar
-  ctx.save();
-  const goldGlow = ctx.createRadialGradient(300, 210, 30, 300, 210, 420);
-  goldGlow.addColorStop(0, 'rgba(212, 175, 55, 0.18)');
-  goldGlow.addColorStop(0.5, 'rgba(212, 175, 55, 0.03)');
-  goldGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = goldGlow;
-  ctx.fillRect(0, 0, width, height);
-  ctx.restore();
-
-  // Luxury gold dust particles
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.04)';
-  for (let i = 0; i < 22; i++) {
-    const px = Math.random() * width;
-    const py = Math.random() * height;
-    const pr = Math.random() * 2.5 + 1;
+  // 2. Asymmetric chamfer-cut border with double tracks
+  function drawChassisOutline(offset) {
+    const cx = cardX + offset;
+    const cy = cardY + offset;
+    const cw = cardW - (offset * 2);
+    const ch = cardH - (offset * 2);
+    const cut = 20;
     ctx.beginPath();
-    ctx.arc(px, py, pr, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(cx + 8, cy);
+    ctx.lineTo(cx + cw - cut, cy);
+    ctx.lineTo(cx + cw, cy + cut); // Top-right chamfer
+    ctx.lineTo(cx + cw, cy + ch - 8);
+    ctx.lineTo(cx + cw - 8, cy + ch);
+    ctx.lineTo(cx + cut, cy + ch);
+    ctx.lineTo(cx, cy + ch - cut); // Bottom-left chamfer
+    ctx.lineTo(cx, cy + 8);
+    ctx.closePath();
   }
 
-  // Draw logo watermark in background layer
   ctx.save();
-  ctx.globalAlpha = 0.05;
-  try {
-    const logoImg = await loadImage(path.join(__dirname, 'assets', 'logo.png'));
-    const logoSize = 340;
-    ctx.drawImage(logoImg, width / 2 - logoSize / 2, height / 2 - logoSize / 2 + 100, logoSize, logoSize);
-  } catch (e) {
-    console.error("Failed to draw logo watermark:", e);
-  }
+  ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 4.5;
+  drawChassisOutline(0); ctx.stroke();
+
+  ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5;
+  drawChassisOutline(8); ctx.stroke();
   ctx.restore();
 
-  // 2. Main Gold Card Frame
+  // 3. Avatar Section
   ctx.save();
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 3.5;
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
-  ctx.stroke();
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(avX, avY, avRadius + 4, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
 
-  // Inner thin gold accent line
-  ctx.save();
-  ctx.strokeStyle = 'rgba(252, 211, 77, 0.35)';
-  ctx.lineWidth = 1;
-  drawRoundedRect(ctx, cardX + 6, cardY + 6, cardW - 12, cardH - 12, 11);
-  ctx.stroke();
-  ctx.restore();
-
-  // 3. Ornate Corner Filigrees (Ruby embellished)
-  drawDetailedCorner(ctx, cardX + 12, cardY + 12, 1, 1);       // Top Left
-  drawDetailedCorner(ctx, cardX + cardW - 12, cardY + 12, -1, 1); // Top Right
-  drawDetailedCorner(ctx, cardX + 12, cardY + cardH - 12, 1, -1); // Bottom Left
-  drawDetailedCorner(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1); // Bottom Right
-
-  // Center border flourishes (Ruby embellished)
-  drawCenterFlourish(ctx, 300, cardY + 12);
-  drawCenterFlourish(ctx, 300, cardY + cardH - 12);
-
-  // 4. Header Section
-  const avatarX = 300;
-  const avatarY = cardY + 140;
-  const avatarRadius = 60;
-
-  // Gold crown above avatar (Gem embellished)
-  drawCrown(ctx, avatarX, avatarY - avatarRadius - 18, 44, 28);
-
-  // Gold avatar flourish wings
-  drawAvatarFlourish(ctx, avatarX, avatarY, avatarRadius);
-
-  // Dynamic Avatar Backglow Extraction
-  let glowColor = 'rgba(212, 175, 55, 0.55)'; // Fallback gold glow
   let loadedImg = null;
   if (avatarBuffer) {
     try {
       loadedImg = await loadImage(avatarBuffer);
-      // Average color extraction via tiny 8x8 canvas
-      const tempCanvas = createCanvas(8, 8);
-      const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.drawImage(loadedImg, 0, 0, 8, 8);
-      const imgData = tempCtx.getImageData(0, 0, 8, 8).data;
-      
-      let rSum = 0, gSum = 0, bSum = 0, count = 0;
-      for (let i = 0; i < imgData.length; i += 4) {
-        const a = imgData[i + 3];
-        if (a > 30) {
-          rSum += imgData[i];
-          gSum += imgData[i + 1];
-          bSum += imgData[i + 2];
-          count++;
-        }
-      }
-      if (count > 0) {
-        const rAvg = Math.round(rSum / count);
-        const gAvg = Math.round(gSum / count);
-        const bAvg = Math.round(bSum / count);
-        glowColor = `rgba(${rAvg}, ${gAvg}, ${bAvg}, 0.7)`;
-      }
     } catch (e) {
-      console.error("Failed to extract color tone from avatar:", e);
+      console.error("Failed to load avatar image in profile generator:", e);
     }
   }
 
-  // Avatar circular gold ring with dynamic backglow
-  ctx.save();
-  ctx.strokeStyle = '#ffd700';
-  ctx.shadowColor = glowColor;
-  ctx.shadowBlur = 18;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(avatarX, avatarY, avatarRadius + 3, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-
-  // Alternate Ruby and Emerald Gems around the Avatar Ring (12 gems total)
-  for (let i = 0; i < 12; i++) {
-    const angle = (i * Math.PI) / 6;
-    const sx = avatarX + (avatarRadius + 7) * Math.cos(angle);
-    const sy = avatarY + (avatarRadius + 7) * Math.sin(angle);
-    const type = i % 2 === 0 ? 'ruby' : 'emerald';
-    drawGem(ctx, sx, sy, 3.5, type);
-  }
-
-  // Avatar clip & draw
   ctx.save();
   ctx.beginPath();
-  ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
+  ctx.arc(avX, avY, avRadius, 0, Math.PI * 2);
   ctx.clip();
-
   if (loadedImg) {
-    ctx.drawImage(loadedImg, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+    ctx.drawImage(loadedImg, avX - avRadius, avY - avRadius, avRadius * 2, avRadius * 2);
   } else {
-    drawSilhouette(ctx, avatarX, avatarY, avatarRadius);
+    drawSilhouette(ctx, avX, avY, avRadius);
   }
   ctx.restore();
 
-  // Username gold scroll ribbon/banner
-  ctx.save();
-  ctx.fillStyle = 'rgba(212, 175, 55, 0.16)';
-  ctx.strokeStyle = '#ffd700';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(160, avatarY + 75);
-  ctx.lineTo(440, avatarY + 75);
-  ctx.lineTo(425, avatarY + 95);
-  ctx.lineTo(440, avatarY + 115);
-  ctx.lineTo(160, avatarY + 115);
-  ctx.lineTo(175, avatarY + 95);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // Ribbon corner Emeralds
-  drawGem(ctx, 160, avatarY + 95, 3.5, 'emerald');
-  drawGem(ctx, 440, avatarY + 95, 3.5, 'emerald');
-  ctx.restore();
-
-  // Username inside banner (centered in gold gradient, normalized serif typeface)
-  ctx.save();
-  const nameGrad = ctx.createLinearGradient(180, avatarY + 95, 420, avatarY + 95);
-  nameGrad.addColorStop(0, '#f59e0b');
-  nameGrad.addColorStop(0.5, '#fbbf24');
-  nameGrad.addColorStop(1, '#fef08a');
-  ctx.fillStyle = nameGrad;
-  ctx.textAlign = 'center';
+  // 4. Dynamic Username Capsule with Emoji Support
   const name = normalizeStyledText(user.first_name || 'PLAYER');
-  const nameUpper = name.toUpperCase();
-  const maxNameWidth = 230;
-  let fontSize = 22;
-  let fontSpec = `bold ${fontSize}px "DejaVu Serif"`;
+  const displayName = name.toUpperCase();
+
+  let fontSize = 21;
+  let fontSpec = `bold ${fontSize}px "DejaVu Sans"`;
 
   function measureNameWidth(fs) {
+    ctx.save();
     const fontParts = fs.split(/\s+/);
     const familyIndex = fontParts.findIndex(part => part.includes('sans-serif') || part.includes('Arial') || part.includes('DejaVu'));
-    let sizeAndStyle = '14px';
-    let primaryFamily = 'DejaVu Serif';
+    let sizeAndStyle = '21px';
+    let primaryFamily = 'DejaVu Sans';
     if (familyIndex !== -1) {
       sizeAndStyle = fontParts.slice(0, familyIndex).join(' ');
+      const familyPart = fontParts.slice(familyIndex).join(' ').replace(/['"]/g, '');
+      if (familyPart) primaryFamily = familyPart;
     } else {
       sizeAndStyle = fontParts.slice(0, -1).join(' ');
     }
     const primaryFont = `${sizeAndStyle} "${primaryFamily}"`;
     const emojiFont = `${sizeAndStyle} "Noto Color Emoji"`;
-    
-    const segments = nameUpper.split(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/gu);
+
+    const segments = displayName.split(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/gu);
     const activeSegments = segments.filter(seg => seg !== '');
-    
+
     let w = 0;
     for (const seg of activeSegments) {
       const isEmoji = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base})/u.test(seg);
-      ctx.save();
       ctx.font = isEmoji ? emojiFont : primaryFont;
       w += ctx.measureText(seg).width;
-      ctx.restore();
     }
+    ctx.restore();
     return w;
   }
 
-  while (fontSize > 10 && measureNameWidth(fontSpec) > maxNameWidth) {
+  while (fontSize > 11 && measureNameWidth(fontSpec) > 260) {
     fontSize--;
-    fontSpec = `bold ${fontSize}px "DejaVu Serif"`;
+    fontSpec = `bold ${fontSize}px "DejaVu Sans"`;
   }
 
-  // Adjust vertical alignment slightly to account for smaller font size centering
-  const textY = avatarY + 102 + (22 - fontSize) * 0.25;
-  drawTextWithEmojis(ctx, nameUpper, avatarX, textY, fontSpec);
+  const textW = measureNameWidth(fontSpec);
+  const nameplateW = Math.max(160, Math.min(320, textW + 36));
+  const nameplateX = 300 - nameplateW / 2;
+
+  ctx.save();
+  ctx.fillStyle = '#110f13';
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(nameplateX, avY + 95, nameplateW, 38, 4);
+  ctx.fill(); ctx.stroke();
   ctx.restore();
 
-  // Header separator gold line
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.22)';
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  const textY = avY + 95 + 19 + (fontSize * 0.35);
+  drawTextWithEmojis(ctx, displayName, 300, textY, fontSpec);
+  ctx.restore();
+
+  // 5. Compact MOTM Star Capsule
+  ctx.save();
+  ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.2)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(cardX + 45, cardY + 285);
-  ctx.lineTo(cardX + cardW - 45, cardY + 285);
-  ctx.stroke();
+  ctx.roundRect(260, avY + 140, 80, 20, 4);
+  ctx.fill(); ctx.stroke();
 
-  // Section header draw helper
-  function drawSectionHeader(title, y, themeColor) {
+  // Draw gold vector star
+  drawVectorStar(ctx, 274, avY + 150, 5, 4.5, 2, '#fbbf24');
+
+  // Text
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 10px "DejaVu Sans", sans-serif';
+  ctx.textAlign = 'left';
+  drawTextWithEmojis(ctx, `${stats.motm || 0} MOTM`, 285, avY + 154, 'bold 10px "DejaVu Sans"');
+  ctx.restore();
+
+  // 6. Batting & Bowling Stats Grid
+  function drawSectionHeader(title, y) {
     ctx.save();
-    // Gold wings/lines flanking header
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)';
-    ctx.lineWidth = 1.2;
-    
-    // Left Wing line
-    ctx.beginPath();
-    ctx.moveTo(110, y - 5);
-    ctx.lineTo(210, y - 5);
-    ctx.stroke();
-
-    // Right Wing line
-    ctx.beginPath();
-    ctx.moveTo(390, y - 5);
-    ctx.lineTo(490, y - 5);
-    ctx.stroke();
-
-    // Scroll wings
-    drawOrnateFlourish(ctx, 210, y - 5, 'left');
-    drawOrnateFlourish(ctx, 390, y - 5, 'right');
-
-    // Title text
-    ctx.fillStyle = themeColor;
-    ctx.textAlign = 'center';
-    drawTextWithEmojis(ctx, title, 300, y, 'bold 15px "DejaVu Serif"');
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(80, y); ctx.lineTo(210, y); ctx.moveTo(390, y); ctx.lineTo(520, y); ctx.stroke();
+    ctx.fillStyle = '#060608'; ctx.fillRect(215, y - 12, 170, 24);
+    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 11px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
+    drawTextWithEmojis(ctx, title, 300, y + 4, 'bold 11px "DejaVu Sans"');
     ctx.restore();
   }
 
-  // --- BATTING SECTION ---
-  const batStartY = cardY + 320;
-  drawSectionHeader('BATTING', batStartY, '#ffd700');
-  drawCricketBat(ctx, 110, batStartY - 6);
-
-  // 2-Column Batting Grid (3 rows)
-  const batRowY = batStartY + 45;
-  const col1X = 170;
-  const col2X = 430;
-  
+  const col1 = 170;
+  const col2 = 430;
   const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs}*` : '0.00');
-
-  const battingItems = [
-    [
-      { label: 'Runs Scored', value: stats.runs, x: col1X },
-      { label: 'Batting Average', value: avgStr, x: col2X }
-    ],
-    [
-      { label: 'Fours / Sixes', value: `${stats.fours} / ${stats.sixes}`, x: col1X },
-      { label: '50s / 100s', value: `${stats.fifties} / ${stats.centuries}`, x: col2X }
-    ],
-    [
-      { label: 'Highest Score', value: stats.highscore, x: col1X },
-      { label: 'Ducks Count', value: stats.ducks, x: col2X }
-    ]
-  ];
-
-  battingItems.forEach((row, rowIndex) => {
-    const itemY = batRowY + rowIndex * 75;
-    row.forEach(item => {
-      ctx.save();
-      // Label
-      ctx.fillStyle = '#94a3b8';
-      ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.label, item.x, itemY, 'bold 11px "DejaVu Serif"');
-
-      // Value (bold gold-yellow gradient)
-      const valGrad = ctx.createLinearGradient(item.x - 50, itemY + 22, item.x + 50, itemY + 22);
-      valGrad.addColorStop(0, '#fbbf24');
-      valGrad.addColorStop(1, '#fef08a');
-      ctx.fillStyle = valGrad;
-      ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 20px "DejaVu Serif"');
-      ctx.restore();
-    });
-  });
-
-  // Section Divider Line
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.16)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cardX + 45, batRowY + 200);
-  ctx.lineTo(cardX + cardW - 45, batRowY + 200);
-  ctx.stroke();
-
-  // --- BOWLING SECTION ---
-  const bowlStartY = batRowY + 230;
-  // Theme Bowling header with Sapphire Blue/Ice color
-  drawSectionHeader('BOWLING', bowlStartY, '#38bdf8');
-  drawWickets(ctx, 110, bowlStartY - 6);
-
   const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
   const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
+  const bowlAvg = stats.wickets > 0 ? (stats.runs_conceded / stats.wickets).toFixed(2) : '0.00';
+  const overs = (stats.balls_bowled / 6).toFixed(1);
 
-  const bowlingItems = [
-    [
-      { label: 'Wickets Taken', value: stats.wickets, x: col1X },
-      { label: 'Economy Rate', value: econ, x: col2X }
-    ],
-    [
-      { label: '3w / 5w Hauls', value: `${stats.threew} / ${stats.fivew}`, x: col1X },
-      { label: 'Best Bowling', value: bestBowling, x: col2X }
-    ]
+  const batStartY = avY + 195;
+  drawSectionHeader("BATTING RECORDS", batStartY);
+
+  const battingItems = [
+    { label: "Runs Scored", val: stats.runs || 0, x: col1, y: batStartY + 35 },
+    { label: "Batting Average", val: avgStr, x: col2, y: batStartY + 35 },
+    { label: "Highest Score", val: stats.highscore || 0, x: col1, y: batStartY + 105 },
+    { label: "Fours / Sixes", val: `${stats.fours || 0} / ${stats.sixes || 0}`, x: col2, y: batStartY + 105 },
+    { label: "50s / 100s", val: `${stats.fifties || 0} / ${stats.centuries || 0}`, x: col1, y: batStartY + 175 },
+    { label: "Ducks Count", val: stats.ducks || 0, x: col2, y: batStartY + 175 }
   ];
 
-  bowlingItems.forEach((row, rowIndex) => {
-    const itemY = bowlStartY + 45 + rowIndex * 78;
-    row.forEach(item => {
-      ctx.save();
-      ctx.fillStyle = '#94a3b8';
-      ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.label, item.x, itemY, 'bold 11px "DejaVu Serif"');
+  ctx.save();
+  battingItems.forEach(item => {
+    ctx.fillStyle = '#0d0b0e';
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(item.x - 90, item.y, 180, 56, 4);
+    ctx.fill(); ctx.stroke();
 
-      // Value (bold sapphire/cyan/ice-blue gradient)
-      const valGrad = ctx.createLinearGradient(item.x - 50, itemY + 22, item.x + 50, itemY + 22);
-      valGrad.addColorStop(0, '#38bdf8');
-      valGrad.addColorStop(1, '#bae6fd');
-      ctx.fillStyle = valGrad;
-      ctx.textAlign = 'center';
-      drawTextWithEmojis(ctx, item.value, item.x, itemY + 24, 'bold 20px "DejaVu Serif"');
-      ctx.restore();
-    });
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 9.5px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
+    drawTextWithEmojis(ctx, item.label.toUpperCase(), item.x, item.y + 18, 'bold 9.5px "DejaVu Sans"');
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 19px "DejaVu Sans", sans-serif';
+    drawTextWithEmojis(ctx, String(item.val), item.x, item.y + 42, 'bold 19px "DejaVu Sans"');
   });
+  ctx.restore();
 
-  // Footer separator gold line
-  ctx.strokeStyle = 'rgba(212, 175, 55, 0.16)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cardX + 45, cardY + cardH - 35);
-  ctx.lineTo(cardX + cardW - 45, cardY + cardH - 35);
-  ctx.stroke();
+  const bowlStartY = batStartY + 265;
+  drawSectionHeader("BOWLING RECORDS", bowlStartY);
 
-  // 6. Premium Glossy Card overlay reflection shine
+  const bowlingItems = [
+    { label: "Wickets Taken", val: stats.wickets || 0, x: col1, y: bowlStartY + 35 },
+    { label: "Economy Rate", val: econ, x: col2, y: bowlStartY + 35 },
+    { label: "Best Bowling", val: bestBowling, x: col1, y: bowlStartY + 105 },
+    { label: "3w / 5w Hauls", val: `${stats.threew || 0} / ${stats.fivew || 0}`, x: col2, y: bowlStartY + 105 },
+    { label: "Bowling Average", val: bowlAvg, x: col1, y: bowlStartY + 175 },
+    { label: "Overs Bowled", val: overs, x: col2, y: bowlStartY + 175 }
+  ];
+
+  ctx.save();
+  bowlingItems.forEach(item => {
+    ctx.fillStyle = '#0d0b0e';
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(item.x - 90, item.y, 180, 56, 4);
+    ctx.fill(); ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 9.5px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
+    drawTextWithEmojis(ctx, item.label.toUpperCase(), item.x, item.y + 18, 'bold 9.5px "DejaVu Sans"');
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 19px "DejaVu Sans", sans-serif';
+    drawTextWithEmojis(ctx, String(item.val), item.x, item.y + 42, 'bold 19px "DejaVu Sans"');
+  });
+  ctx.restore();
+
+  // 7. Bottom Brand Stamp
+  ctx.save();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.font = 'bold 10px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
+  drawTextWithEmojis(ctx, "HANDCRICKET PRO COLLECTIBLE  //  REDLINE SPORT EDITION", 300, 940, 'bold 10px "DejaVu Sans"');
+  ctx.restore();
+
+  // 8. Card Gloss Overlay
   ctx.save();
   const glossGrad = ctx.createLinearGradient(0, 0, width, height);
-  glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
-  glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.04)');
+  glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
+  glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.02)');
   glossGrad.addColorStop(0.31, 'rgba(255, 255, 255, 0)');
   glossGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = glossGrad;
   ctx.beginPath();
-  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 16);
+  drawChassisOutline(0);
   ctx.fill();
   ctx.restore();
 
@@ -878,6 +752,33 @@ function drawSilhouette(ctx, x, y, radius) {
   ctx.beginPath();
   ctx.arc(x, y + radius + 8, radius * 0.8, Math.PI, 0, false);
   ctx.fill();
+}
+
+function drawVectorStar(ctx, cx, cy, spikes, outerRadius, innerRadius, color) {
+  let rot = (Math.PI / 2) * 3;
+  let x = cx;
+  let y = cy;
+  const step = Math.PI / spikes;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - outerRadius);
+  for (let i = 0; i < spikes; i++) {
+    x = cx + Math.cos(rot) * outerRadius;
+    y = cy + Math.sin(rot) * outerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
+
+    x = cx + Math.cos(rot) * innerRadius;
+    y = cy + Math.sin(rot) * innerRadius;
+    ctx.lineTo(x, y);
+    rot += step;
+  }
+  ctx.lineTo(cx, cy - outerRadius);
+  ctx.closePath();
+  ctx.fillStyle = color || '#fbbf24';
+  ctx.fill();
+  ctx.restore();
 }
 
 module.exports = {
