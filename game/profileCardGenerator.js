@@ -11,6 +11,7 @@ const themes = [
   {
     name: 'red',
     themeColor: '#ef4444',
+    secondaryColor: '#f97316',
     borderBaseColor: '#1e293b',
     glowColorRadial: 'rgba(239, 68, 68, 0.12)',
     editionName: 'REDLINE SPORT EDITION'
@@ -18,6 +19,7 @@ const themes = [
   {
     name: 'blue',
     themeColor: '#38bdf8',
+    secondaryColor: '#8b5cf6',
     borderBaseColor: '#0f172a',
     glowColorRadial: 'rgba(56, 189, 248, 0.12)',
     editionName: 'SAPPHIRE STRIKE EDITION'
@@ -25,6 +27,7 @@ const themes = [
   {
     name: 'green',
     themeColor: '#22c55e',
+    secondaryColor: '#06b6d4',
     borderBaseColor: '#062f17',
     glowColorRadial: 'rgba(34, 197, 94, 0.12)',
     editionName: 'TOXIC HAZARD EDITION'
@@ -32,6 +35,7 @@ const themes = [
   {
     name: 'purple',
     themeColor: '#a855f7',
+    secondaryColor: '#ec4899',
     borderBaseColor: '#1e1b4b',
     glowColorRadial: 'rgba(168, 85, 247, 0.12)',
     editionName: 'NEON HELIX EDITION'
@@ -39,6 +43,7 @@ const themes = [
   {
     name: 'gold',
     themeColor: '#fbbf24',
+    secondaryColor: '#dc2626',
     borderBaseColor: '#1c1917',
     glowColorRadial: 'rgba(251, 191, 36, 0.12)',
     editionName: 'CENTURION GOLD EDITION'
@@ -46,6 +51,7 @@ const themes = [
   {
     name: 'cyan',
     themeColor: '#06b6d4',
+    secondaryColor: '#4f46e5',
     borderBaseColor: '#083344',
     glowColorRadial: 'rgba(6, 182, 212, 0.12)',
     editionName: 'GLACIER PEAK EDITION'
@@ -53,6 +59,7 @@ const themes = [
   {
     name: 'pink',
     themeColor: '#ec4899',
+    secondaryColor: '#38bdf8',
     borderBaseColor: '#31102f',
     glowColorRadial: 'rgba(236, 72, 153, 0.12)',
     editionName: 'ROSE COPPER EDITION'
@@ -552,7 +559,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   }
 
   // 1. Sleek luxury brushed metal background texture
-  drawBackgroundTexture(ctx, theme.name);
+  drawBackgroundTexture(ctx, theme);
 
   // Background radial core glow
   ctx.save();
@@ -661,7 +668,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawChassisOutline(0); ctx.stroke();
   ctx.restore();
 
-  // Multi-pass laser neon glow for inner track
+  // Multi-pass laser neon glow for OUTER track
   ctx.save();
   ctx.shadowColor = theme.themeColor;
   
@@ -678,6 +685,23 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawChassisOutline(8); ctx.stroke();
   ctx.restore();
 
+  // Multi-pass laser neon glow for INNER track (Secondary theme color)
+  ctx.save();
+  ctx.shadowColor = theme.secondaryColor;
+  
+  // Pass 1: Wide neon emission
+  ctx.strokeStyle = theme.secondaryColor;
+  ctx.lineWidth = 2.5;
+  ctx.shadowBlur = 12;
+  drawChassisOutline(18); ctx.stroke();
+  
+  // Pass 2: High intensity center core
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 0.8;
+  ctx.shadowBlur = 3;
+  drawChassisOutline(18); ctx.stroke();
+  ctx.restore();
+
   // Corner brackets conditionally matching theme geometry
   if (theme.name === 'red' || theme.name === 'green' || theme.name === 'pink') {
     drawCornerBracket(ctx, cardX + 12, cardY + 12, 1, 1, theme.themeColor);
@@ -685,6 +709,56 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     drawCornerBracket(ctx, cardX + 12, cardY + cardH - 12, 1, -1, theme.themeColor);
     drawCornerBracket(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1, theme.themeColor);
   }
+
+  // 2.5. Top Header Badges and Serials
+  ctx.save();
+  ctx.font = 'bold 8px "DejaVu Sans", sans-serif';
+  
+  // Left: "ULTRA-PREMIUM COLLECTIBLE"
+  ctx.fillStyle = theme.secondaryColor;
+  ctx.textAlign = 'left';
+  drawTextWithEmojis(ctx, "ULTRA-PREMIUM COLLECTIBLE", cardX + 25, 65, 'bold 8px "DejaVu Sans"');
+
+  // Right: "SERIALIZED NO. XXX/100"
+  ctx.fillStyle = '#94a3b8';
+  ctx.textAlign = 'right';
+  const displayId = String((parseInt(user.id) || 0) % 100).padStart(3, '0');
+  drawTextWithEmojis(ctx, `SERIALIZED NO. ${displayId}/100`, cardX + cardW - 25, 65, 'bold 8px "DejaVu Sans"');
+  
+  // Center badge backing: "CYBERNETIC ATHLETE" / theme.editionName
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.strokeStyle = theme.themeColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(200, 50, 200, 22, 6);
+  ctx.fill(); ctx.stroke();
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 9px "DejaVu Sans", sans-serif';
+  ctx.textAlign = 'center';
+  drawTextWithEmojis(ctx, theme.editionName, 300, 64, 'bold 9px "DejaVu Sans"');
+  ctx.restore();
+
+  // Glowing shards around the avatar
+  ctx.save();
+  ctx.fillStyle = theme.themeColor;
+  ctx.shadowColor = theme.themeColor;
+  ctx.shadowBlur = 8;
+  
+  // Shard A (top-left of avatar)
+  ctx.beginPath();
+  ctx.moveTo(avX - avRadius - 15, avY - 20);
+  ctx.lineTo(avX - avRadius - 5, avY - 35);
+  ctx.lineTo(avX - avRadius - 8, avY - 10);
+  ctx.closePath(); ctx.fill();
+
+  // Shard B (bottom-right of avatar)
+  ctx.beginPath();
+  ctx.moveTo(avX + avRadius + 12, avY + 15);
+  ctx.lineTo(avX + avRadius + 22, avY + 5);
+  ctx.lineTo(avX + avRadius + 18, avY + 28);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
 
   // 3. Avatar Section with multi-pass glow ring
   ctx.save();
@@ -788,16 +862,22 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   nameplateGrad.addColorStop(1, '#0c0b0f');
   ctx.fillStyle = nameplateGrad;
   ctx.fill();
-  ctx.strokeStyle = '#2d2b36';
+  ctx.strokeStyle = theme.themeColor;
   ctx.lineWidth = 1.5;
   ctx.stroke();
-
-  // Theme accent tick marks on nameplate sides
-  ctx.strokeStyle = theme.themeColor;
+ 
+  // Bi-color glowing accent corners
+  ctx.strokeStyle = theme.secondaryColor;
   ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(nameplateX, nameplateY + 10); ctx.lineTo(nameplateX, nameplateY + 28);
-  ctx.moveTo(nameplateX + nameplateW, nameplateY + 10); ctx.lineTo(nameplateX + nameplateW, nameplateY + 28);
+  // Top-left corner bracket
+  ctx.moveTo(nameplateX + 10, nameplateY);
+  ctx.lineTo(nameplateX, nameplateY);
+  ctx.lineTo(nameplateX, nameplateY + 10);
+  // Bottom-right corner bracket
+  ctx.moveTo(nameplateX + nameplateW - 10, nameplateY + nameplateH);
+  ctx.lineTo(nameplateX + nameplateW, nameplateY + nameplateH);
+  ctx.lineTo(nameplateX + nameplateW, nameplateY + nameplateH - 10);
   ctx.stroke();
   ctx.restore();
 
@@ -828,7 +908,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.restore();
 
   // 6. Batting & Bowling Sleek Dashboard Panels
-  function drawDashboardPanel(title, startY, items) {
+  function drawDashboardPanel(title, startY, items, isBatting) {
     const pX = 65;
     const pW = 470;
     const pH = 205;
@@ -878,21 +958,37 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     // 2. Division lines inside panel
     ctx.strokeStyle = '#1b1a20';
     ctx.lineWidth = 1.2;
-    // Vertical center division line
+    
+    // Vertical split: Left (visuals) / Right (stats)
     ctx.beginPath();
-    ctx.moveTo(300, startY + 32);
-    ctx.lineTo(300, startY + pH - 12);
+    ctx.moveTo(pX + 145, startY + 28);
+    ctx.lineTo(pX + 145, startY + pH - 12);
     ctx.stroke();
 
-    // Horizontal division lines
+    // Vertical line between stats columns
     ctx.beginPath();
-    ctx.moveTo(pX + 15, startY + 86);
+    ctx.moveTo(375, startY + 28);
+    ctx.lineTo(375, startY + pH - 12);
+    ctx.stroke();
+
+    // Horizontal division lines for stats rows
+    ctx.beginPath();
+    ctx.moveTo(pX + 145, startY + 86);
     ctx.lineTo(pX + pW - 15, startY + 86);
-    ctx.moveTo(pX + 15, startY + 144);
+    ctx.moveTo(pX + 145, startY + 144);
     ctx.lineTo(pX + pW - 15, startY + 144);
     ctx.stroke();
 
-    // 3. Render grid items
+    // 3. Render left tech visuals
+    if (isBatting) {
+      drawLineGraph(ctx, pX + 15, startY + 40, 115, 62, theme.themeColor);
+      drawRadarScanner(ctx, pX + 72, startY + 152, 26, theme.secondaryColor);
+    } else {
+      drawWaveform(ctx, pX + 15, startY + 40, 115, 62, theme.themeColor);
+      drawRadarScanner(ctx, pX + 72, startY + 152, 26, theme.secondaryColor);
+    }
+
+    // 4. Render grid items
     items.forEach(item => {
       // Label
       ctx.fillStyle = '#8e8b9e';
@@ -909,8 +1005,8 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     ctx.restore();
   }
 
-  const col1 = 182;
-  const col2 = 418;
+  const col1 = 292;
+  const col2 = 452;
   const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs}*` : '0.00');
   const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
   const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
@@ -926,7 +1022,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     { label: "50s / 100s", val: `${stats.fifties || 0} / ${stats.centuries || 0}`, x: col1, y: batStartY + 166 },
     { label: "Ducks Count", val: stats.ducks || 0, x: col2, y: batStartY + 166 }
   ];
-  drawDashboardPanel("BATTING INSTRUMENTS", batStartY, battingItems);
+  drawDashboardPanel("BATTING INSTRUMENTS", batStartY, battingItems, true);
 
   const bowlStartY = batStartY + 235;
   const bowlingItems = [
@@ -937,7 +1033,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     { label: "Bowling Avg", val: bowlAvg, x: col1, y: bowlStartY + 166 },
     { label: "Overs Bowled", val: overs, x: col2, y: bowlStartY + 166 }
   ];
-  drawDashboardPanel("BOWLING INSTRUMENTS", bowlStartY, bowlingItems);
+  drawDashboardPanel("BOWLING INSTRUMENTS", bowlStartY, bowlingItems, false);
 
   // 7. Bottom Brand Stamp
   ctx.save();
@@ -1019,7 +1115,86 @@ function drawCornerBracket(ctx, x, y, rx, ry, color) {
   ctx.restore();
 }
 
-function drawBackgroundTexture(ctx, themeName) {
+function drawLineGraph(ctx, x, y, w, h, themeColor) {
+  ctx.save();
+  // Draw grid lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+  ctx.lineWidth = 1;
+  for (let gx = x; gx <= x + w; gx += w / 4) {
+    ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx, y + h); ctx.stroke();
+  }
+  for (let gy = y; gy <= y + h; gy += h / 4) {
+    ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke();
+  }
+
+  // Draw plot line
+  ctx.strokeStyle = themeColor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + h * 0.7);
+  ctx.lineTo(x + w * 0.25, y + h * 0.45);
+  ctx.lineTo(x + w * 0.5, y + h * 0.6);
+  ctx.lineTo(x + w * 0.75, y + h * 0.25);
+  ctx.lineTo(x + w, y + h * 0.35);
+  ctx.stroke();
+
+  // Glow points
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(x + w * 0.75, y + h * 0.25, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawRadarScanner(ctx, x, y, radius, themeColor) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+  ctx.lineWidth = 1;
+  // Concentric circles
+  ctx.beginPath(); ctx.arc(x, y, radius * 0.4, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, radius * 0.7, 0, Math.PI * 2); ctx.stroke();
+  
+  // Outer glowing circle
+  ctx.strokeStyle = themeColor;
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
+
+  // Crosshairs
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.beginPath(); ctx.moveTo(x - radius - 5, y); ctx.lineTo(x + radius + 5, y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y - radius - 5); ctx.lineTo(x, y + radius + 5); ctx.stroke();
+
+  // Blips/Scanner line
+  ctx.strokeStyle = themeColor;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  const scanX = x + Math.cos(1.2) * radius;
+  const scanY = y + Math.sin(1.2) * radius;
+  ctx.lineTo(scanX, scanY);
+  ctx.stroke();
+
+  // Target dots
+  ctx.fillStyle = themeColor;
+  ctx.beginPath(); ctx.arc(x + radius * 0.4, y - radius * 0.3, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(x - radius * 0.2, y + radius * 0.5, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawWaveform(ctx, x, y, w, h, themeColor) {
+  ctx.save();
+  ctx.fillStyle = themeColor;
+  const barCount = 12;
+  const barW = w / barCount - 2;
+  const heights = [0.3, 0.5, 0.8, 0.4, 0.6, 0.9, 0.7, 0.4, 0.2, 0.5, 0.8, 0.3];
+  for (let i = 0; i < barCount; i++) {
+    const barH = h * heights[i];
+    ctx.fillRect(x + i * (barW + 2), y + h - barH, barW, barH);
+  }
+  ctx.restore();
+}
+
+function drawBackgroundTexture(ctx, theme) {
   ctx.save();
   
   // Base dark gradient
@@ -1030,6 +1205,52 @@ function drawBackgroundTexture(ctx, themeName) {
   ctx.fillStyle = baseGrad;
   ctx.fillRect(0, 0, 600, 1000);
   
+  // Cybernetic perspective grid lines
+  const themeColor = theme.themeColor || '#ef4444';
+  ctx.strokeStyle = themeColor + '0d'; // ~5% opacity
+  ctx.lineWidth = 1.5;
+  const horizonY = 320;
+  const centerX = 300;
+
+  // Perspective vertical lines
+  for (let angle = -Math.PI / 1.5; angle <= Math.PI / 1.5; angle += Math.PI / 16) {
+    ctx.beginPath();
+    ctx.moveTo(centerX, horizonY);
+    const endX = centerX + Math.sin(angle) * 1200;
+    const endY = horizonY + Math.cos(angle) * 1200;
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+  }
+
+  // Perspective horizontal lines
+  let yOffset = 0;
+  let mult = 15;
+  for (let i = 0; i < 20; i++) {
+    const gridY = horizonY + yOffset;
+    if (gridY > 1000) break;
+    ctx.beginPath();
+    ctx.moveTo(0, gridY);
+    ctx.lineTo(600, gridY);
+    ctx.stroke();
+    yOffset += mult;
+    mult *= 1.25; // exponential spacing
+  }
+
+  // Floating digital shards
+  ctx.fillStyle = themeColor + '1a'; // ~10% opacity
+  // Shard 1
+  ctx.beginPath();
+  ctx.moveTo(80, 200); ctx.lineTo(110, 180); ctx.lineTo(130, 220); ctx.closePath(); ctx.fill();
+  // Shard 2
+  ctx.beginPath();
+  ctx.moveTo(500, 160); ctx.lineTo(520, 140); ctx.lineTo(510, 190); ctx.closePath(); ctx.fill();
+  // Shard 3
+  ctx.beginPath();
+  ctx.moveTo(70, 750); ctx.lineTo(95, 730); ctx.lineTo(80, 780); ctx.closePath(); ctx.fill();
+  // Shard 4
+  ctx.beginPath();
+  ctx.moveTo(520, 800); ctx.lineTo(540, 770); ctx.lineTo(510, 820); ctx.closePath(); ctx.fill();
+
   // Smooth 3D Metallic lighting reflection
   const metalGrad = ctx.createLinearGradient(0, 0, 600, 1000);
   metalGrad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
@@ -1038,13 +1259,6 @@ function drawBackgroundTexture(ctx, themeName) {
   metalGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = metalGrad;
   ctx.fillRect(0, 0, 600, 1000);
-
-  // Subtle horizontal brushed metal stripes (very low opacity for texture)
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.006)';
-  ctx.lineWidth = 1;
-  for (let y = 0; y < 1000; y += 4) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(600, y); ctx.stroke();
-  }
   
   ctx.restore();
 }
