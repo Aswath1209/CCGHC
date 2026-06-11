@@ -4,45 +4,14 @@ try { GlobalFonts.loadSystemFonts(); } catch(e) {}
 
 const ASSETS = path.join(__dirname, 'assets');
 
-// Template is 1024x1024. We render onto 800x800 (scale factor ~0.78)
-// Then we pad to 800x1000 for Telegram compatibility
-const TPL_W = 1024, TPL_H = 1024;
-const OUT_W = 800, OUT_H = 800;
-const SCALE = OUT_W / TPL_W; // 0.78125
-
-// Key positions on the 1024x1024 template (measured from template):
-// Avatar circle center: ~(512, 290), radius ~205
-// After scale: center (399, 226), radius 160
-const AV_X = Math.round(512 * SCALE);   // 400
-const AV_Y = Math.round(285 * SCALE);   // 222
-const AV_R = Math.round(200 * SCALE);   // 156
-
-// Nameplate text center: ~(512, 595) on template
-const NP_CX = Math.round(512 * SCALE);  // 400
-const NP_Y  = Math.round(596 * SCALE);  // 465
-
-// Batting stat cells (icon area + value) on template:
-// Row y ~685, cols at ~165,  ~380,  ~595,  ~810
-// After scale: y=535, cols=129, 297, 465, 633
-const BAT_Y = Math.round(688 * SCALE);
-const BAT_COLS = [165,380,595,810].map(x=>Math.round(x*SCALE));
-
-// Bowling stat cells: row y ~810
-const BOW_Y = Math.round(810 * SCALE);
-const BOW_COLS = BAT_COLS;
-
-// Bottom 4 boxes: row y ~920, cols at ~130, ~340, ~555, ~770
-const BOT_Y  = Math.round(920 * SCALE);
-const BOT_COLS = [130,340,555,770].map(x=>Math.round(x*SCALE));
-
 const themes = [
-  { name:'red',    tc:'#f97316', sc:'#dc2626' },
-  { name:'blue',   tc:'#38bdf8', sc:'#8b5cf6' },
-  { name:'green',  tc:'#22c55e', sc:'#06b6d4' },
-  { name:'purple', tc:'#a855f7', sc:'#ec4899' },
-  { name:'gold',   tc:'#fbbf24', sc:'#f97316' },
-  { name:'cyan',   tc:'#06b6d4', sc:'#4f46e5' },
-  { name:'pink',   tc:'#ec4899', sc:'#38bdf8' },
+  { name: 'red',    hue: '0deg',   tc: '#f97316' },
+  { name: 'blue',   hue: '180deg', tc: '#38bdf8' },
+  { name: 'green',  hue: '90deg',  tc: '#22c55e' },
+  { name: 'purple', hue: '240deg', tc: '#a855f7' },
+  { name: 'gold',   hue: '20deg',  tc: '#fbbf24' },
+  { name: 'cyan',   hue: '150deg', tc: '#06b6d4' },
+  { name: 'pink',   hue: '300deg', tc: '#ec4899' },
 ];
 
 const unicodeMap={0x1d00:'A',0x299:'B',0x1d04:'C',0x1d05:'D',0x1d07:'E',0xa730:'F',0x262:'G',0x29c:'H',0x26a:'I',0x1d0a:'J',0x1d0b:'K',0x29f:'L',0x1d0d:'M',0x274:'N',0x1d0f:'O',0x1d18:'P',0x280:'R',0xa731:'S',0x1d1b:'T',0x1d1c:'U',0x1d20:'V',0x1d21:'W',0x28f:'Y',0x1d22:'Z'};
@@ -71,113 +40,208 @@ function drawSilhouette(ctx,x,y,r){
   ctx.beginPath();ctx.arc(x,y+r*1.0,r*0.72,Math.PI,0,false);ctx.fill();
 }
 
-// Stat cell: label on top, big value below
-function statCell(ctx,x,y,label,val,tc){
+// Icon drawers for the custom bottom row
+function icoStar(ctx, x, y, c) {
   ctx.save();
-  ctx.fillStyle='#aaa';ctx.font='bold 9px "DejaVu Sans"';ctx.textAlign='center';
-  ctx.fillText(label.toUpperCase(),x,y-8);
-  ctx.fillStyle='#fff';ctx.font='bold 20px "DejaVu Sans"';
-  ctx.shadowColor=tc;ctx.shadowBlur=8;
-  ctx.fillText(String(val),x,y+14);ctx.shadowBlur=0;
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a1 = (Math.PI / 2) * 3 + i * (Math.PI * 2 / 5);
+    const a2 = a1 + Math.PI / 5;
+    if (i === 0) ctx.moveTo(x + Math.cos(a1) * 10, y + Math.sin(a1) * 10);
+    else ctx.lineTo(x + Math.cos(a1) * 10, y + Math.sin(a1) * 10);
+    ctx.lineTo(x + Math.cos(a2) * 4.5, y + Math.sin(a2) * 4.5);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function icoCircle(ctx, x, y, c, text) {
+  ctx.save();
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(x, y, 9, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = c;
+  ctx.font = `bold ${text.length > 2 ? 6.5 : 8}px "DejaVu Sans"`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y + 0.5);
+  ctx.restore();
+}
+
+function icoGrid(ctx, x, y, c) {
+  ctx.save();
+  ctx.fillStyle = c;
+  const s = 3;
+  const g = 1.5;
+  for (let r = 0; r < 3; r++) {
+    for (let col = 0; col < 3; col++) {
+      ctx.fillRect(x - 5.25 + col * (s + g), y - 5.25 + r * (s + g), s, s);
+    }
+  }
   ctx.restore();
 }
 
 async function generateProfileCard(user,stats,avatarBuffer){
-  // Create canvas matching template size (square), then pad to 800x1000
-  const canvas=createCanvas(OUT_W, OUT_H);
-  const ctx=canvas.getContext('2d');
+  // 1. Create base 1024x1024 canvas
+  const canvas = createCanvas(1024, 1024);
+  const ctx = canvas.getContext('2d');
 
-  const themeName=user.card_theme||'red';
-  let th=themes.find(t=>t.name===themeName)||themes[0];
-  if(!user.card_theme&&user.id)th=themes[(parseInt(user.id)||0)%themes.length];
-  const tc=th.tc;
+  const themeName = user.card_theme || 'red';
+  let th = themes.find(t => t.name === themeName) || themes[0];
+  if (!user.card_theme && user.id) th = themes[(parseInt(user.id) || 0) % themes.length];
+  const tc = th.tc;
 
-  // ── 1. Draw template
-  try{
-    const tpl=await loadImage(path.join(ASSETS,'card_template.png'));
-    ctx.drawImage(tpl,0,0,OUT_W,OUT_H);
-  }catch(e){
-    ctx.fillStyle='#0a0608';ctx.fillRect(0,0,OUT_W,OUT_H);
-  }
-
-  // ── 2. Apply theme color tint to frame (multiply blend isn't available so use overlay)
-  if(th.name !== 'red' && th.name !== 'gold'){
-    // Tint the border area with theme color
+  // 2. Load template image and apply hue rotation filter
+  try {
+    const tpl = await loadImage(path.join(ASSETS, 'card_template.png'));
     ctx.save();
-    ctx.globalCompositeOperation='screen';
-    ctx.globalAlpha=0.18;
-    ctx.strokeStyle=tc;ctx.lineWidth=18;
-    ctx.beginPath();ctx.roundRect(8,8,OUT_W-16,OUT_H-16,14);ctx.stroke();
-    ctx.globalCompositeOperation='source-over';
-    ctx.globalAlpha=1;
+    if (th.hue !== '0deg') {
+      ctx.filter = `hue-rotate(${th.hue})`;
+    }
+    ctx.drawImage(tpl, 0, 0, 1024, 1024);
     ctx.restore();
+  } catch (e) {
+    ctx.fillStyle = '#0a0608';
+    ctx.fillRect(0, 0, 1024, 1024);
   }
 
-  // ── 3. Avatar
-  let img=null;
-  if(avatarBuffer){try{img=await loadImage(avatarBuffer);}catch(e){}}
+  // 3. Draw Player Avatar inside fire ring (center: 512, 308, radius: 188)
+  const avX = 512, avY = 308, avR = 188;
+  let img = null;
+  if (avatarBuffer) {
+    try { img = await loadImage(avatarBuffer); } catch (e) {}
+  }
   ctx.save();
-  ctx.beginPath();ctx.arc(AV_X,AV_Y,AV_R,0,Math.PI*2);ctx.clip();
-  if(img){
-    // Cover-fit the image in the circle
-    const s=Math.max(AV_R*2/img.width,AV_R*2/img.height);
-    const dw=img.width*s,dh=img.height*s;
-    ctx.drawImage(img,AV_X-dw/2,AV_Y-dh/2,dw,dh);
-  }else{
-    drawSilhouette(ctx,AV_X,AV_Y,AV_R);
+  ctx.beginPath();
+  ctx.arc(avX, avY, avR, 0, Math.PI * 2);
+  ctx.clip();
+  if (img) {
+    const s = Math.max(avR * 2 / img.width, avR * 2 / img.height);
+    const dw = img.width * s, dh = img.height * s;
+    ctx.drawImage(img, avX - dw / 2, avY - dh / 2, dw, dh);
+  } else {
+    drawSilhouette(ctx, avX, avY, avR);
   }
   ctx.restore();
 
-  // ── 4. Player Name (over the template's "PLAYER NAME" area)
-  const name=normalizeStyledText(user.first_name||'PLAYER').toUpperCase();
-  const handle=`@${(user.username||user.first_name||'player').toLowerCase().replace(/\s+/g,'_').slice(0,22)}`;
-
-  let fs=32;ctx.font=`bold italic ${fs}px "DejaVu Sans"`;
-  while(fs>16&&ctx.measureText(name).width>340){fs--;ctx.font=`bold italic ${fs}px "DejaVu Sans"`;}
-
-  // Cover the template "PLAYER NAME" text with solid fill first
+  // 4. Draw Nameplate Cover using cloned clean background patch
   ctx.save();
-  ctx.fillStyle='rgba(6,3,1,0.0)'; // transparent - template text will be overdrawn
-  ctx.fillRect(NP_CX-200,NP_Y-38,400,55);
-  // Draw actual name
-  ctx.fillStyle='#ffffff';ctx.font=`bold italic ${fs}px "DejaVu Sans"`;
-  ctx.textAlign='center';ctx.shadowColor='#000';ctx.shadowBlur=4;
-  drawText(ctx,name,NP_CX,NP_Y,`bold italic ${fs}px "DejaVu Sans"`);
-  ctx.shadowBlur=0;
-  // Handle below
-  ctx.fillStyle=tc+'ee';ctx.font='11px "DejaVu Sans"';
-  ctx.fillText(handle,NP_CX,NP_Y+18);
+  ctx.drawImage(canvas, 328, 550, 10, 76, 338, 550, 350, 76);
   ctx.restore();
 
-  // ── 5. Batting stats
-  const avg=stats.dismissals>0?(stats.runs/stats.dismissals).toFixed(1):(stats.runs>0?`${stats.runs}*`:'0.0');
-  const sr=stats.balls_faced>0?((stats.runs/stats.balls_faced)*100).toFixed(1):'0.0';
-  const matches=(stats.wins||0)+(stats.losses||0);
-  const batVals=[matches,(stats.runs||0).toLocaleString(),avg,sr];
-  const batLabels=['MATCHES','RUNS','AVERAGE','STRIKE RATE'];
-  BAT_COLS.forEach((cx2,i)=>statCell(ctx,cx2,BAT_Y,batLabels[i],batVals[i],tc));
+  // 5. Draw Player Name
+  const name = normalizeStyledText(user.first_name || 'PLAYER').toUpperCase();
+  const handle = `@${(user.username || user.first_name || 'player').toLowerCase().replace(/\s+/g, '_').slice(0, 22)}`;
 
-  // ── 6. Bowling stats
-  const econ=stats.balls_bowled>0?((stats.runs_conceded*6)/stats.balls_bowled).toFixed(1):'0.0';
-  const bavg=stats.wickets>0?(stats.runs_conceded/stats.wickets).toFixed(1):'0.0';
-  const bb=`${stats.best_wickets||0}/${stats.best_runs_conceded||0}`;
-  const bowVals=[stats.wickets||0,econ,bavg,bb];
-  const bowLabels=['WICKETS','ECONOMY','AVERAGE','BEST BOWLING'];
-  BOW_COLS.forEach((cx2,i)=>statCell(ctx,cx2,BOW_Y,bowLabels[i],bowVals[i],tc));
+  let fs = 44;
+  ctx.font = `italic bold ${fs}px "DejaVu Sans"`;
+  while (fs > 22 && ctx.measureText(name).width > 350) {
+    fs--;
+    ctx.font = `italic bold ${fs}px "DejaVu Sans"`;
+  }
 
-  // ── 7. Bottom 4 mini boxes
-  const hs=stats.highscore>0?`${stats.highscore}*`:'0';
-  const botVals=[hs,stats.fifties||0,stats.centuries||0,stats.motm||0];
-  const botLabels=['HIGHEST SCORE','50s','100s','MOTM'];
-  BOT_COLS.forEach((cx2,i)=>statCell(ctx,cx2,BOT_Y,botLabels[i],botVals[i],tc));
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#000000';
+  ctx.shadowBlur = 6;
+  drawText(ctx, name, 512, 580, `italic bold ${fs}px "DejaVu Sans"`);
+  ctx.shadowBlur = 0;
 
-  // ── 8. Output as 800x1000 (pad 100px top and bottom)
-  const finalCanvas=createCanvas(800,1000);
-  const fctx=finalCanvas.getContext('2d');
-  fctx.fillStyle='#000';fctx.fillRect(0,0,800,1000);
-  fctx.drawImage(canvas,0,100,800,800);
+  ctx.fillStyle = tc;
+  ctx.font = 'bold 15px "DejaVu Sans"';
+  ctx.fillText(handle, 512, 612);
+
+  // 6. Draw Batting Stats
+  const avg = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(1) : (stats.runs > 0 ? `${stats.runs}*` : '0.0');
+  const sr = stats.balls_faced > 0 ? ((stats.runs / stats.balls_faced) * 100).toFixed(1) : '0.0';
+  const matches = (stats.wins || 0) + (stats.losses || 0);
+  
+  const batVals = [matches, (stats.runs || 0).toLocaleString(), avg, sr];
+  const batLabels = ['MATCHES', 'RUNS', 'AVERAGE', 'STRIKE RATE'];
+  const cols = [274, 412, 554, 696];
+
+  cols.forEach((x, i) => {
+    ctx.save();
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = 'bold 10px "DejaVu Sans"';
+    ctx.textAlign = 'left';
+    ctx.fillText(batLabels[i], x, 715);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px "DejaVu Sans"';
+    ctx.shadowColor = tc;
+    ctx.shadowBlur = 8;
+    ctx.fillText(String(batVals[i]), x, 740);
+    ctx.restore();
+  });
+
+  // 7. Draw Bowling Stats
+  const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(1) : '0.0';
+  const bavg = stats.wickets > 0 ? (stats.runs_conceded / stats.wickets).toFixed(1) : '0.0';
+  const bb = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
+
+  const bowVals = [stats.wickets || 0, econ, bavg, bb];
+  const bowLabels = ['WICKETS', 'ECONOMY', 'AVERAGE', 'BEST BOWLING'];
+
+  cols.forEach((x, i) => {
+    ctx.save();
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = 'bold 10px "DejaVu Sans"';
+    ctx.textAlign = 'left';
+    ctx.fillText(bowLabels[i], x, 815);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px "DejaVu Sans"';
+    ctx.shadowColor = tc;
+    ctx.shadowBlur = 8;
+    ctx.fillText(String(bowVals[i]), x, 840);
+    ctx.restore();
+  });
+
+  // 8. Draw Bottom 4 Box Stats (Highest Score, 50s, 100s, Maidens)
+  const hs = stats.highscore > 0 ? `${stats.highscore}*` : '0';
+  const botVals = [hs, stats.fifties || 0, stats.centuries || 0, stats.maidens || 0];
+  const botLabels = ['HIGHEST SCORE', '50s', '100s', 'MAIDENS'];
+  const botLefts = [214, 360, 506, 652];
+  const botIcons = [
+    (c, x, y) => icoStar(c, x, y, tc),
+    (c, x, y) => icoCircle(c, x, y, tc, '50'),
+    (c, x, y) => icoCircle(c, x, y, tc, '100'),
+    (c, x, y) => icoGrid(c, x, y, tc),
+  ];
+
+  botLefts.forEach((left, i) => {
+    const iconX = left + 22;
+    const textX = left + 48;
+    botIcons[i](ctx, iconX, 912);
+
+    ctx.save();
+    ctx.fillStyle = '#aaaaaa';
+    ctx.font = 'bold 10px "DejaVu Sans"';
+    ctx.textAlign = 'left';
+    ctx.fillText(botLabels[i], textX, 902);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px "DejaVu Sans"';
+    ctx.shadowColor = tc;
+    ctx.shadowBlur = 8;
+    ctx.fillText(String(botVals[i]), textX, 932);
+    ctx.restore();
+  });
+
+  // 9. Output as scaled 800x1000 with black padding
+  const finalCanvas = createCanvas(800, 1000);
+  const fctx = finalCanvas.getContext('2d');
+  fctx.fillStyle = '#000000';
+  fctx.fillRect(0, 0, 800, 1000);
+  fctx.drawImage(canvas, 0, 100, 800, 800);
 
   return finalCanvas.toBuffer('image/png');
 }
 
-module.exports={generateProfileCard,normalizeStyledText};
+module.exports = { generateProfileCard, normalizeStyledText };
