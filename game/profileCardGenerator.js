@@ -526,7 +526,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const ctx = canvas.getContext('2d');
 
   // Fill entire 800x1000 canvas with the dark matte background
-  ctx.fillStyle = '#060608';
+  ctx.fillStyle = '#050507';
   ctx.fillRect(0, 0, width, height);
 
   // Translate 100px horizontally to center the 600px wide card
@@ -551,6 +551,16 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     theme = themes[themeIndex];
   }
 
+  // 1. Background carbon-fiber weave pattern
+  ctx.save();
+  ctx.fillStyle = '#0b0b0e';
+  for (let y = 0; y < height; y += 6) {
+    for (let x = (y % 12 === 0 ? 0 : 3); x < 600; x += 6) {
+      ctx.fillRect(x, y, 3, 3);
+    }
+  }
+  ctx.restore();
+
   // Background radial core glow
   ctx.save();
   const glow = ctx.createRadialGradient(avX, avY, 10, avX, avY, 340);
@@ -560,31 +570,22 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.fillRect(0, 0, 600, height);
   ctx.restore();
 
-  // Diagonal pinstripes
-  ctx.save();
-  ctx.strokeStyle = theme.glowColorRadial.replace('0.12', '0.02');
-  ctx.lineWidth = 1.5;
-  for (let i = -100; i < 600 + height; i += 60) {
-    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 400, height); ctx.stroke();
-  }
-  ctx.restore();
-
   // 2. Asymmetric chamfer-cut border with double tracks
   function drawChassisOutline(offset) {
     const cx = cardX + offset;
     const cy = cardY + offset;
     const cw = cardW - (offset * 2);
     const ch = cardH - (offset * 2);
-    const cut = 20;
+    const cut = 24;
     ctx.beginPath();
-    ctx.moveTo(cx + 8, cy);
+    ctx.moveTo(cx + 12, cy);
     ctx.lineTo(cx + cw - cut, cy);
     ctx.lineTo(cx + cw, cy + cut); // Top-right chamfer
-    ctx.lineTo(cx + cw, cy + ch - 8);
-    ctx.lineTo(cx + cw - 8, cy + ch);
+    ctx.lineTo(cx + cw, cy + ch - 12);
+    ctx.lineTo(cx + cw - 12, cy + ch);
     ctx.lineTo(cx + cut, cy + ch);
     ctx.lineTo(cx, cy + ch - cut); // Bottom-left chamfer
-    ctx.lineTo(cx, cy + 8);
+    ctx.lineTo(cx, cy + 12);
     ctx.closePath();
   }
 
@@ -597,16 +598,22 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   // Glowing inner frame outline
   ctx.save();
   ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.2;
   ctx.shadowColor = theme.themeColor;
   ctx.shadowBlur = 14;
   drawChassisOutline(8); ctx.stroke();
   ctx.restore();
 
+  // Mechanical corner brackets
+  drawCornerBracket(ctx, cardX + 12, cardY + 12, 1, 1, theme.themeColor);
+  drawCornerBracket(ctx, cardX + cardW - 12, cardY + 12, -1, 1, theme.themeColor);
+  drawCornerBracket(ctx, cardX + 12, cardY + cardH - 12, 1, -1, theme.themeColor);
+  drawCornerBracket(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1, theme.themeColor);
+
   // 3. Avatar Section
   ctx.save();
   ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 3;
   ctx.shadowColor = theme.themeColor;
   ctx.shadowBlur = 14;
   ctx.beginPath(); ctx.arc(avX, avY, avRadius + 4, 0, Math.PI * 2); ctx.stroke();
@@ -676,14 +683,39 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const textW = measureNameWidth(fontSpec);
   const nameplateW = Math.max(160, Math.min(320, textW + 36));
   const nameplateX = 300 - nameplateW / 2;
+  const nameplateY = avY + 95;
+  const nameplateH = 38;
+  const nCut = 8;
 
   ctx.save();
-  ctx.fillStyle = '#110f13';
-  ctx.strokeStyle = '#334155';
-  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.roundRect(nameplateX, avY + 95, nameplateW, 38, 4);
-  ctx.fill(); ctx.stroke();
+  ctx.moveTo(nameplateX + nCut, nameplateY);
+  ctx.lineTo(nameplateX + nameplateW - nCut, nameplateY);
+  ctx.lineTo(nameplateX + nameplateW, nameplateY + nCut);
+  ctx.lineTo(nameplateX + nameplateW, nameplateY + nameplateH - nCut);
+  ctx.lineTo(nameplateX + nameplateW - nCut, nameplateY + nameplateH);
+  ctx.lineTo(nameplateX + nCut, nameplateY + nameplateH);
+  ctx.lineTo(nameplateX, nameplateY + nameplateH - nCut);
+  ctx.lineTo(nameplateX, nameplateY + nCut);
+  ctx.closePath();
+
+  // Dark brushed finish
+  const nameplateGrad = ctx.createLinearGradient(nameplateX, nameplateY, nameplateX, nameplateY + nameplateH);
+  nameplateGrad.addColorStop(0, '#151419');
+  nameplateGrad.addColorStop(1, '#0c0b0f');
+  ctx.fillStyle = nameplateGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#2d2b36';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Theme accent tick marks on nameplate sides
+  ctx.strokeStyle = theme.themeColor;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(nameplateX, nameplateY + 10); ctx.lineTo(nameplateX, nameplateY + 28);
+  ctx.moveTo(nameplateX + nameplateW, nameplateY + 10); ctx.lineTo(nameplateX + nameplateW, nameplateY + 28);
+  ctx.stroke();
   ctx.restore();
 
   ctx.save();
@@ -696,7 +728,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   // 5. Compact MOTM Star Capsule
   ctx.save();
   ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
-  ctx.strokeStyle = 'rgba(251, 191, 36, 0.2)';
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.25)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.roundRect(260, avY + 140, 80, 20, 4);
@@ -712,26 +744,90 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawTextWithEmojis(ctx, `${stats.motm || 0} MOTM`, 285, avY + 154, 'bold 10px "DejaVu Sans"');
   ctx.restore();
 
-  // 6. Batting & Bowling Stats Grid
-  function drawSectionHeader(title, y) {
+  // 6. Batting & Bowling Sleek Dashboard Panels
+  function drawDashboardPanel(title, startY, items) {
+    const pX = 65;
+    const pW = 470;
+    const pH = 205;
+    const pCut = 12;
+
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    // 1. Draw chamfered panel backing
+    ctx.beginPath();
+    ctx.moveTo(pX + pCut, startY);
+    ctx.lineTo(pX + pW - pCut, startY);
+    ctx.lineTo(pX + pW, startY + pCut);
+    ctx.lineTo(pX + pW, startY + pH - pCut);
+    ctx.lineTo(pX + pW - pCut, startY + pH);
+    ctx.lineTo(pX + pCut, startY + pH);
+    ctx.lineTo(pX, startY + pH - pCut);
+    ctx.lineTo(pX, startY + pCut);
+    ctx.closePath();
+
+    // Dark technical gradient
+    const panelGrad = ctx.createLinearGradient(pX, startY, pX, startY + pH);
+    panelGrad.addColorStop(0, '#100f13');
+    panelGrad.addColorStop(1, '#070608');
+    ctx.fillStyle = panelGrad;
+    ctx.fill();
+
+    // Panel border
+    ctx.strokeStyle = '#1e1d24';
     ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(80, y); ctx.lineTo(210, y); ctx.moveTo(390, y); ctx.lineTo(520, y); ctx.stroke();
-    ctx.fillStyle = '#060608'; ctx.fillRect(215, y - 12, 170, 24);
-    
-    // Glowing Section text
-    ctx.fillStyle = theme.themeColor;
-    ctx.font = 'bold 11px "DejaVu Sans", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = theme.themeColor;
-    ctx.shadowBlur = 8;
-    drawTextWithEmojis(ctx, title, 300, y + 4, 'bold 11px "DejaVu Sans"');
+    ctx.stroke();
+
+    // Glowing corner bracket ticks on the panel
+    ctx.strokeStyle = theme.themeColor;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    // Top-left bracket
+    ctx.moveTo(pX + 16, startY); ctx.lineTo(pX + pCut, startY); ctx.lineTo(pX, startY + pCut); ctx.lineTo(pX, startY + 16);
+    // Bottom-right bracket
+    ctx.moveTo(pX + pW - 16, startY + pH); ctx.lineTo(pX + pW - pCut, startY + pH); ctx.lineTo(pX + pW, startY + pH - pCut); ctx.lineTo(pX + pW, startY + pH - 16);
+    ctx.stroke();
+
+    // Header label text floating in top-left
+    ctx.fillStyle = '#656370';
+    ctx.font = 'bold 9.5px "DejaVu Sans", sans-serif';
+    ctx.textAlign = 'left';
+    drawTextWithEmojis(ctx, title, pX + 18, startY + 20, 'bold 9.5px "DejaVu Sans"');
+
+    // 2. Division lines inside panel
+    ctx.strokeStyle = '#1b1a20';
+    ctx.lineWidth = 1.2;
+    // Vertical center division line
+    ctx.beginPath();
+    ctx.moveTo(300, startY + 32);
+    ctx.lineTo(300, startY + pH - 12);
+    ctx.stroke();
+
+    // Horizontal division lines
+    ctx.beginPath();
+    ctx.moveTo(pX + 15, startY + 86);
+    ctx.lineTo(pX + pW - 15, startY + 86);
+    ctx.moveTo(pX + 15, startY + 144);
+    ctx.lineTo(pX + pW - 15, startY + 144);
+    ctx.stroke();
+
+    // 3. Render grid items
+    items.forEach(item => {
+      // Label
+      ctx.fillStyle = '#8e8b9e';
+      ctx.font = 'bold 9px "DejaVu Sans", sans-serif';
+      ctx.textAlign = 'center';
+      drawTextWithEmojis(ctx, item.label.toUpperCase(), item.x, item.y, 'bold 9px "DejaVu Sans"');
+
+      // Value
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 18.5px "DejaVu Sans", sans-serif';
+      drawTextWithEmojis(ctx, String(item.val), item.x, item.y + 23, 'bold 18.5px "DejaVu Sans"');
+    });
+
     ctx.restore();
   }
 
-  const col1 = 170;
-  const col2 = 430;
+  const col1 = 182;
+  const col2 = 418;
   const avgStr = stats.dismissals > 0 ? (stats.runs / stats.dismissals).toFixed(2) : (stats.runs > 0 ? `${stats.runs}*` : '0.00');
   const econ = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(2) : '0.00';
   const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
@@ -739,60 +835,26 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const overs = (stats.balls_bowled / 6).toFixed(1);
 
   const batStartY = avY + 195;
-  drawSectionHeader("BATTING RECORDS", batStartY);
-
   const battingItems = [
-    { label: "Runs Scored", val: stats.runs || 0, x: col1, y: batStartY + 35 },
-    { label: "Batting Average", val: avgStr, x: col2, y: batStartY + 35 },
-    { label: "Highest Score", val: stats.highscore || 0, x: col1, y: batStartY + 105 },
-    { label: "Fours / Sixes", val: `${stats.fours || 0} / ${stats.sixes || 0}`, x: col2, y: batStartY + 105 },
-    { label: "50s / 100s", val: `${stats.fifties || 0} / ${stats.centuries || 0}`, x: col1, y: batStartY + 175 },
-    { label: "Ducks Count", val: stats.ducks || 0, x: col2, y: batStartY + 175 }
+    { label: "Runs Scored", val: stats.runs || 0, x: col1, y: batStartY + 50 },
+    { label: "Batting Avg", val: avgStr, x: col2, y: batStartY + 50 },
+    { label: "Highest Score", val: stats.highscore || 0, x: col1, y: batStartY + 108 },
+    { label: "Fours / Sixes", val: `${stats.fours || 0} / ${stats.sixes || 0}`, x: col2, y: batStartY + 108 },
+    { label: "50s / 100s", val: `${stats.fifties || 0} / ${stats.centuries || 0}`, x: col1, y: batStartY + 166 },
+    { label: "Ducks Count", val: stats.ducks || 0, x: col2, y: batStartY + 166 }
   ];
+  drawDashboardPanel("BATTING INSTRUMENTS", batStartY, battingItems);
 
-  ctx.save();
-  battingItems.forEach(item => {
-    ctx.fillStyle = '#0d0b0e';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.roundRect(item.x - 90, item.y, 180, 56, 4);
-    ctx.fill(); ctx.stroke();
-
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 9.5px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
-    drawTextWithEmojis(ctx, item.label.toUpperCase(), item.x, item.y + 18, 'bold 9.5px "DejaVu Sans"');
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 19px "DejaVu Sans", sans-serif';
-    drawTextWithEmojis(ctx, String(item.val), item.x, item.y + 42, 'bold 19px "DejaVu Sans"');
-  });
-  ctx.restore();
-
-  const bowlStartY = batStartY + 265;
-  drawSectionHeader("BOWLING RECORDS", bowlStartY);
-
+  const bowlStartY = batStartY + 235;
   const bowlingItems = [
-    { label: "Wickets Taken", val: stats.wickets || 0, x: col1, y: bowlStartY + 35 },
-    { label: "Economy Rate", val: econ, x: col2, y: bowlStartY + 35 },
-    { label: "Best Bowling", val: bestBowling, x: col1, y: bowlStartY + 105 },
-    { label: "3w / 5w Hauls", val: `${stats.threew || 0} / ${stats.fivew || 0}`, x: col2, y: bowlStartY + 105 },
-    { label: "Bowling Average", val: bowlAvg, x: col1, y: bowlStartY + 175 },
-    { label: "Overs Bowled", val: overs, x: col2, y: bowlStartY + 175 }
+    { label: "Wickets Taken", val: stats.wickets || 0, x: col1, y: bowlStartY + 50 },
+    { label: "Economy Rate", val: econ, x: col2, y: bowlStartY + 50 },
+    { label: "Best Bowling", val: bestBowling, x: col1, y: bowlStartY + 108 },
+    { label: "3w / 5w Hauls", val: `${stats.threew || 0} / ${stats.fivew || 0}`, x: col2, y: bowlStartY + 108 },
+    { label: "Bowling Avg", val: bowlAvg, x: col1, y: bowlStartY + 166 },
+    { label: "Overs Bowled", val: overs, x: col2, y: bowlStartY + 166 }
   ];
-
-  ctx.save();
-  bowlingItems.forEach(item => {
-    ctx.fillStyle = '#0d0b0e';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.roundRect(item.x - 90, item.y, 180, 56, 4);
-    ctx.fill(); ctx.stroke();
-
-    ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 9.5px "DejaVu Sans", sans-serif'; ctx.textAlign = 'center';
-    drawTextWithEmojis(ctx, item.label.toUpperCase(), item.x, item.y + 18, 'bold 9.5px "DejaVu Sans"');
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 19px "DejaVu Sans", sans-serif';
-    drawTextWithEmojis(ctx, String(item.val), item.x, item.y + 42, 'bold 19px "DejaVu Sans"');
-  });
-  ctx.restore();
+  drawDashboardPanel("BOWLING INSTRUMENTS", bowlStartY, bowlingItems);
 
   // 7. Bottom Brand Stamp
   ctx.save();
@@ -859,6 +921,18 @@ function drawVectorStar(ctx, cx, cy, spikes, outerRadius, innerRadius, color) {
   ctx.closePath();
   ctx.fillStyle = color || '#fbbf24';
   ctx.fill();
+  ctx.restore();
+}
+
+function drawCornerBracket(ctx, x, y, rx, ry, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x + rx * 20, y);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x, y + ry * 20);
+  ctx.stroke();
   ctx.restore();
 }
 
