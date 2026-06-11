@@ -551,15 +551,8 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     theme = themes[themeIndex];
   }
 
-  // 1. Background carbon-fiber weave pattern
-  ctx.save();
-  ctx.fillStyle = '#0b0b0e';
-  for (let y = 0; y < height; y += 6) {
-    for (let x = (y % 12 === 0 ? 0 : 3); x < 600; x += 6) {
-      ctx.fillRect(x, y, 3, 3);
-    }
-  }
-  ctx.restore();
+  // 1. Theme-specific background texture pattern
+  drawBackgroundTexture(ctx, theme.name);
 
   // Background radial core glow
   ctx.save();
@@ -570,23 +563,96 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.fillRect(0, 0, 600, height);
   ctx.restore();
 
-  // 2. Asymmetric chamfer-cut border with double tracks
+  // 2. Theme-specific Outlines / Chassis Shapes
   function drawChassisOutline(offset) {
     const cx = cardX + offset;
     const cy = cardY + offset;
     const cw = cardW - (offset * 2);
     const ch = cardH - (offset * 2);
-    const cut = 24;
-    ctx.beginPath();
-    ctx.moveTo(cx + 12, cy);
-    ctx.lineTo(cx + cw - cut, cy);
-    ctx.lineTo(cx + cw, cy + cut); // Top-right chamfer
-    ctx.lineTo(cx + cw, cy + ch - 12);
-    ctx.lineTo(cx + cw - 12, cy + ch);
-    ctx.lineTo(cx + cut, cy + ch);
-    ctx.lineTo(cx, cy + ch - cut); // Bottom-left chamfer
-    ctx.lineTo(cx, cy + 12);
-    ctx.closePath();
+
+    if (theme.name === 'blue') {
+      ctx.beginPath();
+      ctx.roundRect(cx, cy, cw, ch, 24);
+    } else if (theme.name === 'green') {
+      const cut = 16;
+      ctx.beginPath();
+      ctx.moveTo(cx + cut, cy);
+      ctx.lineTo(cx + cw - cut, cy);
+      ctx.lineTo(cx + cw, cy + cut);
+      ctx.lineTo(cx + cw, cy + ch - cut);
+      ctx.lineTo(cx + cw - cut, cy + ch);
+      ctx.lineTo(cx + cut, cy + ch);
+      ctx.lineTo(cx, cy + ch - cut);
+      ctx.lineTo(cx, cy + cut);
+      ctx.closePath();
+    } else if (theme.name === 'purple') {
+      const step = 14;
+      ctx.beginPath();
+      ctx.moveTo(cx + step, cy);
+      ctx.lineTo(cx + cw - step, cy);
+      ctx.lineTo(cx + cw - step, cy + step);
+      ctx.lineTo(cx + cw, cy + step);
+      ctx.lineTo(cx + cw, cy + ch - step);
+      ctx.lineTo(cx + cw - step, cy + ch - step);
+      ctx.lineTo(cx + cw - step, cy + ch);
+      ctx.lineTo(cx + step, cy + ch);
+      ctx.lineTo(cx + step, cy + ch - step);
+      ctx.lineTo(cx, cy + ch - step);
+      ctx.lineTo(cx, cy + step);
+      ctx.lineTo(cx + step, cy + step);
+      ctx.closePath();
+    } else if (theme.name === 'gold') {
+      ctx.beginPath();
+      ctx.moveTo(cx + cw / 2, cy); // Top center peak
+      ctx.lineTo(cx + cw - 16, cy + 12);
+      ctx.lineTo(cx + cw, cy + 32);
+      ctx.lineTo(cx + cw, cy + ch - 32);
+      ctx.lineTo(cx + cw - 16, cy + ch - 12);
+      ctx.lineTo(cx + cw / 2, cy + ch); // Bottom center peak
+      ctx.lineTo(cx + 16, cy + ch - 12);
+      ctx.lineTo(cx, cy + ch - 32);
+      ctx.lineTo(cx, cy + 32);
+      ctx.lineTo(cx + 16, cy + 12);
+      ctx.closePath();
+    } else if (theme.name === 'cyan') {
+      const cutX = 32;
+      const cutY = 20;
+      ctx.beginPath();
+      ctx.moveTo(cx + cutX, cy);
+      ctx.lineTo(cx + cw - cutX, cy);
+      ctx.lineTo(cx + cw, cy + cutY);
+      ctx.lineTo(cx + cw, cy + ch - cutY);
+      ctx.lineTo(cx + cw - cutX, cy + ch);
+      ctx.lineTo(cx + cutX, cy + ch);
+      ctx.lineTo(cx, cy + ch - cutY);
+      ctx.lineTo(cx, cy + cutY);
+      ctx.closePath();
+    } else if (theme.name === 'pink') {
+      const cut = 24;
+      ctx.beginPath();
+      ctx.moveTo(cx + cut, cy);
+      ctx.lineTo(cx + cw - cut, cy);
+      ctx.lineTo(cx + cw, cy + cut);
+      ctx.lineTo(cx + cw, cy + ch - cut);
+      ctx.lineTo(cx + cw - cut, cy + ch);
+      ctx.lineTo(cx + cut, cy + ch);
+      ctx.lineTo(cx, cy + ch - cut);
+      ctx.lineTo(cx, cy + cut);
+      ctx.closePath();
+    } else {
+      // Default / Red (Redline Sport) asymmetric chamfer
+      const cut = 24;
+      ctx.beginPath();
+      ctx.moveTo(cx + 12, cy);
+      ctx.lineTo(cx + cw - cut, cy);
+      ctx.lineTo(cx + cw, cy + cut);
+      ctx.lineTo(cx + cw, cy + ch - 12);
+      ctx.lineTo(cx + cw - 12, cy + ch);
+      ctx.lineTo(cx + cut, cy + ch);
+      ctx.lineTo(cx, cy + ch - cut);
+      ctx.lineTo(cx, cy + 12);
+      ctx.closePath();
+    }
   }
 
   // Outer frame
@@ -604,11 +670,13 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawChassisOutline(8); ctx.stroke();
   ctx.restore();
 
-  // Mechanical corner brackets
-  drawCornerBracket(ctx, cardX + 12, cardY + 12, 1, 1, theme.themeColor);
-  drawCornerBracket(ctx, cardX + cardW - 12, cardY + 12, -1, 1, theme.themeColor);
-  drawCornerBracket(ctx, cardX + 12, cardY + cardH - 12, 1, -1, theme.themeColor);
-  drawCornerBracket(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1, theme.themeColor);
+  // Corner brackets conditionally matching theme geometry
+  if (theme.name === 'red' || theme.name === 'green' || theme.name === 'pink') {
+    drawCornerBracket(ctx, cardX + 12, cardY + 12, 1, 1, theme.themeColor);
+    drawCornerBracket(ctx, cardX + cardW - 12, cardY + 12, -1, 1, theme.themeColor);
+    drawCornerBracket(ctx, cardX + 12, cardY + cardH - 12, 1, -1, theme.themeColor);
+    drawCornerBracket(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1, theme.themeColor);
+  }
 
   // 3. Avatar Section
   ctx.save();
@@ -933,6 +1001,108 @@ function drawCornerBracket(ctx, x, y, rx, ry, color) {
   ctx.lineTo(x, y);
   ctx.lineTo(x, y + ry * 20);
   ctx.stroke();
+  ctx.restore();
+}
+
+function drawBackgroundTexture(ctx, themeName) {
+  ctx.save();
+  
+  if (themeName === 'blue') {
+    // 2D Cyber Grid lines
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.015)';
+    ctx.lineWidth = 1.2;
+    for (let x = 0; x < 600; x += 25) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1000); ctx.stroke();
+    }
+    for (let y = 0; y < 1000; y += 25) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(600, y); ctx.stroke();
+    }
+  } else if (themeName === 'green') {
+    // Honeycomb Hexagon Matrix
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.012)';
+    ctx.lineWidth = 1;
+    const hexRadius = 16;
+    const a = hexRadius / 2;
+    const b = hexRadius * Math.sin(Math.PI / 3);
+    for (let y = -20; y < 1000 + hexRadius; y += b * 2) {
+      for (let x = -20; x < 600 + hexRadius; x += hexRadius * 3) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + hexRadius, y);
+        ctx.lineTo(x + hexRadius + a, y + b);
+        ctx.lineTo(x + hexRadius, y + b * 2);
+        ctx.lineTo(x, y + b * 2);
+        ctx.lineTo(x - a, y + b);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x + hexRadius * 1.5, y + b);
+        ctx.lineTo(x + hexRadius * 2.5, y + b);
+        ctx.lineTo(x + hexRadius * 2.5 + a, y + b * 2);
+        ctx.lineTo(x + hexRadius * 2.5, y + b * 3);
+        ctx.lineTo(x + hexRadius * 1.5, y + b * 3);
+        ctx.lineTo(x + hexRadius * 1.5 - a, y + b * 2);
+        ctx.closePath();
+        ctx.stroke();
+      }
+    }
+  } else if (themeName === 'purple') {
+    // Cyberpunk tech circuit lines
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.02)';
+    ctx.lineWidth = 1.5;
+    const nodes = [
+      {x: 100, y: 100, dx: 150, dy: 150},
+      {x: 500, y: 120, dx: 450, dy: 170},
+      {x: 80, y: 800, dx: 140, dy: 740},
+      {x: 520, y: 820, dx: 460, dy: 760},
+      {x: 200, y: 450, dx: 250, dy: 500},
+      {x: 400, y: 480, dx: 350, dy: 530}
+    ];
+    nodes.forEach(node => {
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y);
+      ctx.lineTo(node.dx, node.dy);
+      ctx.lineTo(node.dx, node.dy + 80);
+      ctx.stroke();
+      
+      ctx.fillStyle = 'rgba(168, 85, 247, 0.15)';
+      ctx.beginPath(); ctx.arc(node.x, node.y, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(node.dx, node.dy + 80, 4, 0, Math.PI * 2); ctx.fill();
+    });
+  } else if (themeName === 'gold') {
+    // Regal Brushed Stripes
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.012)';
+    ctx.lineWidth = 2.5;
+    for (let y = 0; y < 1000; y += 16) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(600, y); ctx.stroke();
+    }
+  } else if (themeName === 'cyan') {
+    // Sharp Crystalline diagonals
+    ctx.strokeStyle = 'rgba(6, 182, 212, 0.025)';
+    ctx.lineWidth = 1;
+    for (let i = -200; i < 600 + 1000; i += 40) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 300, 1000); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 300, 1000); ctx.stroke();
+    }
+  } else if (themeName === 'pink') {
+    // Cyberpunk Dot Matrix Grid
+    ctx.fillStyle = 'rgba(236, 72, 153, 0.02)';
+    for (let y = 10; y < 1000; y += 20) {
+      for (let x = 10; x < 600; x += 20) {
+        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  } else {
+    // Red / Default - Carbon fiber weave pattern
+    ctx.fillStyle = '#0b0b0e';
+    for (let y = 0; y < 1000; y += 6) {
+      for (let x = (y % 12 === 0 ? 0 : 3); x < 600; x += 6) {
+        ctx.fillRect(x, y, 3, 3);
+      }
+    }
+  }
+  
   ctx.restore();
 }
 
