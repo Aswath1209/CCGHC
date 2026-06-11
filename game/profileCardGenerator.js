@@ -525,7 +525,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Fill entire 800x1000 canvas with the dark matte background
+  // Fill entire 800x1000 canvas with the deep obsidian black
   ctx.fillStyle = '#050507';
   ctx.fillRect(0, 0, width, height);
 
@@ -551,7 +551,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     theme = themes[themeIndex];
   }
 
-  // 1. Theme-specific background texture pattern
+  // 1. Sleek luxury brushed metal background texture
   drawBackgroundTexture(ctx, theme.name);
 
   // Background radial core glow
@@ -661,12 +661,20 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawChassisOutline(0); ctx.stroke();
   ctx.restore();
 
-  // Glowing inner frame outline
+  // Multi-pass laser neon glow for inner track
   ctx.save();
-  ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 2.2;
   ctx.shadowColor = theme.themeColor;
-  ctx.shadowBlur = 14;
+  
+  // Pass 1: Wide neon emission
+  ctx.strokeStyle = theme.themeColor;
+  ctx.lineWidth = 3.5;
+  ctx.shadowBlur = 18;
+  drawChassisOutline(8); ctx.stroke();
+  
+  // Pass 2: High intensity center core
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.shadowBlur = 4;
   drawChassisOutline(8); ctx.stroke();
   ctx.restore();
 
@@ -678,12 +686,19 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     drawCornerBracket(ctx, cardX + cardW - 12, cardY + cardH - 12, -1, -1, theme.themeColor);
   }
 
-  // 3. Avatar Section
+  // 3. Avatar Section with multi-pass glow ring
   ctx.save();
-  ctx.strokeStyle = theme.themeColor;
-  ctx.lineWidth = 3;
   ctx.shadowColor = theme.themeColor;
-  ctx.shadowBlur = 14;
+  // Pass 1: Wide neon ring
+  ctx.strokeStyle = theme.themeColor;
+  ctx.lineWidth = 4;
+  ctx.shadowBlur = 16;
+  ctx.beginPath(); ctx.arc(avX, avY, avRadius + 4, 0, Math.PI * 2); ctx.stroke();
+
+  // Pass 2: White core ring
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.shadowBlur = 4;
   ctx.beginPath(); ctx.arc(avX, avY, avRadius + 4, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
 
@@ -1007,100 +1022,28 @@ function drawCornerBracket(ctx, x, y, rx, ry, color) {
 function drawBackgroundTexture(ctx, themeName) {
   ctx.save();
   
-  if (themeName === 'blue') {
-    // 2D Cyber Grid lines
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.015)';
-    ctx.lineWidth = 1.2;
-    for (let x = 0; x < 600; x += 25) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 1000); ctx.stroke();
-    }
-    for (let y = 0; y < 1000; y += 25) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(600, y); ctx.stroke();
-    }
-  } else if (themeName === 'green') {
-    // Honeycomb Hexagon Matrix
-    ctx.strokeStyle = 'rgba(34, 197, 94, 0.012)';
-    ctx.lineWidth = 1;
-    const hexRadius = 16;
-    const a = hexRadius / 2;
-    const b = hexRadius * Math.sin(Math.PI / 3);
-    for (let y = -20; y < 1000 + hexRadius; y += b * 2) {
-      for (let x = -20; x < 600 + hexRadius; x += hexRadius * 3) {
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + hexRadius, y);
-        ctx.lineTo(x + hexRadius + a, y + b);
-        ctx.lineTo(x + hexRadius, y + b * 2);
-        ctx.lineTo(x, y + b * 2);
-        ctx.lineTo(x - a, y + b);
-        ctx.closePath();
-        ctx.stroke();
+  // Base dark gradient
+  const baseGrad = ctx.createLinearGradient(0, 0, 600, 1000);
+  baseGrad.addColorStop(0, '#0a0a0c');
+  baseGrad.addColorStop(0.5, '#060608');
+  baseGrad.addColorStop(1, '#020203');
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(0, 0, 600, 1000);
+  
+  // Smooth 3D Metallic lighting reflection
+  const metalGrad = ctx.createLinearGradient(0, 0, 600, 1000);
+  metalGrad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
+  metalGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0)');
+  metalGrad.addColorStop(0.7, 'rgba(255, 255, 255, 0.015)');
+  metalGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = metalGrad;
+  ctx.fillRect(0, 0, 600, 1000);
 
-        ctx.beginPath();
-        ctx.moveTo(x + hexRadius * 1.5, y + b);
-        ctx.lineTo(x + hexRadius * 2.5, y + b);
-        ctx.lineTo(x + hexRadius * 2.5 + a, y + b * 2);
-        ctx.lineTo(x + hexRadius * 2.5, y + b * 3);
-        ctx.lineTo(x + hexRadius * 1.5, y + b * 3);
-        ctx.lineTo(x + hexRadius * 1.5 - a, y + b * 2);
-        ctx.closePath();
-        ctx.stroke();
-      }
-    }
-  } else if (themeName === 'purple') {
-    // Cyberpunk tech circuit lines
-    ctx.strokeStyle = 'rgba(168, 85, 247, 0.02)';
-    ctx.lineWidth = 1.5;
-    const nodes = [
-      {x: 100, y: 100, dx: 150, dy: 150},
-      {x: 500, y: 120, dx: 450, dy: 170},
-      {x: 80, y: 800, dx: 140, dy: 740},
-      {x: 520, y: 820, dx: 460, dy: 760},
-      {x: 200, y: 450, dx: 250, dy: 500},
-      {x: 400, y: 480, dx: 350, dy: 530}
-    ];
-    nodes.forEach(node => {
-      ctx.beginPath();
-      ctx.moveTo(node.x, node.y);
-      ctx.lineTo(node.dx, node.dy);
-      ctx.lineTo(node.dx, node.dy + 80);
-      ctx.stroke();
-      
-      ctx.fillStyle = 'rgba(168, 85, 247, 0.15)';
-      ctx.beginPath(); ctx.arc(node.x, node.y, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(node.dx, node.dy + 80, 4, 0, Math.PI * 2); ctx.fill();
-    });
-  } else if (themeName === 'gold') {
-    // Regal Brushed Stripes
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.012)';
-    ctx.lineWidth = 2.5;
-    for (let y = 0; y < 1000; y += 16) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(600, y); ctx.stroke();
-    }
-  } else if (themeName === 'cyan') {
-    // Sharp Crystalline diagonals
-    ctx.strokeStyle = 'rgba(6, 182, 212, 0.025)';
-    ctx.lineWidth = 1;
-    for (let i = -200; i < 600 + 1000; i += 40) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 300, 1000); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i + 300, 1000); ctx.stroke();
-    }
-  } else if (themeName === 'pink') {
-    // Cyberpunk Dot Matrix Grid
-    ctx.fillStyle = 'rgba(236, 72, 153, 0.02)';
-    for (let y = 10; y < 1000; y += 20) {
-      for (let x = 10; x < 600; x += 20) {
-        ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-  } else {
-    // Red / Default - Carbon fiber weave pattern
-    ctx.fillStyle = '#0b0b0e';
-    for (let y = 0; y < 1000; y += 6) {
-      for (let x = (y % 12 === 0 ? 0 : 3); x < 600; x += 6) {
-        ctx.fillRect(x, y, 3, 3);
-      }
-    }
+  // Subtle horizontal brushed metal stripes (very low opacity for texture)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.006)';
+  ctx.lineWidth = 1;
+  for (let y = 0; y < 1000; y += 4) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(600, y); ctx.stroke();
   }
   
   ctx.restore();
