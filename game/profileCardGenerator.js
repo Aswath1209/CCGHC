@@ -520,12 +520,20 @@ function drawAvatarFlourish(ctx, x, y, radius) {
 }
 
 async function generateProfileCard(user, stats, avatarBuffer) {
-  const width = 600;
+  const width = 800;
   const height = 1000;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Card boundary dimensions
+  // Fill entire 800x1000 canvas with the dark matte background
+  ctx.fillStyle = '#060608';
+  ctx.fillRect(0, 0, width, height);
+
+  // Translate 100px horizontally to center the 600px wide card
+  ctx.save();
+  ctx.translate(100, 0);
+
+  // Card boundary dimensions (relative to the 600px card width)
   const cardX = 35;
   const cardY = 35;
   const cardW = 530;
@@ -543,24 +551,20 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     theme = themes[themeIndex];
   }
 
-  // 1. Matte Charcoal Background
-  ctx.fillStyle = '#060608';
-  ctx.fillRect(0, 0, width, height);
-
   // Background radial core glow
   ctx.save();
   const glow = ctx.createRadialGradient(avX, avY, 10, avX, avY, 340);
   glow.addColorStop(0, theme.glowColorRadial);
   glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(0, 0, 600, height);
   ctx.restore();
 
   // Diagonal pinstripes
   ctx.save();
   ctx.strokeStyle = theme.glowColorRadial.replace('0.12', '0.02');
   ctx.lineWidth = 1.5;
-  for (let i = -100; i < width + height; i += 60) {
+  for (let i = -100; i < 600 + height; i += 60) {
     ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i - 400, height); ctx.stroke();
   }
   ctx.restore();
@@ -799,7 +803,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
 
   // 8. Card Gloss Overlay
   ctx.save();
-  const glossGrad = ctx.createLinearGradient(0, 0, width, height);
+  const glossGrad = ctx.createLinearGradient(0, 0, 600, height);
   glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
   glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.02)');
   glossGrad.addColorStop(0.31, 'rgba(255, 255, 255, 0)');
@@ -809,6 +813,8 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   drawChassisOutline(0);
   ctx.fill();
   ctx.restore();
+
+  ctx.restore(); // Restore card translation
 
   return canvas.toBuffer('image/png');
 }
