@@ -393,6 +393,49 @@ const themes = {
   10: { name: 'blue', color: '#3b82f6', accent: '#2563eb', glow: 'rgba(59, 130, 246, 0.48)' }
 };
 
+function drawChassisPath(ctx, x, y, w, h, offset, hasTopCap = true) {
+  const ox = x + offset;
+  const oy = y + offset;
+  const ow = w - offset * 2;
+  const oh = h - offset * 2;
+  const cut = 36 - offset;
+  
+  ctx.beginPath();
+  // Top edge
+  ctx.moveTo(ox + cut, oy);
+  if (hasTopCap) {
+    ctx.lineTo(ox + ow / 2 - 90 + offset, oy);
+    ctx.lineTo(ox + ow / 2 - 78 + offset, oy - 12 + offset);
+    ctx.lineTo(ox + ow / 2 + 78 - offset, oy - 12 + offset);
+    ctx.lineTo(ox + ow / 2 + 90 - offset, oy);
+  }
+  ctx.lineTo(ox + ow - cut, oy);
+  
+  // Top-right corner
+  ctx.lineTo(ox + ow, oy + cut);
+  
+  // Right edge
+  ctx.lineTo(ox + ow, oy + oh - cut);
+  
+  // Bottom-right corner
+  ctx.lineTo(ox + ow - cut, oy + oh);
+  
+  // Bottom edge
+  ctx.lineTo(ox + ow / 2 + 90 - offset, oy + oh);
+  ctx.lineTo(ox + ow / 2 + 78 - offset, oy + oh + 12 - offset);
+  ctx.lineTo(ox + ow / 2 - 78 + offset, oy + oh + 12 - offset);
+  ctx.lineTo(ox + ow / 2 - 90 + offset, oy + oh);
+  ctx.lineTo(ox + cut, oy + oh);
+  
+  // Bottom-left corner
+  ctx.lineTo(ox, oy + oh - cut);
+  
+  // Left edge
+  ctx.lineTo(ox, oy + cut);
+  
+  ctx.closePath();
+}
+
 async function generateProfileCard(user, stats, avatarBuffer) {
   const canvas = createCanvas(1024, 1448);
   const ctx = canvas.getContext('2d');
@@ -466,13 +509,11 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const y = 32;
   const w = width - 64;
   const h = height - 64;
-  const r = 28;
 
   // 1. Semi-transparent dark background for the whole card content area
   ctx.save();
   ctx.fillStyle = 'rgba(5, 2, 2, 0.5)';
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
+  drawChassisPath(ctx, x, y, w, h, 0, designId !== 9);
   ctx.fill();
   ctx.restore();
 
@@ -493,14 +534,13 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   }
   ctx.restore();
 
-  // 3. Thick glowing outer rounded rectangle border
+  // 3. Thick glowing outer border using custom chassis path
   ctx.save();
   ctx.strokeStyle = accent;
   ctx.lineWidth = 4.5;
   ctx.shadowColor = glowColor;
   ctx.shadowBlur = 18;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
+  drawChassisPath(ctx, x, y, w, h, 0, designId !== 9);
   ctx.stroke();
   ctx.restore();
 
@@ -508,8 +548,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.save();
   ctx.strokeStyle = accentBright + 'a6';
   ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(x + 10, y + 10, w - 20, h - 20, r - 8);
+  drawChassisPath(ctx, x, y, w, h, 10, designId !== 9);
   ctx.stroke();
   ctx.restore();
 
@@ -547,47 +586,16 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.stroke();
   ctx.restore();
 
-  // 6. Center Top and Bottom slanted/trapezoidal caps
-  ctx.save();
-  ctx.strokeStyle = accentBright;
-  ctx.fillStyle = 'rgba(6, 2, 2, 0.95)';
-  ctx.lineWidth = 2.4;
-  ctx.shadowColor = glowColor;
-  ctx.shadowBlur = 10;
-
-  // Top center cap
+  // 6. Season 4 text inside the top cap (which is built into the chassis outline)
   if (designId !== 9) {
-    const capW = 180;
-    const capH = 24;
-    ctx.beginPath();
-    ctx.moveTo(x + w / 2 - capW / 2, y + 4);
-    ctx.lineTo(x + w / 2 - capW / 2 + 12, y + 4 + capH);
-    ctx.lineTo(x + w / 2 + capW / 2 - 12, y + 4 + capH);
-    ctx.lineTo(x + w / 2 + capW / 2, y + 4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Text inside the top cap
+    ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 11px "DejaVu Sans"';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('SEASON 4', x + w / 2, y + 4 + capH / 2 + 1);
+    ctx.fillText('SEASON 4', x + w / 2, y - 6 + 1);
+    ctx.restore();
   }
-
-  // Bottom center cap
-  const bCapW = 160;
-  const bCapH = 14;
-  ctx.beginPath();
-  ctx.moveTo(x + w / 2 - bCapW / 2, y + h - 4);
-  ctx.lineTo(x + w / 2 - bCapW / 2 + 12, y + h - 4 - bCapH);
-  ctx.lineTo(x + w / 2 + bCapW / 2 - 12, y + h - 4 - bCapH);
-  ctx.lineTo(x + w / 2 + bCapW / 2, y + h - 4);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
 
   // Render the design-specific graphic overlays
   ctx.save();
