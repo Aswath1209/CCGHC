@@ -554,23 +554,36 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.lineWidth = 2.4;
   ctx.shadowColor = glowColor;
   ctx.shadowBlur = 10;
-  const capW = 160;
-  const capH = 14;
+
   // Top center cap
-  ctx.beginPath();
-  ctx.moveTo(x + w / 2 - capW / 2, y + 4);
-  ctx.lineTo(x + w / 2 - capW / 2 + 12, y + 4 + capH);
-  ctx.lineTo(x + w / 2 + capW / 2 - 12, y + 4 + capH);
-  ctx.lineTo(x + w / 2 + capW / 2, y + 4);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
+  if (designId !== 9) {
+    const capW = 180;
+    const capH = 24;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2 - capW / 2, y + 4);
+    ctx.lineTo(x + w / 2 - capW / 2 + 12, y + 4 + capH);
+    ctx.lineTo(x + w / 2 + capW / 2 - 12, y + 4 + capH);
+    ctx.lineTo(x + w / 2 + capW / 2, y + 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Text inside the top cap
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px "DejaVu Sans"';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SEASON 4', x + w / 2, y + 4 + capH / 2 + 1);
+  }
+
   // Bottom center cap
+  const bCapW = 160;
+  const bCapH = 14;
   ctx.beginPath();
-  ctx.moveTo(x + w / 2 - capW / 2, y + h - 4);
-  ctx.lineTo(x + w / 2 - capW / 2 + 12, y + h - 4 - capH);
-  ctx.lineTo(x + w / 2 + capW / 2 - 12, y + h - 4 - capH);
-  ctx.lineTo(x + w / 2 + capW / 2, y + h - 4);
+  ctx.moveTo(x + w / 2 - bCapW / 2, y + h - 4);
+  ctx.lineTo(x + w / 2 - bCapW / 2 + 12, y + h - 4 - bCapH);
+  ctx.lineTo(x + w / 2 + bCapW / 2 - 12, y + h - 4 - bCapH);
+  ctx.lineTo(x + w / 2 + bCapW / 2, y + h - 4);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -860,6 +873,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   const economy = stats.balls_bowled > 0 ? ((stats.runs_conceded * 6) / stats.balls_bowled).toFixed(1) : '0.0';
   const bestBowling = `${stats.best_wickets || 0}/${stats.best_runs_conceded || 0}`;
   const highScore = stats.highscore > 0 ? `${stats.highscore}*` : '0';
+  const overs = (stats.balls_bowled / 6).toFixed(1);
 
   const battingItems = [
     { label: 'Matches', value: matches, icon: drawCalendarIcon },
@@ -867,7 +881,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     { label: 'Average', value: battingAverage, icon: drawBarsIcon },
     { label: 'Strike Rate', value: strikeRate, icon: drawGaugeIcon },
     { label: 'Highest Score', value: highScore, icon: drawStarIcon },
-    { label: '50s', value: stats.fifties || 0, icon: (iconCtx, xB, yB, color, size) => drawNumberBadge(iconCtx, xB, yB, size, '50', color) }
+    { label: '50s / 100s', value: `${stats.fifties || 0} / ${stats.centuries || 0}`, icon: (iconCtx, xB, yB, color, size) => drawNumberBadge(iconCtx, xB, yB, size, '50/100', color) }
   ];
 
   const bowlingItems = [
@@ -875,9 +889,34 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     { label: 'Economy', value: economy, icon: drawGaugeIcon },
     { label: 'Average', value: bowlingAverage, icon: drawBarsIcon },
     { label: 'Best Bowling', value: bestBowling, icon: drawTargetIcon },
-    { label: '100s', value: stats.centuries || 0, icon: (iconCtx, xB, yB, color, size) => drawNumberBadge(iconCtx, xB, yB, size, '100', color) },
-    { label: 'MOTMs', value: stats.motm || 0, icon: drawTrophyIcon }
+    { label: 'Overs', value: overs, icon: drawCalendarIcon },
+    { label: '3w / 5w', value: `${stats.threew || 0} / ${stats.fivew || 0}`, icon: (iconCtx, xB, yB, color, size) => drawNumberBadge(iconCtx, xB, yB, size, '3w/5w', color) }
   ];
+
+  // Draw MOTM Prestige Badge centered below the nameplate
+  ctx.save();
+  const motmBadgeX = width / 2 - 90;
+  const motmBadgeY = 782;
+  const motmBadgeW = 180;
+  const motmBadgeH = 30;
+  const motmBadgeR = 6;
+
+  ctx.beginPath();
+  ctx.roundRect(motmBadgeX, motmBadgeY, motmBadgeW, motmBadgeH, motmBadgeR);
+  ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.28)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  drawStarIcon(ctx, motmBadgeX + 22, motmBadgeY + motmBadgeH / 2, '#fbbf24', 28);
+
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 12px "DejaVu Sans"';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${stats.motm} MOTM AWARDS`, motmBadgeX + 44, motmBadgeY + motmBadgeH / 2 + 0.5);
+  ctx.restore();
 
   // Draw a beautiful stats panel
   function drawStatPanel(panelX, panelY, panelW, panelH, title, items) {
@@ -923,9 +962,9 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     const colGap = 17;
     const colMargin = 16;
 
-    const rowH = 106;
-    const rowGap = 12;
-    const rowMargin = 52; // start after title/divider
+    const rowH = 88;
+    const rowGap = 8;
+    const rowMargin = 46; // start after title/divider
 
     items.forEach((item, index) => {
       const row = Math.floor(index / 3);
@@ -963,7 +1002,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
       }
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(item.label.toUpperCase(), colX + 52, colY + 18);
+      ctx.fillText(item.label.toUpperCase(), colX + 52, colY + 14);
       ctx.restore();
 
       // Value at the bottom-right
@@ -978,13 +1017,13 @@ async function generateProfileCard(user, stats, avatarBuffer) {
       ctx.textBaseline = 'bottom';
       ctx.shadowColor = accent + '7a';
       ctx.shadowBlur = 8;
-      ctx.fillText(valueStr, colX + colW - 22, colY + rowH - 16);
+      ctx.fillText(valueStr, colX + colW - 22, colY + rowH - 12);
       ctx.restore();
     });
   }
 
-  drawStatPanel(68, 788, 888, 292, 'BATTING RECORD', battingItems);
-  drawStatPanel(68, 1098, 888, 292, 'BOWLING RECORD', bowlingItems);
+  drawStatPanel(68, 824, 888, 240, 'BATTING RECORD', battingItems);
+  drawStatPanel(68, 1082, 888, 240, 'BOWLING RECORD', bowlingItems);
 
   // Footer Credit
   ctx.save();
@@ -992,7 +1031,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.font = 'bold 12px "DejaVu Sans"';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('CRICKET CHAMPIONS LEAGUE • CHAMPION CARD', width / 2, 1416);
+  ctx.fillText('CRICKET CHAMPIONS LEAGUE • CHAMPION CARD', width / 2, 1380);
   ctx.restore();
 
   return canvas.toBuffer('image/png');
