@@ -462,49 +462,117 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   }
   ctx.restore();
 
-  // Symmetrical layout helper for drawing the outer frame
-  function drawOuterFramePathLocal(x, y, w, h) {
-    const cut = 26;
-    const notchWidth = 136;
-    const notchDepth = 16;
-    ctx.beginPath();
-    ctx.moveTo(x + cut, y);
-    ctx.lineTo(x + w / 2 - notchWidth / 2, y);
-    ctx.lineTo(x + w / 2 - notchWidth / 2 + 18, y + notchDepth);
-    ctx.lineTo(x + w / 2 + notchWidth / 2 - 18, y + notchDepth);
-    ctx.lineTo(x + w / 2 + notchWidth / 2, y);
-    ctx.lineTo(x + w - cut, y);
-    ctx.lineTo(x + w, y + cut);
-    ctx.lineTo(x + w, y + h - cut);
-    ctx.lineTo(x + w - cut, y + h);
-    ctx.lineTo(x + w / 2 + notchWidth / 2, y + h);
-    ctx.lineTo(x + w / 2 + notchWidth / 2 - 18, y + h - notchDepth);
-    ctx.lineTo(x + w / 2 - notchWidth / 2 + 18, y + h - notchDepth);
-    ctx.lineTo(x + w / 2 - notchWidth / 2, y + h);
-    ctx.lineTo(x + cut, y + h);
-    ctx.lineTo(x, y + h - cut);
-    ctx.lineTo(x, y + cut);
-    ctx.closePath();
-  }
+  const x = 32;
+  const y = 32;
+  const w = width - 64;
+  const h = height - 64;
+  const r = 28;
 
-  // Draw the main card outer borders matching theme color
+  // 1. Semi-transparent dark background for the whole card content area
   ctx.save();
-  drawOuterFramePathLocal(18, 18, width - 36, height - 36);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+  ctx.fillStyle = 'rgba(5, 2, 2, 0.5)';
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
   ctx.fill();
-  const frameGrad = ctx.createLinearGradient(18, 18, width - 18, height - 18);
-  frameGrad.addColorStop(0, accentBright);
-  frameGrad.addColorStop(0.3, accent);
-  frameGrad.addColorStop(0.7, accentBright);
-  frameGrad.addColorStop(1, accent);
-  ctx.strokeStyle = frameGrad;
-  ctx.lineWidth = 4;
+  ctx.restore();
+
+  // 2. Draw the honeycomb patterns on the left and right margins
+  ctx.save();
+  ctx.strokeStyle = accent + '1e';
+  ctx.lineWidth = 1;
+  for (let hy = y + 48; hy < y + h - 48; hy += 28) {
+    for (const hx of [x + 20, x + 34, x + w - 34, x + w - 20]) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3;
+        ctx.lineTo(hx + 8 * Math.cos(angle), hy + 8 * Math.sin(angle));
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // 3. Thick glowing outer rounded rectangle border
+  ctx.save();
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 4.5;
   ctx.shadowColor = glowColor;
-  ctx.shadowBlur = 16;
+  ctx.shadowBlur = 18;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
   ctx.stroke();
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-  ctx.lineWidth = 1.4;
+  ctx.restore();
+
+  // 4. Inner thin secondary border
+  ctx.save();
+  ctx.strokeStyle = accentBright + 'a6';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(x + 10, y + 10, w - 20, h - 20, r - 8);
+  ctx.stroke();
+  ctx.restore();
+
+  // 5. Four Corner L-Brackets (thick highlight)
+  ctx.save();
+  ctx.strokeStyle = accentBright;
+  ctx.lineWidth = 5;
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = 12;
+  const bracketSize = 54;
+  const bracketOffset = 6;
+  // Top-left
+  ctx.beginPath();
+  ctx.moveTo(x + bracketOffset, y + bracketOffset + bracketSize);
+  ctx.lineTo(x + bracketOffset, y + bracketOffset);
+  ctx.lineTo(x + bracketOffset + bracketSize, y + bracketOffset);
+  ctx.stroke();
+  // Top-right
+  ctx.beginPath();
+  ctx.moveTo(x + w - bracketOffset - bracketSize, y + bracketOffset);
+  ctx.lineTo(x + w - bracketOffset, y + bracketOffset);
+  ctx.lineTo(x + w - bracketOffset, y + bracketOffset + bracketSize);
+  ctx.stroke();
+  // Bottom-left
+  ctx.beginPath();
+  ctx.moveTo(x + bracketOffset, y + h - bracketOffset - bracketSize);
+  ctx.lineTo(x + bracketOffset, y + h - bracketOffset);
+  ctx.lineTo(x + bracketOffset + bracketSize, y + h - bracketOffset);
+  ctx.stroke();
+  // Bottom-right
+  ctx.beginPath();
+  ctx.moveTo(x + w - bracketOffset - bracketSize, y + h - bracketOffset);
+  ctx.lineTo(x + w - bracketOffset, y + h - bracketOffset);
+  ctx.lineTo(x + w - bracketOffset, y + h - bracketOffset - bracketSize);
+  ctx.stroke();
+  ctx.restore();
+
+  // 6. Center Top and Bottom slanted/trapezoidal caps
+  ctx.save();
+  ctx.strokeStyle = accentBright;
+  ctx.fillStyle = 'rgba(6, 2, 2, 0.95)';
+  ctx.lineWidth = 2.4;
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = 10;
+  const capW = 160;
+  const capH = 14;
+  // Top center cap
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2 - capW / 2, y + 4);
+  ctx.lineTo(x + w / 2 - capW / 2 + 12, y + 4 + capH);
+  ctx.lineTo(x + w / 2 + capW / 2 - 12, y + 4 + capH);
+  ctx.lineTo(x + w / 2 + capW / 2, y + 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Bottom center cap
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2 - capW / 2, y + h - 4);
+  ctx.lineTo(x + w / 2 - capW / 2 + 12, y + h - 4 - capH);
+  ctx.lineTo(x + w / 2 + capW / 2 - 12, y + h - 4 - capH);
+  ctx.lineTo(x + w / 2 + capW / 2, y + h - 4);
+  ctx.closePath();
+  ctx.fill();
   ctx.stroke();
   ctx.restore();
 
@@ -514,20 +582,20 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     // Design 1: Centurion Gold (Heavy corner tech brackets)
     ctx.strokeStyle = accent + '73';
     ctx.lineWidth = 2;
-    ctx.strokeRect(40, 40, width - 80, height - 80);
+    ctx.strokeRect(50, 50, width - 100, height - 100);
     ctx.fillStyle = accentBright;
-    ctx.fillRect(40, 40, 24, 4);
-    ctx.fillRect(40, 40, 4, 24);
-    ctx.fillRect(width - 64, 40, 24, 4);
-    ctx.fillRect(width - 44, 40, 4, 24);
+    ctx.fillRect(50, 50, 24, 4);
+    ctx.fillRect(50, 50, 4, 24);
+    ctx.fillRect(width - 74, 50, 24, 4);
+    ctx.fillRect(width - 54, 50, 4, 24);
   } else if (designId === 2) {
     // Design 2: Cyber Carbon (2D tech circuit lines and glowing matrix nodes)
     ctx.strokeStyle = accent + '1f';
     ctx.lineWidth = 1;
-    for (let x = 50; x < width; x += 60) {
+    for (let xGrid = 60; xGrid < width - 50; xGrid += 60) {
       ctx.beginPath();
-      ctx.moveTo(x, 50);
-      ctx.lineTo(x, height - 50);
+      ctx.moveTo(xGrid, 60);
+      ctx.lineTo(xGrid, height - 60);
       ctx.stroke();
     }
     ctx.fillStyle = accent + '80';
@@ -548,68 +616,68 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     ctx.save();
     ctx.fillStyle = accent + '10';
     ctx.beginPath();
-    ctx.moveTo(18, 200);
+    ctx.moveTo(32, 200);
     ctx.lineTo(120, 300);
     ctx.lineTo(120, 600);
-    ctx.lineTo(18, 700);
+    ctx.lineTo(32, 700);
     ctx.closePath();
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(width - 18, 200);
+    ctx.moveTo(width - 32, 200);
     ctx.lineTo(width - 120, 300);
     ctx.lineTo(width - 120, 600);
-    ctx.lineTo(width - 18, 700);
+    ctx.lineTo(width - 32, 700);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
   } else if (designId === 5) {
     // Design 5: Laser Beams (Intense vertical theme glow lines on left/right edges)
-    const laserGlow = ctx.createLinearGradient(0, 0, 150, 0);
+    const laserGlow = ctx.createLinearGradient(32, 0, 150, 0);
     laserGlow.addColorStop(0, accent + '59');
     laserGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = laserGlow;
-    ctx.fillRect(18, 18, 120, height - 36);
+    ctx.fillRect(32, 32, 120, height - 64);
     
-    const laserGlowR = ctx.createLinearGradient(width - 150, 0, width, 0);
+    const laserGlowR = ctx.createLinearGradient(width - 150, 0, width - 32, 0);
     laserGlowR.addColorStop(0, 'rgba(0, 0, 0, 0)');
     laserGlowR.addColorStop(1, accent + '59');
     ctx.fillStyle = laserGlowR;
-    ctx.fillRect(width - 138, 18, 120, height - 36);
+    ctx.fillRect(width - 152, 32, 120, height - 64);
   } else if (designId === 6) {
     // Design 6: Royal Crest (Heavy corner plates and metallic highlights)
     ctx.strokeStyle = accentBright;
     ctx.lineWidth = 3;
-    ctx.strokeRect(30, 30, width - 60, height - 60);
+    ctx.strokeRect(48, 48, width - 96, height - 96);
     ctx.fillStyle = accentBright;
     ctx.beginPath();
-    ctx.moveTo(30, 30);
-    ctx.lineTo(70, 30);
-    ctx.lineTo(30, 70);
+    ctx.moveTo(48, 48);
+    ctx.lineTo(88, 48);
+    ctx.lineTo(48, 88);
     ctx.closePath();
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(width - 30, 30);
-    ctx.lineTo(width - 70, 30);
-    ctx.lineTo(width - 30, 70);
+    ctx.moveTo(width - 48, 48);
+    ctx.lineTo(width - 88, 48);
+    ctx.lineTo(width - 48, 88);
     ctx.closePath();
     ctx.fill();
   } else if (designId === 7) {
     // Design 7: Stealth Obsidian (Subtle horizontal scanlines)
     ctx.fillStyle = accent + '0c';
-    for (let y = 50; y < height; y += 12) {
-      ctx.fillRect(18, y, width - 36, 2);
+    for (let yGrid = 60; yGrid < height - 60; yGrid += 12) {
+      ctx.fillRect(32, yGrid, width - 64, 2);
     }
   } else if (designId === 8) {
     // Design 8: Industrial Steel (Metallic corner bolts/rivets and brushed borders)
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 2;
-    ctx.strokeRect(38, 38, width - 76, height - 76);
+    ctx.strokeRect(48, 48, width - 96, height - 96);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.beginPath(); ctx.arc(50, 50, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(width - 50, 50, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(50, height - 50, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(width - 50, height - 50, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(60, 60, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(width - 60, 60, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(60, height - 60, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(width - 60, height - 60, 5, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   } else if (designId === 9) {
     // Design 9: Celestial Nebula (Concentric space orbit rings centered around avatar)
@@ -629,16 +697,16 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     ctx.fillStyle = accent + '1e';
     for (let i = 0; i < 6; i++) {
       ctx.beginPath();
-      ctx.moveTo(35, 100 + i * 80);
-      ctx.lineTo(55, 120 + i * 80);
-      ctx.lineTo(35, 140 + i * 80);
+      ctx.moveTo(48, 100 + i * 80);
+      ctx.lineTo(68, 120 + i * 80);
+      ctx.lineTo(48, 140 + i * 80);
       ctx.closePath();
       ctx.fill();
       
       ctx.beginPath();
-      ctx.moveTo(width - 35, 100 + i * 80);
-      ctx.lineTo(width - 55, 120 + i * 80);
-      ctx.lineTo(width - 35, 140 + i * 80);
+      ctx.moveTo(width - 48, 100 + i * 80);
+      ctx.lineTo(width - 68, 120 + i * 80);
+      ctx.lineTo(width - 48, 140 + i * 80);
       ctx.closePath();
       ctx.fill();
     }
@@ -797,71 +865,29 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     { label: 'Matches', value: matches, icon: drawCalendarIcon },
     { label: 'Runs', value: (stats.runs || 0).toLocaleString(), icon: drawBatIcon },
     { label: 'Average', value: battingAverage, icon: drawBarsIcon },
-    { label: 'Strike Rate', value: strikeRate, icon: drawGaugeIcon }
+    { label: 'Strike Rate', value: strikeRate, icon: drawGaugeIcon },
+    { label: 'Highest Score', value: highScore, icon: drawStarIcon },
+    { label: '50s', value: stats.fifties || 0, icon: (iconCtx, xB, yB, color, size) => drawNumberBadge(iconCtx, xB, yB, size, '50', color) }
   ];
 
   const bowlingItems = [
     { label: 'Wickets', value: stats.wickets || 0, icon: drawStumpsIcon },
     { label: 'Economy', value: economy, icon: drawGaugeIcon },
     { label: 'Average', value: bowlingAverage, icon: drawBarsIcon },
-    { label: 'Best Bowling', value: bestBowling, icon: drawTargetIcon }
+    { label: 'Best Bowling', value: bestBowling, icon: drawTargetIcon },
+    { label: '100s', value: stats.centuries || 0, icon: (iconCtx, xB, yB, color, size) => drawNumberBadge(iconCtx, xB, yB, size, '100', color) },
+    { label: 'MOTMs', value: stats.motm || 0, icon: drawTrophyIcon }
   ];
-
-  // Combined 50s/100s milestones, trophies for MOTMs, dot grid for Ducks
-  const summaryItems = [
-    { label: 'Highest Score', value: highScore, icon: drawStarIcon },
-    { label: '50s / 100s', value: `${stats.fifties || 0}/${stats.centuries || 0}`, icon: (iconCtx, x, y, color, size) => drawNumberBadge(iconCtx, x, y, size, '50/100', color) },
-    { label: 'MOTM Awards', value: stats.motm || 0, icon: drawTrophyIcon },
-    { label: 'Ducks', value: stats.ducks || 0, icon: drawDotGridIcon }
-  ];
-
-  // Draw an individual stats column box
-  function drawMetricColumn(item, x, y, w, h, isSummaryBox) {
-    const iconX = x + 28;
-    const iconY = y + (isSummaryBox ? 32 : 44);
-    const labelX = x + 58;
-    const labelY = y + (isSummaryBox ? 32 : 44);
-
-    if (item.icon) {
-      item.icon(ctx, iconX, iconY, accent, 34);
-    }
-
-    ctx.save();
-    ctx.fillStyle = '#cccccc';
-    let labelSize = 16;
-    ctx.font = `bold ${labelSize}px "DejaVu Sans"`;
-    while (labelSize > 12 && ctx.measureText(item.label.toUpperCase()).width > w - 76) {
-      labelSize -= 1;
-      ctx.font = `bold ${labelSize}px "DejaVu Sans"`;
-    }
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(item.label.toUpperCase(), labelX, labelY);
-    ctx.restore();
-
-    const valueStr = String(item.value);
-    let valueSize = isSummaryBox ? 44 : 54;
-    if (valueStr.length > 8) valueSize = 34;
-    else if (valueStr.length > 6) valueSize = 40;
-    else if (valueStr.length > 4) valueSize = 44;
-
-    ctx.save();
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = `bold ${valueSize}px "DejaVu Sans"`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = accent + '7a';
-    ctx.shadowBlur = 10;
-    ctx.fillText(valueStr, x + w / 2, y + h - (isSummaryBox ? 24 : 34));
-    ctx.restore();
-  }
 
   // Draw a beautiful stats panel
-  function drawStatPanel(panelX, panelY, panelW, panelH, title, items, summary = false) {
+  function drawStatPanel(panelX, panelY, panelW, panelH, title, items) {
     ctx.save();
-    drawChamferedRectPath(ctx, panelX, panelY, panelW, panelH, 14);
+    // Rounded rectangle border for the panel
+    ctx.beginPath();
+    ctx.roundRect(panelX, panelY, panelW, panelH, 16);
     ctx.fillStyle = panelFill;
     ctx.fill();
+
     const border = ctx.createLinearGradient(panelX, panelY, panelX + panelW, panelY + panelH);
     border.addColorStop(0, accentBright);
     border.addColorStop(0.45, accent);
@@ -876,58 +902,98 @@ async function generateProfileCard(user, stats, avatarBuffer) {
     ctx.fillStyle = overlay;
     ctx.fill();
 
-    const topLineY = panelY + 19;
-    ctx.strokeStyle = accent + '2e';
-    ctx.lineWidth = 1;
+    // Panel Title inside the border at top-left
+    ctx.fillStyle = accentBright;
+    ctx.font = 'bold 16px "DejaVu Sans"';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(title.toUpperCase(), panelX + 20, panelY + 24);
+
+    // Divider line below title
+    ctx.strokeStyle = accent + '38';
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.moveTo(panelX + 16, topLineY);
-    ctx.lineTo(panelX + panelW - 16, topLineY);
+    ctx.moveTo(panelX + 20, panelY + 40);
+    ctx.lineTo(panelX + panelW - 20, panelY + 40);
     ctx.stroke();
     ctx.restore();
 
-    if (title) {
-      ctx.save();
-      drawRibbonPath(ctx, panelX + panelW / 2 - 130, panelY - 18, 260, 36);
-      ctx.fillStyle = accent;
-      ctx.fill();
-      ctx.strokeStyle = accentBright;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 18px "DejaVu Sans"';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(title, panelX + panelW / 2, panelY + 0);
-      ctx.restore();
-    }
+    // Box dimensions
+    const colW = 274;
+    const colGap = 17;
+    const colMargin = 16;
 
-    const contentX = panelX + 14;
-    const contentY = panelY + 30;
-    const contentW = panelW - 28;
-    const contentH = panelH - 40;
-    const columnWidth = contentW / 4;
-
-    ctx.save();
-    ctx.strokeStyle = accent + '3d';
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 4; i++) {
-      const dividerX = contentX + columnWidth * i;
-      ctx.beginPath();
-      ctx.moveTo(dividerX, contentY + 8);
-      ctx.lineTo(dividerX, contentY + contentH - 8);
-      ctx.stroke();
-    }
-    ctx.restore();
+    const rowH = 106;
+    const rowGap = 12;
+    const rowMargin = 52; // start after title/divider
 
     items.forEach((item, index) => {
-      const columnX = contentX + columnWidth * index;
-      drawMetricColumn(item, columnX, contentY, columnWidth, contentH, summary);
+      const row = Math.floor(index / 3);
+      const col = index % 3;
+      const colX = panelX + colMargin + col * (colW + colGap);
+      const colY = panelY + rowMargin + row * (rowH + rowGap);
+      
+      // Draw metric box
+      ctx.save();
+      drawChamferedRectPath(ctx, colX, colY, colW, rowH, 8);
+      ctx.fillStyle = 'rgba(10, 4, 4, 0.82)';
+      ctx.fill();
+      ctx.strokeStyle = accent + '5b';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+
+      // Icon on the left
+      const iconSize = 34;
+      const iconX = colX + 24;
+      const iconY = colY + rowH / 2;
+      if (item.icon) {
+        item.icon(ctx, iconX, iconY, accent, iconSize);
+      }
+
+      // Label at the top-left of the box
+      ctx.save();
+      ctx.fillStyle = accentBright + 'd9';
+      let labelSize = 13;
+      ctx.font = `bold ${labelSize}px "DejaVu Sans"`;
+      const maxLabelW = colW - 68;
+      while (labelSize > 9 && ctx.measureText(item.label.toUpperCase()).width > maxLabelW) {
+        labelSize -= 1;
+        ctx.font = `bold ${labelSize}px "DejaVu Sans"`;
+      }
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(item.label.toUpperCase(), colX + 52, colY + 18);
+      ctx.restore();
+
+      // Value at the bottom-right
+      const valueStr = String(item.value);
+      ctx.save();
+      ctx.fillStyle = '#ffffff';
+      let valueSize = 32;
+      if (valueStr.length > 8) valueSize = 20;
+      else if (valueStr.length > 5) valueSize = 24;
+      ctx.font = `italic bold ${valueSize}px "DejaVu Sans"`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'bottom';
+      ctx.shadowColor = accent + '7a';
+      ctx.shadowBlur = 8;
+      ctx.fillText(valueStr, colX + colW - 22, colY + rowH - 16);
+      ctx.restore();
     });
   }
 
-  drawStatPanel(68, 800, 888, 170, 'BATTING STATS', battingItems);
-  drawStatPanel(68, 995, 888, 170, 'BOWLING STATS', bowlingItems);
-  drawStatPanel(68, 1190, 888, 150, '', summaryItems, true);
+  drawStatPanel(68, 788, 888, 292, 'BATTING RECORD', battingItems);
+  drawStatPanel(68, 1098, 888, 292, 'BOWLING RECORD', bowlingItems);
+
+  // Footer Credit
+  ctx.save();
+  ctx.fillStyle = accent + 'cc';
+  ctx.font = 'bold 12px "DejaVu Sans"';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('CRICKET CHAMPIONS LEAGUE • CHAMPION CARD', width / 2, 1416);
+  ctx.restore();
 
   return canvas.toBuffer('image/png');
 }
