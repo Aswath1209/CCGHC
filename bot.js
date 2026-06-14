@@ -829,14 +829,16 @@ bot.command('generate', async (ctx) => {
 
 bot.command('mycard', async (ctx) => {
   try {
-      if (ctx.chat.type !== 'private') {
-          return ctx.reply(`⚠️ This command can only be used in private DMs with the bot. Send it here: @${ctx.me.username}`);
-      }
-
+      // Removed private chat restriction so it can be used in Group Chats!
+      
       const now = Date.now();
       const lastUsed = cardCooldowns.get(ctx.from.id) || 0;
-      if (now - lastUsed < CARD_COOLDOWN_MS) {
-          const remainingMs = CARD_COOLDOWN_MS - (now - lastUsed);
+      const isAdmin = isBotAdmin(ctx.from.id);
+      const THIRTY_MINUTES = 30 * 60 * 1000;
+      
+      // Enforce 30-minute cooldown for all non-admin users to prevent GC spam/lag
+      if (!isAdmin && now - lastUsed < THIRTY_MINUTES) {
+          const remainingMs = THIRTY_MINUTES - (now - lastUsed);
           const minutes = Math.floor(remainingMs / 60000);
           const seconds = Math.ceil((remainingMs % 60000) / 1000);
           const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
