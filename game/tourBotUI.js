@@ -679,6 +679,22 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       });
       
       text += `───────────────────`;
+
+      const imageTitle = tour.name
+          ? `${tour.name.toUpperCase()} SCORECARD`
+          : 'LIVE MATCH SCORECARD';
+
+      try {
+          const buffer = await generateScoreboardImage(tour, imageTitle, null);
+          if (buffer) {
+              await ctx.replyWithPhoto(new InputFile(buffer, 'scorecard.png'));
+              await ctx.reply(text, { parse_mode: 'HTML' });
+              return;
+          }
+      } catch (err) {
+          console.error("Failed to generate/send scoreboard image, falling back to text:", err);
+      }
+
       await ctx.reply(text, { parse_mode: 'HTML' });
   });
 
@@ -769,7 +785,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           "11. /set_wickets [wickets] - Set match wickets (Host/Captains in lobby)\n" +
           "12. /powersurge - Toggle Power Surge (Host/Captains)\n" +
           "13. /endtour - Safely cancel the Tour match\n" +
-          "14. /tourresume - Resume match if stuck (Host)\n",
+          "14. /tourresume - Resume match if stuck (Host)\n" +
+          "15. /score - View the current scorecard\n",
           { parse_mode: 'HTML' }
       );
   });
@@ -877,10 +894,10 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               await sleep(1500);
           }
           
-          await ctx.api.sendMessage(tour.chatId, renderScoreboard(tour), { parse_mode: 'HTML' });
-
-          // Pacing delay
-          await sleep(1500);
+          if (!res.matchEnded) {
+              await ctx.api.sendMessage(tour.chatId, renderScoreboard(tour), { parse_mode: 'HTML' });
+              await sleep(1500);
+          }
 
           if (res.matchEnded) {
               const s1 = (tour.teamA.score || 0) + (tour.teamA.bonusRuns || 0) - (tour.teamA.penaltyRuns || 0);
@@ -969,10 +986,16 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               try {
                   const buffer = await generateScoreboardImage(tour, resultText, potmName);
                   if (buffer) {
-                      await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), {
-                          caption: msg,
-                          parse_mode: 'HTML'
-                      });
+                      const caption = res.motm
+                          ? `🏆 ${resultText}!\n🎖 POTM: ${res.motm.first_name}`
+                          : `🏆 ${resultText}!`;
+                      try {
+                          await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), { caption });
+                      } catch (photoErr) {
+                          console.error("Final scoreboard photo send failed, retrying once:", photoErr);
+                          await sleep(1500);
+                          await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), { caption });
+                      }
                   } else {
                       await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
                   }

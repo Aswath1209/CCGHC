@@ -752,15 +752,75 @@ bot.command('profile', async (ctx) => {
 const cardCooldowns = new Map();
 const CARD_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes cooldown per user
 
+function buildExampleScoreboardMatch() {
+  return {
+    firstBattingTeamId: 'teamA',
+    teamA: {
+      name: 'India',
+      score: 185,
+      wickets: 4,
+      bonusRuns: 0,
+      penaltyRuns: 0,
+      players: [
+        { id: 1, first_name: 'Rohit Sharma', runs: 45, balls: 30, wickets: 0, runsConceded: 0, ballsBowled: 0 },
+        { id: 2, first_name: 'Virat Kohli', runs: 82, balls: 53, wickets: 0, runsConceded: 0, ballsBowled: 0 },
+        { id: 3, first_name: 'Suryakumar', runs: 25, balls: 12, wickets: 0, runsConceded: 0, ballsBowled: 0 },
+        { id: 4, first_name: 'Hardik', runs: 12, balls: 8, wickets: 1, runsConceded: 24, ballsBowled: 18 },
+        { id: 5, first_name: 'Bumrah', runs: 0, balls: 0, wickets: 3, runsConceded: 18, ballsBowled: 24 },
+        { id: 6, first_name: 'Siraj', runs: 0, balls: 0, wickets: 1, runsConceded: 30, ballsBowled: 24 },
+        { id: 7, first_name: 'Arshdeep', runs: 0, balls: 0, wickets: 2, runsConceded: 20, ballsBowled: 24 }
+      ],
+      outPlayers: [1, 3, 4]
+    },
+    teamB: {
+      name: 'Australia',
+      score: 160,
+      wickets: 7,
+      bonusRuns: 0,
+      penaltyRuns: 0,
+      players: [
+        { id: 8, first_name: 'Warner', runs: 30, balls: 20, wickets: 0, runsConceded: 0, ballsBowled: 0 },
+        { id: 9, first_name: 'Head', runs: 50, balls: 35, wickets: 0, runsConceded: 0, ballsBowled: 0 },
+        { id: 10, first_name: 'Maxwell', runs: 15, balls: 10, wickets: 1, runsConceded: 35, ballsBowled: 24 },
+        { id: 11, first_name: 'Stoinis', runs: 20, balls: 15, wickets: 0, runsConceded: 25, ballsBowled: 12 },
+        { id: 12, first_name: 'Starc', runs: 5, balls: 5, wickets: 2, runsConceded: 40, ballsBowled: 24 },
+        { id: 13, first_name: 'Cummins', runs: 10, balls: 5, wickets: 1, runsConceded: 30, ballsBowled: 24 },
+        { id: 14, first_name: 'Zampa', runs: 0, balls: 0, wickets: 0, runsConceded: 25, ballsBowled: 24 }
+      ],
+      outPlayers: [8, 9, 10, 11, 12, 13]
+    },
+    innings: 2,
+    innings1Balls: 120,
+    innings2Balls: 120,
+    config: { overs: 20 }
+  };
+}
+
 bot.command('generate', async (ctx) => {
   try {
+      const arg = ctx.match ? ctx.match.trim().toLowerCase() : "";
+      if (arg === 'score') {
+          await ctx.replyWithChatAction("upload_photo");
+
+          const { generateScoreboardImage } = require('./game/scoreboardGenerator');
+          const { InputFile } = require('grammy');
+          const exampleTour = buildExampleScoreboardMatch();
+          const buffer = await generateScoreboardImage(exampleTour, "India won by 25 runs", "Virat Kohli");
+
+          if (!buffer) {
+              return ctx.reply("❌ Failed to generate example scoreboard image.");
+          }
+
+          await ctx.replyWithPhoto(new InputFile(buffer, 'scorecard.png'));
+          return;
+      }
+
       if (ctx.chat.type !== 'private') {
           return ctx.reply(`⚠️ This command can only be used in private DMs with the bot. Send it here: @${ctx.me.username}`);
       }
 
-      const arg = ctx.match ? ctx.match.trim().toLowerCase() : "";
       if (arg !== 'card') {
-          return ctx.reply("⚠️ Usage: <code>/generate card</code>", { parse_mode: 'HTML' });
+          return ctx.reply("⚠️ Usage: <code>/generate card</code> or <code>/generate score</code>", { parse_mode: 'HTML' });
       }
 
       const now = Date.now();
