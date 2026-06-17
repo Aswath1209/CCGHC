@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 
 // Load system fonts for fallback support (e.g. emoji and star characters)
@@ -18,7 +19,6 @@ try {
   GlobalFonts.registerFromPath(path.join(__dirname, '../assets/fonts/Saira-SemiBoldItalic.ttf'), 'Saira');
   
   // Dynamic scanning for any Fishmonger fonts uploaded by the user
-  const fs = require('fs');
   const dirsToScan = [
     path.join(__dirname, '../assets/fonts'),
     path.join(__dirname, '../fonts')
@@ -177,15 +177,60 @@ function drawOrnateBorder(ctx, x, y, w, h, radius) {
   });
 }
 
+async function loadScoreboardBackground() {
+  const candidates = [
+    path.join(__dirname, '../assets/scoreboard_template3.jpeg'),
+    path.join(__dirname, '../assets/scoreboard_template2.jpeg'),
+    path.join(__dirname, '../assets/scoreboard_template.jpeg')
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      if (!fs.existsSync(candidate)) continue;
+      const bg = await loadImage(candidate);
+      return {
+        width: bg.width,
+        height: bg.height,
+        draw(ctx) {
+          ctx.drawImage(bg, 0, 0);
+        }
+      };
+    } catch (err) {
+      console.warn(`Failed to load scoreboard background from ${candidate}:`, err);
+    }
+  }
+
+  const width = 1600;
+  const height = 1000;
+  return {
+    width,
+    height,
+    draw(ctx) {
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, '#0b1220');
+      gradient.addColorStop(0.55, '#111827');
+      gradient.addColorStop(1, '#1f2937');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(0, 0, width, 10);
+      ctx.fillRect(0, height - 10, width, 10);
+      ctx.restore();
+    }
+  };
+}
+
 async function generateScoreboardImage(tour, resultText, potmName) {
   try {
-    const bgPath = path.join(__dirname, '../assets/scoreboard_template3.jpeg');
-    const bg = await loadImage(bgPath);
+    const bg = await loadScoreboardBackground();
 
     const canvas = createCanvas(bg.width, bg.height);
     const ctx = canvas.getContext('2d');
 
-    ctx.drawImage(bg, 0, 0);
+    bg.draw(ctx);
 
     // Setup first and second batting teams
     const totalScore = (team) => Math.max(0, (team.score || 0) + (team.bonusRuns || 0) - (team.penaltyRuns || 0));
