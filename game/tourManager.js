@@ -183,8 +183,13 @@ function renameTeam(tourId, userId, newName) {
 
     if (!teamKey) return { success: false, error: 'Only captains or players on the team can rename it.' };
 
+    const trimmed = newName.trim();
+    if (trimmed.length > 32) {
+        return { success: false, error: `❌ Team name too long! Please keep it under 32 characters.\n\nYours: "${trimmed}" (${trimmed.length} chars)` };
+    }
+
     const team = tour[teamKey];
-    team.name = newName.trim().substring(0, 30);
+    team.name = trimmed;
     team.customName = true;
     return { success: true, teamName: team.name };
 }
