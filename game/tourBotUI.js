@@ -4,8 +4,8 @@ const { generateScoreboardImage } = require('./scoreboardGenerator');
 
 module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTARY, CCL_GIFS, GIF_EVENTS) {
   const POWER_SURGE_ACTIVATED_GIFS = [
-      'https://s13.gifyu.com/images/bdzYm.gif',
-      'https://s13.gifyu.com/images/bdz5Y.gif',
+      'https://s13.gifyu.com/images/bdzOf.gif',
+      'https://s13.gifyu.com/images/bdzOi.gif',
   ];
 
   function escapeHtml(str) {
