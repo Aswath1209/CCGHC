@@ -3,6 +3,10 @@ const tourManager = require('./tourManager');
 const { generateScoreboardImage } = require('./scoreboardGenerator');
 
 module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTARY, CCL_GIFS, GIF_EVENTS) {
+  const POWER_SURGE_ACTIVATED_GIFS = [
+      'https://s13.gifyu.com/images/bdzYm.gif',
+      'https://s13.gifyu.com/images/bdz5Y.gif',
+  ];
 
   function escapeHtml(str) {
       if (!str) return '';
@@ -294,12 +298,23 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       tour.powerSurge = !tour.powerSurge;
       
       if (tour.powerSurge) {
-          await ctx.reply(
+          const powerSurgeGif = POWER_SURGE_ACTIVATED_GIFS[
+              Math.floor(Math.random() * POWER_SURGE_ACTIVATED_GIFS.length)
+          ];
+          const caption =
               `⚡️ <b>Power Surge Activated!</b>\n\n` +
               `🏏 Batsman can now play <b>5</b>.\n` +
-              `🥎 Bowler can now bowl <b>Leg Cutter</b>!`,
-              { parse_mode: 'HTML' }
-          );
+              `🥎 Bowler can now bowl <b>Leg Cutter</b>!`;
+
+          try {
+              await ctx.api.sendAnimation(tour.chatId, powerSurgeGif, {
+                  caption,
+                  parse_mode: 'HTML',
+              });
+          } catch (e) {
+              console.log("Power Surge GIF send failed", e.message);
+              await ctx.reply(caption, { parse_mode: 'HTML' });
+          }
       } else {
           await ctx.reply(`⚡️ <b>Power Surge Deactivated!</b>`, { parse_mode: 'HTML' });
       }
