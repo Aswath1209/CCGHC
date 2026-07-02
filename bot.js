@@ -1951,6 +1951,89 @@ async function sendDMInstructions(ctx, game, batP, bowlP) {
     }
 }
 
+
+bot.on(['message:text', 'message:caption'], async (ctx, next) => {
+  const rawText = ctx.message.text || ctx.message.caption || '';
+  if (!rawText.startsWith('/')) return next();
+  
+  const cmd = rawText.split(/\s+/)[0].replace('/', '').split('@')[0];
+  if (!['broadcast', 'broadcast_groups', 'broadcast_users'].includes(cmd)) {
+      return next();
+  }
+  
+  if (!isBotAdmin(ctx.from.id)) return;
+  
+  const match = rawText.match(/^\/\S+\s*/);
+  const offsetShift = match ? match[0].length : 0;
+  const broadcastMsgText = rawText.slice(offsetShift);
+  
+  let shouldPin = false;
+  let textToBroadcast = broadcastMsgText;
+  let pinOffsetShift = 0;
+  
+  if (broadcastMsgText.startsWith('-pin ') || broadcastMsgText.startsWith('--pin ')) {
+      shouldPin = true;
+      const pinMatch = broadcastMsgText.match(/^--?pin\s+/);
+      pinOffsetShift = pinMatch ? pinMatch[0].length : 0;
+      textToBroadcast = broadcastMsgText.slice(pinOffsetShift);
+  } else if (broadcastMsgText.trim() === '-pin' || broadcastMsgText.trim() === '--pin') {
+      shouldPin = true;
+      textToBroadcast = '';
+      pinOffsetShift = broadcastMsgText.length;
+  }
+  
+  const totalOffsetShift = offsetShift + pinOffsetShift;
+  
+  const isCaption = !ctx.message.text && ctx.message.caption;
+  const rawEntities = isCaption ? ctx.message.caption_entities : ctx.message.entities;
+  const adjustedEntities = [];
+  if (rawEntities) {
+      rawEntities.forEach(ent => {
+          if (ent.offset + ent.length <= totalOffsetShift) return;
+          
+          const newOffset = Math.max(0, ent.offset - totalOffsetShift);
+          const newLength = ent.offset >= totalOffsetShift ? ent.length : ent.length - (totalOffsetShift - ent.offset);
+          if (newLength > 0) {
+              adjustedEntities.push({
+                  ...ent,
+                  offset: newOffset,
+                  length: newLength
+              });
+          }
+      });
+  }
+  
+  const broadcastMsg = convertTelegramToHtml(textToBroadcast, adjustedEntities);
+  const replyMsg = ctx.message.reply_to_message;
+  
+  if (!textToBroadcast && !replyMsg && !isCaption) {
+      return ctx.reply(`❌ Please provide a message.\n\n<b>Usage 1:</b> /${cmd} Hello world!\n<b>Usage 2:</b> Reply to ANY message (with bold, images, etc.) with /${cmd} to preserve exact formatting!\n<b>Usage 3:</b> Upload an image/media and write /${cmd} Your caption here!\n\n💡 Add <code>-pin</code> to pin the broadcast message (e.g. <code>/${cmd} -pin Hello!</code> or reply with <code>/${cmd} -pin</code>)`, { parse_mode: 'HTML' });
+  }
+  
+  let targetIds = [];
+  if (cmd === 'broadcast' || cmd === 'broadcast_groups') {
+      const groupIds = await sb.getAllGroupIds();
+      targetIds.push(...groupIds);
+  }
+  if (cmd === 'broadcast' || cmd === 'broadcast_users') {
+      const userIds = await sb.getAllUserIds();
+      targetIds.push(...userIds);
+  }
+  
+  // Unique IDs only
+  targetIds = [...new Set(targetIds)];
+  
+  if (targetIds.length === 0) {
+      return ctx.reply("❌ No target chats found in database.");
+  }
+  
+  const copyCurrent = (isCaption && !replyMsg) ? ctx.message.message_id : null;
+  sendBroadcast(ctx, targetIds, broadcastMsg, replyMsg ? replyMsg.message_id : null, copyCurrent, shouldPin)
+      .catch(err => console.error("Broadcast Error:", err));
+      
+  await ctx.reply("✅ <b>Broadcast has been moved to background.</b>\n\nYou can continue using the bot while it sends messages.", { parse_mode: 'HTML' });
+});
+
 // DM Text Message Handlers
 bot.on('message:text', async (ctx) => {
     if (ctx.chat.type !== 'private') return; 
@@ -2348,88 +2431,6 @@ bot.command(['revertbroadcast', 'deletebroadcast'], async (ctx) => {
   await sb.clearLastBroadcastMessages();
   
   await ctx.reply(`🏁 <b>Revert Complete</b>\n\n✅ Successfully deleted: ${success}\n❌ Failed/Skipped: ${failed}`, { parse_mode: 'HTML' });
-});
-
-bot.on(['message:text', 'message:caption'], async (ctx, next) => {
-  const rawText = ctx.message.text || ctx.message.caption || '';
-  if (!rawText.startsWith('/')) return next();
-  
-  const cmd = rawText.split(/\s+/)[0].replace('/', '').split('@')[0];
-  if (!['broadcast', 'broadcast_groups', 'broadcast_users'].includes(cmd)) {
-      return next();
-  }
-  
-  if (!isBotAdmin(ctx.from.id)) return;
-  
-  const match = rawText.match(/^\/\S+\s*/);
-  const offsetShift = match ? match[0].length : 0;
-  const broadcastMsgText = rawText.slice(offsetShift);
-  
-  let shouldPin = false;
-  let textToBroadcast = broadcastMsgText;
-  let pinOffsetShift = 0;
-  
-  if (broadcastMsgText.startsWith('-pin ') || broadcastMsgText.startsWith('--pin ')) {
-      shouldPin = true;
-      const pinMatch = broadcastMsgText.match(/^--?pin\s+/);
-      pinOffsetShift = pinMatch ? pinMatch[0].length : 0;
-      textToBroadcast = broadcastMsgText.slice(pinOffsetShift);
-  } else if (broadcastMsgText.trim() === '-pin' || broadcastMsgText.trim() === '--pin') {
-      shouldPin = true;
-      textToBroadcast = '';
-      pinOffsetShift = broadcastMsgText.length;
-  }
-  
-  const totalOffsetShift = offsetShift + pinOffsetShift;
-  
-  const isCaption = !ctx.message.text && ctx.message.caption;
-  const rawEntities = isCaption ? ctx.message.caption_entities : ctx.message.entities;
-  const adjustedEntities = [];
-  if (rawEntities) {
-      rawEntities.forEach(ent => {
-          if (ent.offset + ent.length <= totalOffsetShift) return;
-          
-          const newOffset = Math.max(0, ent.offset - totalOffsetShift);
-          const newLength = ent.offset >= totalOffsetShift ? ent.length : ent.length - (totalOffsetShift - ent.offset);
-          if (newLength > 0) {
-              adjustedEntities.push({
-                  ...ent,
-                  offset: newOffset,
-                  length: newLength
-              });
-          }
-      });
-  }
-  
-  const broadcastMsg = convertTelegramToHtml(textToBroadcast, adjustedEntities);
-  const replyMsg = ctx.message.reply_to_message;
-  
-  if (!textToBroadcast && !replyMsg && !isCaption) {
-      return ctx.reply(`❌ Please provide a message.\n\n<b>Usage 1:</b> /${cmd} Hello world!\n<b>Usage 2:</b> Reply to ANY message (with bold, images, etc.) with /${cmd} to preserve exact formatting!\n<b>Usage 3:</b> Upload an image/media and write /${cmd} Your caption here!\n\n💡 Add <code>-pin</code> to pin the broadcast message (e.g. <code>/${cmd} -pin Hello!</code> or reply with <code>/${cmd} -pin</code>)`, { parse_mode: 'HTML' });
-  }
-  
-  let targetIds = [];
-  if (cmd === 'broadcast' || cmd === 'broadcast_groups') {
-      const groupIds = await sb.getAllGroupIds();
-      targetIds.push(...groupIds);
-  }
-  if (cmd === 'broadcast' || cmd === 'broadcast_users') {
-      const userIds = await sb.getAllUserIds();
-      targetIds.push(...userIds);
-  }
-  
-  // Unique IDs only
-  targetIds = [...new Set(targetIds)];
-  
-  if (targetIds.length === 0) {
-      return ctx.reply("❌ No target chats found in database.");
-  }
-  
-  const copyCurrent = (isCaption && !replyMsg) ? ctx.message.message_id : null;
-  sendBroadcast(ctx, targetIds, broadcastMsg, replyMsg ? replyMsg.message_id : null, copyCurrent, shouldPin)
-      .catch(err => console.error("Broadcast Error:", err));
-      
-  await ctx.reply("✅ <b>Broadcast has been moved to background.</b>\n\nYou can continue using the bot while it sends messages.", { parse_mode: 'HTML' });
 });
 
 const express = require('express');
