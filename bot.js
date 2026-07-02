@@ -1292,6 +1292,10 @@ bot.on('callback_query:data', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
 
+  if (data === 'shot_noop') {
+      return ctx.answerCallbackQuery();
+  }
+
   if (data.startsWith('shot_play_')) {
       const parts = data.split('_');
       const zoneId = parseInt(parts[2]);
@@ -1336,22 +1340,37 @@ bot.on('callback_query:data', async (ctx) => {
       } else if (selected.type.type === "gap") {
           outcomeText = `🏏 <b>FOUR!</b> Cracking shot through the gap at <b>${selected.name}</b>! You won <code>${winnings}🪙</code> (Net profit: <code>+${change}🪙</code>).`;
       } else if (selected.type.type === "jackpot") {
-          outcomeText = `💥 <b>SIX! MASSIVE JACKPOT!</b> You absolutely launched it over <b>${selected.name}</b>! You won <code>${winnings}🪙</code> (Net profit: <code>+${change}🪙</code>)! 🏆`;
+          outcomeText = `💥 <b>SIX! JACKPOT!</b> You absolutely launched it over <b>${selected.name}</b>! You won <code>${winnings}🪙</code> (Net profit: <code>+${change}🪙</code>)! 🏆`;
       }
-      
-      let boardRevealText = "\n🔍 <b>Field Layout Revealed:</b>\n";
-      game.board.forEach(z => {
-        const isChosen = z.id === zoneId ? " 👈 <b>YOUR SHOT</b>" : "";
-        boardRevealText += `${z.type.emoji} <b>Zone ${z.id}</b> (${z.name}): ${z.type.label}${isChosen}\n`;
-      });
       
       const resultText = `🏏 <b>SHOT RESULT</b> <b>(Bet: ${game.betAmount}🪙)</b> 🏏\n\n` +
                          `👤 <b>Player:</b> ${escapeHtml(ctx.from.first_name)}\n` +
                          `👛 <b>New Balance:</b> <code>${finalCoins}🪙</code>\n\n` +
-                         `${outcomeText}\n` +
-                         boardRevealText;
+                         `${outcomeText}`;
                          
-      await ctx.editMessageText(resultText, { parse_mode: 'HTML' });
+      const kb = new InlineKeyboard();
+      for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+              const idx = r * 3 + c;
+              const z = game.board[idx];
+              const isChosen = z.id === zoneId;
+              
+              let label = "";
+              if (z.type.type === "fielder") label = `🔴 Fielder`;
+              else if (z.type.type === "single") label = `🟡 Single`;
+              else if (z.type.type === "gap") label = `🟢 Gap`;
+              else if (z.type.type === "jackpot") label = `⭐ Jackpot`;
+              
+              if (isChosen) {
+                  label += " 👈";
+              }
+              
+              kb.text(label, "shot_noop");
+          }
+          kb.row();
+      }
+                         
+      await ctx.editMessageText(resultText, { reply_markup: kb, parse_mode: 'HTML' });
       shotManager.deleteGame(gameId);
       return ctx.answerCallbackQuery();
   }
