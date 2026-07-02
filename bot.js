@@ -2462,7 +2462,10 @@ bot.command(['revertbroadcast', 'deletebroadcast'], async (ctx) => {
 });
 
 bot.command('listgroups', async (ctx) => {
-  if (!isBotAdmin(ctx.from.id)) return;
+  console.log(`[Admin Command] /listgroups triggered by user ID ${ctx.from.id}`);
+  if (!isBotAdmin(ctx.from.id)) {
+      return ctx.reply("❌ This is a Super Admin only command.");
+  }
   const groupIds = await sb.getAllGroupIds();
   if (groupIds.length === 0) {
       return ctx.reply("📁 No groups found in the database.");
