@@ -2192,7 +2192,7 @@ function convertTelegramToHtml(text, entities) {
 
 let activeBroadcastCancel = false;  // Flag to cancel active broadcast
 
-async function sendBroadcast(ctx, targetIds, messageText, replyMessageId, copyCurrentMessageWithCaption = null) {
+async function sendBroadcast(ctx, targetIds, messageText, replyMessageId, copyCurrentMessageWithCaption = null, shouldPin = false) {
     let success = 0;
     let failed = 0;
     const total = targetIds.length;
@@ -2244,8 +2244,10 @@ async function sendBroadcast(ctx, targetIds, messageText, replyMessageId, copyCu
                 await sb.saveBroadcastMessage(targetId, sentMsgId);
             }
             
-            // Pin the message in both groups and private chats
-            await bot.api.pinChatMessage(targetId, sentMsgId).catch(() => {});
+            // Pin the message in both groups and private chats if requested
+            if (shouldPin) {
+                await bot.api.pinChatMessage(targetId, sentMsgId).catch(() => {});
+            }
             success++;
         } catch (e) {
             failed++;
@@ -2344,15 +2346,32 @@ bot.on(['message:text', 'message:caption'], async (ctx, next) => {
   const offsetShift = match ? match[0].length : 0;
   const broadcastMsgText = rawText.slice(offsetShift);
   
+  let shouldPin = false;
+  let textToBroadcast = broadcastMsgText;
+  let pinOffsetShift = 0;
+  
+  if (broadcastMsgText.startsWith('-pin ') || broadcastMsgText.startsWith('--pin ')) {
+      shouldPin = true;
+      const pinMatch = broadcastMsgText.match(/^--?pin\s+/);
+      pinOffsetShift = pinMatch ? pinMatch[0].length : 0;
+      textToBroadcast = broadcastMsgText.slice(pinOffsetShift);
+  } else if (broadcastMsgText.trim() === '-pin' || broadcastMsgText.trim() === '--pin') {
+      shouldPin = true;
+      textToBroadcast = '';
+      pinOffsetShift = broadcastMsgText.length;
+  }
+  
+  const totalOffsetShift = offsetShift + pinOffsetShift;
+  
   const isCaption = !ctx.message.text && ctx.message.caption;
   const rawEntities = isCaption ? ctx.message.caption_entities : ctx.message.entities;
   const adjustedEntities = [];
   if (rawEntities) {
       rawEntities.forEach(ent => {
-          if (ent.offset + ent.length <= offsetShift) return;
+          if (ent.offset + ent.length <= totalOffsetShift) return;
           
-          const newOffset = Math.max(0, ent.offset - offsetShift);
-          const newLength = ent.offset >= offsetShift ? ent.length : ent.length - (offsetShift - ent.offset);
+          const newOffset = Math.max(0, ent.offset - totalOffsetShift);
+          const newLength = ent.offset >= totalOffsetShift ? ent.length : ent.length - (totalOffsetShift - ent.offset);
           if (newLength > 0) {
               adjustedEntities.push({
                   ...ent,
@@ -2363,11 +2382,11 @@ bot.on(['message:text', 'message:caption'], async (ctx, next) => {
       });
   }
   
-  const broadcastMsg = convertTelegramToHtml(broadcastMsgText, adjustedEntities);
+  const broadcastMsg = convertTelegramToHtml(textToBroadcast, adjustedEntities);
   const replyMsg = ctx.message.reply_to_message;
   
-  if (!broadcastMsgText && !replyMsg && !isCaption) {
-      return ctx.reply(`❌ Please provide a message.\n\n<b>Usage 1:</b> /${cmd} Hello world!\n<b>Usage 2:</b> Reply to ANY message (with bold, images, etc.) with /${cmd} to preserve exact formatting!\n<b>Usage 3:</b> Upload an image/media and write /${cmd} Your caption here!`, { parse_mode: 'HTML' });
+  if (!textToBroadcast && !replyMsg && !isCaption) {
+      return ctx.reply(`❌ Please provide a message.\n\n<b>Usage 1:</b> /${cmd} Hello world!\n<b>Usage 2:</b> Reply to ANY message (with bold, images, etc.) with /${cmd} to preserve exact formatting!\n<b>Usage 3:</b> Upload an image/media and write /${cmd} Your caption here!\n\n💡 Add <code>-pin</code> to pin the broadcast message (e.g. <code>/${cmd} -pin Hello!</code> or reply with <code>/${cmd} -pin</code>)`, { parse_mode: 'HTML' });
   }
   
   let targetIds = [];
@@ -2388,7 +2407,7 @@ bot.on(['message:text', 'message:caption'], async (ctx, next) => {
   }
   
   const copyCurrent = (isCaption && !replyMsg) ? ctx.message.message_id : null;
-  sendBroadcast(ctx, targetIds, broadcastMsg, replyMsg ? replyMsg.message_id : null, copyCurrent)
+  sendBroadcast(ctx, targetIds, broadcastMsg, replyMsg ? replyMsg.message_id : null, copyCurrent, shouldPin)
       .catch(err => console.error("Broadcast Error:", err));
       
   await ctx.reply("✅ <b>Broadcast has been moved to background.</b>\n\nYou can continue using the bot while it sends messages.", { parse_mode: 'HTML' });
