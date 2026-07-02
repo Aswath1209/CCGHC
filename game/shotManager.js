@@ -22,12 +22,12 @@ const ZONE_TYPES = {
 function createGame(userId, betAmount) {
   const gameId = Math.random().toString(36).substring(2, 9);
   
-  // Create 9 cards (1 Jackpot, 3 Gaps, 1 Single, 4 Fielders)
+  // Create 9 cards (1 Jackpot, 2 Gaps, 1 Single, 5 Fielders)
   const boardPool = [
     ZONE_TYPES.JACKPOT,
-    ZONE_TYPES.GAP, ZONE_TYPES.GAP, ZONE_TYPES.GAP,
+    ZONE_TYPES.GAP, ZONE_TYPES.GAP,
     ZONE_TYPES.SINGLE,
-    ZONE_TYPES.FIELDER, ZONE_TYPES.FIELDER, ZONE_TYPES.FIELDER, ZONE_TYPES.FIELDER
+    ZONE_TYPES.FIELDER, ZONE_TYPES.FIELDER, ZONE_TYPES.FIELDER, ZONE_TYPES.FIELDER, ZONE_TYPES.FIELDER
   ];
 
   // Fisher-Yates Shuffle
