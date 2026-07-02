@@ -5,6 +5,7 @@ const tourManager = require('./game/tourManager');
 const sb = require('./db/supabase');
 const tourBotUI = require('./game/tourBotUI');
 const handCricketManager = require('./game/handCricketManager');
+const shotManager = require('./game/shotManager');
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -429,6 +430,7 @@ bot.use(session({ initial: () => ({}) }));
 bot.use(async (ctx, next) => {
   if (ctx.chat && (ctx.chat.type === 'group' || ctx.chat.type === 'supergroup')) {
     encounteredGroups.add(ctx.chat.id);
+    await sb.recordGroupInteraction(ctx.chat.id);
   }
   await next();
 });
@@ -466,6 +468,12 @@ try {
     { command: 'profile', description: 'View your stats' },
     { command: 'mycard', description: 'Show premium player card' },
     { command: 'top', description: 'Show global leaderboards (Runs, Wickets, MVPs, Ducks, Highscores)' },
+    { command: 'shot', description: 'Play Shot tactical betting game' },
+    { command: 'broadcast', description: 'SuperAdmin: Send broadcast to users and groups' },
+    { command: 'broadcast_users', description: 'SuperAdmin: Send broadcast to users DMs' },
+    { command: 'broadcast_groups', description: 'SuperAdmin: Send broadcast to groups' },
+    { command: 'stopbroadcast', description: 'SuperAdmin: Stop active broadcast' },
+    { command: 'revertbroadcast', description: 'SuperAdmin: Revert/delete last broadcast' },
     { command: 'help', description: 'Commands list' }
   ]).catch(e => console.error("setMyCommands error (non-blocking):", e.message));
 } catch (e) {
@@ -1069,8 +1077,28 @@ bot.command('quit', async (ctx) => {
 
 bot.command('leaderboard', async (ctx) => {
   try {
-      const text = "📊 <b>Leaderboards</b>\nSelect which to view:";
-      const kb = new InlineKeyboard().text("💰 Coins", "lb_coins").text("🏆 Wins", "lb_wins");
+      const targetUserId = ctx.from.id;
+      const type = 'coins';
+      const lb = await sb.getLeaderboard(type);
+      const userRank = await sb.getUserRank(targetUserId, type);
+      
+      let text = `🏆 <b>Top 10 by Coins</b> 🏆\n\n`;
+      if (lb && lb.length > 0) {
+          lb.forEach((u, i) => {
+             text += `${i+1}. <b>${escapeHtml(u.first_name || 'Player')}</b> - ${u[type]}🪙\n`;
+          });
+      } else {
+          text += "No records found!\n";
+      }
+      
+      if (userRank && userRank.rank > 0) {
+          text += `\nYour Rank: <b>#${userRank.rank}</b> of <b>${userRank.total}</b> (${userRank.value}🪙)`;
+      }
+      
+      const kb = new InlineKeyboard()
+        .text("💰 Coins", `lb_coins_${targetUserId}`)
+        .text("🏆 Wins", `lb_wins_${targetUserId}`);
+        
       await ctx.reply(text, { reply_markup: kb, parse_mode: 'HTML' });
   } catch (e) {
       console.error(e);
@@ -1090,13 +1118,20 @@ bot.command('help', async (ctx) => {
     "👤 /profile - Your stats\n" +
     "🎴 /mycard - Show premium player card\n" +
     "🔄 /daily - Claim 2000 coins\n" +
+    "🏏 /shot [bet] - Play Shot tactical betting game\n" +
     "🏆 /leaderboard - Top players\n" +
     "📜 /rules - Game Rules\n" +
     "🛑 /quit - Leave your current match\n\n" +
     "<i>Admin Commands:</i>\n" +
     "🛑 /endmatch - End 1v1 match\n" +
     "🛑 /endtour - End tour match\n" +
-    "➕ /add [id] [amount] - Give coins",
+    "➕ /add [id] [amount] - Give coins\n\n" +
+    "<i>Super Admin Broadcast:</i>\n" +
+    "📢 /broadcast [msg] - Broadcast to users and groups\n" +
+    "📢 /broadcast_users [msg] - Broadcast to users DMs\n" +
+    "📢 /broadcast_groups [msg] - Broadcast to groups\n" +
+    "🛑 /stopbroadcast - Stop active broadcast\n" +
+    "🗑️ /revertbroadcast - Revert/delete last broadcast",
     { parse_mode: 'HTML' }
   );
 });
@@ -1185,6 +1220,43 @@ bot.command('ccl', async (ctx) => {
   );
 });
 
+bot.command(['shot', 'sh'], async (ctx) => {
+  const args = ctx.message.text.split(/\s+/);
+  const bet = parseInt(args[1]);
+  
+  if (isNaN(bet) || bet <= 0) {
+      return ctx.reply("⚠️ Usage: <code>/shot [bet_amount]</code> (e.g. <code>/shot 100</code>)", { parse_mode: 'HTML' });
+  }
+  
+  const user = await sb.getUser(ctx.from.id, ctx.from.first_name);
+  if (!user) {
+      return ctx.reply("⚠️ You need to register first! Send /register");
+  }
+  
+  if (user.coins < bet) {
+      return ctx.reply(`⚠️ Insufficient coins! You have ${user.coins}🪙`);
+  }
+  
+  const game = shotManager.createGame(ctx.from.id, bet);
+  
+  const text = `🏏 <b>SHOT</b> 🏏\n\n` +
+               `👤 <b>Player:</b> ${escapeHtml(ctx.from.first_name)}\n` +
+               `💰 <b>Bet Amount:</b> <code>${bet}🪙</code>\n\n` +
+               `Choose a zone to play your shot! Find the gaps or the jackpot, and avoid the fielders!\n\n` +
+               `1️⃣ Third Man | 2️⃣ Cover | 3️⃣ Long-off\n` +
+               `4️⃣ Point | 5️⃣ Straight Drive | 6️⃣ Mid-on\n` +
+               `7️⃣ Fine Leg | 8️⃣ Mid-wicket | 9️⃣ Long-on`;
+               
+  const kb = new InlineKeyboard()
+    .text("1", `shot_play_1_${game.gameId}`).text("2", `shot_play_2_${game.gameId}`).text("3", `shot_play_3_${game.gameId}`)
+    .row()
+    .text("4", `shot_play_4_${game.gameId}`).text("5", `shot_play_5_${game.gameId}`).text("6", `shot_play_6_${game.gameId}`)
+    .row()
+    .text("7", `shot_play_7_${game.gameId}`).text("8", `shot_play_8_${game.gameId}`).text("9", `shot_play_9_${game.gameId}`);
+    
+  await ctx.reply(text, { reply_markup: kb, parse_mode: 'HTML' });
+});
+
 async function isAdminOrHost(ctx, match) {
     if (ctx.chat.type === 'private') return true;
     if (match && match.hostId === ctx.from.id) return true;
@@ -1219,6 +1291,70 @@ bot.command('endmatch', async (ctx) => {
 bot.on('callback_query:data', async (ctx) => {
   const data = ctx.callbackQuery.data;
   const userId = ctx.from.id;
+
+  if (data.startsWith('shot_play_')) {
+      const parts = data.split('_');
+      const zoneId = parseInt(parts[2]);
+      const gameId = parts[3];
+      
+      const game = shotManager.getGame(gameId);
+      if (!game) {
+          return ctx.answerCallbackQuery({ text: "⚠️ Game expired or invalid!", show_alert: true });
+      }
+      
+      if (game.userId !== userId) {
+          return ctx.answerCallbackQuery({ text: "⚠️ This is not your game!", show_alert: true });
+      }
+      
+      const user = await sb.getUser(userId);
+      if (!user) {
+          return ctx.answerCallbackQuery({ text: "⚠️ You are not registered!", show_alert: true });
+      }
+      
+      if (user.coins < game.betAmount) {
+          return ctx.answerCallbackQuery({ text: `⚠️ Insufficient coins! You have ${user.coins}🪙`, show_alert: true });
+      }
+      
+      const selected = game.board.find(z => z.id === zoneId);
+      if (!selected) {
+          return ctx.answerCallbackQuery({ text: "⚠️ Invalid zone selected!", show_alert: true });
+      }
+      
+      const multiplier = selected.type.multiplier;
+      const winnings = Math.floor(game.betAmount * multiplier);
+      const change = winnings - game.betAmount;
+      
+      await sb.updateCoins(userId, change);
+      const updatedUser = await sb.getUser(userId);
+      const finalCoins = updatedUser ? updatedUser.coins : user.coins + change;
+      
+      let outcomeText = "";
+      if (selected.type.type === "fielder") {
+          outcomeText = `❌ <b>OUT! Caught!</b> You hit it straight to the fielder at <b>${selected.name}</b>. You lost <code>${game.betAmount}🪙</code>.`;
+      } else if (selected.type.type === "single") {
+          outcomeText = `🏃 <b>Single!</b> Safe shot to <b>${selected.name}</b>. You rotated strike and kept your <code>${game.betAmount}🪙</code>.`;
+      } else if (selected.type.type === "gap") {
+          outcomeText = `🏏 <b>FOUR!</b> Cracking shot through the gap at <b>${selected.name}</b>! You won <code>${winnings}🪙</code> (Net profit: <code>+${change}🪙</code>).`;
+      } else if (selected.type.type === "jackpot") {
+          outcomeText = `💥 <b>SIX! MASSIVE JACKPOT!</b> You absolutely launched it over <b>${selected.name}</b>! You won <code>${winnings}🪙</code> (Net profit: <code>+${change}🪙</code>)! 🏆`;
+      }
+      
+      let boardRevealText = "\n🔍 <b>Field Layout Revealed:</b>\n";
+      game.board.forEach(z => {
+        const isChosen = z.id === zoneId ? " 👈 <b>YOUR SHOT</b>" : "";
+        boardRevealText += `${z.type.emoji} <b>Zone ${z.id}</b> (${z.name}): ${z.type.label}${isChosen}\n`;
+      });
+      
+      const resultText = `🏏 <b>SHOT RESULT</b> <b>(Bet: ${game.betAmount}🪙)</b> 🏏\n\n` +
+                         `👤 <b>Player:</b> ${escapeHtml(ctx.from.first_name)}\n` +
+                         `👛 <b>New Balance:</b> <code>${finalCoins}🪙</code>\n\n` +
+                         `${outcomeText}\n` +
+                         boardRevealText;
+                         
+      await ctx.editMessageText(resultText, { parse_mode: 'HTML' });
+      shotManager.deleteGame(gameId);
+      return ctx.answerCallbackQuery();
+  }
 
   if (data === 'top_menu') {
       await ctx.editMessageText(
@@ -1424,10 +1560,14 @@ bot.on('callback_query:data', async (ctx) => {
       return;
   }
 
-  if (data === 'lb_coins' || data === 'lb_wins') {
+  if (data.startsWith('lb_')) {
+    const parts = data.split('_');
+    const type = parts[1];
+    const targetUserId = parts[2] ? parseInt(parts[2]) : userId;
+    
     try {
-        const type = data === 'lb_coins' ? 'coins' : 'wins';
         const lb = await sb.getLeaderboard(type);
+        const userRank = await sb.getUserRank(targetUserId, type);
         
         let text = type === 'coins' ? '🏆 <b>Top 10 by Coins</b> 🏆\n\n' : '🏆 <b>Top 10 by Wins</b> 🏆\n\n';
         if (lb && lb.length > 0) {
@@ -1435,15 +1575,24 @@ bot.on('callback_query:data', async (ctx) => {
                text += `${i+1}. <b>${escapeHtml(u.first_name || 'Player')}</b> - ${u[type]}${type === 'coins' ? '🪙' : ' W'}\n`;
             });
         } else {
-            text += "No records found!";
+            text += "No records found!\n";
         }
         
-        const kb = new InlineKeyboard().text("💰 Coins", "lb_coins").text("🏆 Wins", "lb_wins");
+        if (userRank && userRank.rank > 0) {
+            const originalUser = await sb.getUser(targetUserId);
+            const nameLabel = targetUserId === userId ? "Your Rank" : `${escapeHtml(originalUser?.first_name || 'Player')}'s Rank`;
+            text += `\n${nameLabel}: <b>#${userRank.rank}</b> of <b>${userRank.total}</b> (${userRank.value}${type === 'coins' ? '🪙' : ' W'})`;
+        }
+        
+        const kb = new InlineKeyboard()
+          .text("💰 Coins", `lb_coins_${targetUserId}`)
+          .text("🏆 Wins", `lb_wins_${targetUserId}`);
+          
         await ctx.editMessageText(text, { reply_markup: kb, parse_mode: 'HTML' });
     } catch(e) {
         console.error("Leaderboard Error:", e);
     }
-    return;
+    return ctx.answerCallbackQuery();
   }
 
   if (data.startsWith('ccl_join_')) {
@@ -1882,10 +2031,10 @@ async function handleRoundResult(ctx, res) {
   try {
     await ctx.api.sendMessage(chatId, `Over ${over + 1}`);
     await ctx.api.sendMessage(chatId, `Ball ${ballInOver}`);
-    await sleep(4000);
+    await sleep(2500);
     
     await ctx.api.sendMessage(chatId, `${cleanBowler} bowls a ${bowlStr} delivery!`);
-    await sleep(4000);
+    await sleep(2500);
 
     if (isWicket) {
         await sendEventUpdate(ctx, chatId, "out", cleanBatsman, cleanBowler);
@@ -1957,6 +2106,293 @@ async function handleRoundResult(ctx, res) {
     }
   }
 }
+
+// --- Admin Broadcast Commands ---
+
+function convertTelegramToHtml(text, entities) {
+    if (!entities || entities.length === 0) {
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    
+    const startTags = Array.from({ length: text.length + 1 }, () => []);
+    const endTags = Array.from({ length: text.length + 1 }, () => []);
+    
+    entities.forEach(ent => {
+        let startTag = '';
+        let endTag = '';
+        switch (ent.type) {
+            case 'bold':
+                startTag = '<b>';
+                endTag = '</b>';
+                break;
+            case 'italic':
+                startTag = '<i>';
+                endTag = '</i>';
+                break;
+            case 'underline':
+                startTag = '<u>';
+                endTag = '</u>';
+                break;
+            case 'strikethrough':
+                startTag = '<s>';
+                endTag = '</s>';
+                break;
+            case 'code':
+                startTag = '<code>';
+                endTag = '</code>';
+                break;
+            case 'pre':
+                startTag = '<pre>';
+                endTag = '</pre>';
+                break;
+            case 'text_link':
+                startTag = `<a href="${ent.url}">`;
+                endTag = '</a>';
+                break;
+            case 'spoiler':
+                startTag = '<tg-spoiler>';
+                endTag = '</tg-spoiler>';
+                break;
+            case 'blockquote':
+                startTag = '<blockquote>';
+                endTag = '</blockquote>';
+                break;
+        }
+        if (startTag) {
+            startTags[ent.offset].push({ tag: startTag, len: ent.length });
+            endTags[ent.offset + ent.length].push({ tag: endTag, len: ent.length });
+        }
+    });
+    
+    let result = '';
+    for (let i = 0; i <= text.length; i++) {
+        const closing = endTags[i];
+        if (closing && closing.length > 0) {
+            closing.sort((a, b) => a.len - b.len);
+            closing.forEach(c => result += c.tag);
+        }
+        
+        const opening = startTags[i];
+        if (opening && opening.length > 0) {
+            opening.sort((a, b) => b.len - a.len);
+            opening.forEach(o => result += o.tag);
+        }
+        
+        if (i < text.length) {
+            const char = text[i];
+            if (char === '<') result += '&lt;';
+            else if (char === '>') result += '&gt;';
+            else if (char === '&') result += '&amp;';
+            else result += char;
+        }
+    }
+    
+    return result;
+}
+
+let activeBroadcastCancel = false;  // Flag to cancel active broadcast
+
+async function sendBroadcast(ctx, targetIds, messageText, replyMessageId, copyCurrentMessageWithCaption = null) {
+    let success = 0;
+    let failed = 0;
+    const total = targetIds.length;
+    
+    // Clear last broadcast tracking in DB and reset cancel flag
+    await sb.clearLastBroadcastMessages();
+    activeBroadcastCancel = false;
+    
+    let statusMsg;
+    try {
+        statusMsg = await ctx.reply(`🚀 <b>Broadcast Started</b>\n\nTargeting ${total} chats. I will update this message with progress.`, { parse_mode: 'HTML' });
+    } catch (e) {
+        console.error("Failed to send initial broadcast status:", e);
+        return;
+    }
+    
+    for (let i = 0; i < total; i++) {
+        // Check cancel flag
+        if (activeBroadcastCancel) {
+            try {
+                await bot.api.sendMessage(ctx.chat.id, `🛑 <b>Broadcast Cancelled by Super Admin</b>\n\n✅ Success: ${success}\n❌ Failed: ${failed}`, { parse_mode: 'HTML' });
+            } catch (e) {}
+            // Reset flag
+            activeBroadcastCancel = false;
+            break;
+        }
+
+        const targetId = targetIds[i];
+        try {
+            let sentMsgId;
+            if (replyMessageId) {
+                // Using copyMessage perfectly preserves formatting, bold, quotes, links, and even photos/videos!
+                const res = await bot.api.copyMessage(targetId, ctx.chat.id, replyMessageId);
+                sentMsgId = res.message_id;
+            } else if (copyCurrentMessageWithCaption) {
+                // Copy the uploaded media message but override caption to strip command prefix
+                const res = await bot.api.copyMessage(targetId, ctx.chat.id, copyCurrentMessageWithCaption, {
+                    caption: messageText,
+                    parse_mode: 'HTML'
+                });
+                sentMsgId = res.message_id;
+            } else {
+                // Standard text broadcast, no default "Announcement" prefix
+                const res = await bot.api.sendMessage(targetId, messageText, { parse_mode: 'HTML' });
+                sentMsgId = res.message_id;
+            }
+            
+            if (sentMsgId) {
+                await sb.saveBroadcastMessage(targetId, sentMsgId);
+            }
+            
+            // Pin the message in both groups and private chats
+            await bot.api.pinChatMessage(targetId, sentMsgId).catch(() => {});
+            success++;
+        } catch (e) {
+            failed++;
+        }
+        
+        // Update status UI every 10 messages or at the end (less frequent updates save API calls)
+        if (i % 10 === 0 || i === total - 1) {
+            try { 
+                await bot.api.editMessageText(ctx.chat.id, statusMsg.message_id, 
+                    `🚀 <b>Broadcasting...</b> (${i + 1}/${total})\n\n` +
+                    `✅ Success: ${success}\n` +
+                    `❌ Failed: ${failed}\n\n` +
+                    `<i>Bot remains active for other users during this process.</i>`, 
+                    { parse_mode: 'HTML' }
+                ); 
+            } catch (e) {}
+        }
+        
+        // Small delay to avoid rate limits (100ms = 10 msgs/sec)
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Only send completion message if we didn't cancel early
+    if (!activeBroadcastCancel) {
+        try {
+            await bot.api.sendMessage(ctx.chat.id, `🏁 <b>Broadcast Complete</b>\n\n✅ Success: ${success}\n❌ Failed: ${failed}`, { parse_mode: 'HTML' });
+        } catch (e) {}
+    }
+}
+
+bot.command('stopbroadcast', async (ctx) => {
+  if (!isBotAdmin(ctx.from.id)) return;
+  activeBroadcastCancel = true;
+  await ctx.reply("⏳ <b>Signal sent to stop the active broadcast.</b>\nIt will cease on the next message iteration.", { parse_mode: 'HTML' });
+});
+
+bot.command(['revertbroadcast', 'deletebroadcast'], async (ctx) => {
+  if (!isBotAdmin(ctx.from.id)) return;
+  
+  const messages = await sb.getLastBroadcastMessages();
+  if (messages.length === 0) {
+      return ctx.reply("❌ No broadcast messages in database to revert, or they have already been reverted.");
+  }
+  
+  const total = messages.length;
+  let success = 0;
+  let failed = 0;
+  
+  const statusMsg = await ctx.reply(`🗑️ <b>Reverting last broadcast...</b>\n\nDeleting ${total} messages. Progress: 0/${total}`, { parse_mode: 'HTML' });
+  
+  for (let i = 0; i < total; i++) {
+      const item = messages[i];
+      try {
+          // Unpin the message if possible first
+          await bot.api.unpinChatMessage(item.chatId, item.messageId).catch(() => {});
+          // Delete message
+          await bot.api.deleteMessage(item.chatId, item.messageId);
+          success++;
+      } catch (e) {
+          failed++;
+      }
+      
+      if (i % 10 === 0 || i === total - 1) {
+          try {
+              await bot.api.editMessageText(ctx.chat.id, statusMsg.message_id,
+                  `🗑️ <b>Reverting last broadcast...</b> (${i + 1}/${total})\n\n` +
+                  `✅ Deleted: ${success}\n` +
+                  `❌ Failed: ${failed}`,
+                  { parse_mode: 'HTML' }
+              );
+          } catch (e) {}
+      }
+      
+      // Delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  // Clear the database tracking after reverting
+  await sb.clearLastBroadcastMessages();
+  
+  await ctx.reply(`🏁 <b>Revert Complete</b>\n\n✅ Successfully deleted: ${success}\n❌ Failed/Skipped: ${failed}`, { parse_mode: 'HTML' });
+});
+
+bot.on(['message:text', 'message:caption'], async (ctx, next) => {
+  const rawText = ctx.message.text || ctx.message.caption || '';
+  if (!rawText.startsWith('/')) return next();
+  
+  const cmd = rawText.split(/\s+/)[0].replace('/', '').split('@')[0];
+  if (!['broadcast', 'broadcast_groups', 'broadcast_users'].includes(cmd)) {
+      return next();
+  }
+  
+  if (!isBotAdmin(ctx.from.id)) return;
+  
+  const match = rawText.match(/^\/\S+\s*/);
+  const offsetShift = match ? match[0].length : 0;
+  const broadcastMsgText = rawText.slice(offsetShift);
+  
+  const isCaption = !ctx.message.text && ctx.message.caption;
+  const rawEntities = isCaption ? ctx.message.caption_entities : ctx.message.entities;
+  const adjustedEntities = [];
+  if (rawEntities) {
+      rawEntities.forEach(ent => {
+          if (ent.offset + ent.length <= offsetShift) return;
+          
+          const newOffset = Math.max(0, ent.offset - offsetShift);
+          const newLength = ent.offset >= offsetShift ? ent.length : ent.length - (offsetShift - ent.offset);
+          if (newLength > 0) {
+              adjustedEntities.push({
+                  ...ent,
+                  offset: newOffset,
+                  length: newLength
+              });
+          }
+      });
+  }
+  
+  const broadcastMsg = convertTelegramToHtml(broadcastMsgText, adjustedEntities);
+  const replyMsg = ctx.message.reply_to_message;
+  
+  if (!broadcastMsgText && !replyMsg && !isCaption) {
+      return ctx.reply(`❌ Please provide a message.\n\n<b>Usage 1:</b> /${cmd} Hello world!\n<b>Usage 2:</b> Reply to ANY message (with bold, images, etc.) with /${cmd} to preserve exact formatting!\n<b>Usage 3:</b> Upload an image/media and write /${cmd} Your caption here!`, { parse_mode: 'HTML' });
+  }
+  
+  let targetIds = [];
+  if (cmd === 'broadcast' || cmd === 'broadcast_groups') {
+      const groupIds = await sb.getAllGroupIds();
+      targetIds.push(...groupIds);
+  }
+  if (cmd === 'broadcast' || cmd === 'broadcast_users') {
+      const userIds = await sb.getAllUserIds();
+      targetIds.push(...userIds);
+  }
+  
+  // Unique IDs only
+  targetIds = [...new Set(targetIds)];
+  
+  if (targetIds.length === 0) {
+      return ctx.reply("❌ No target chats found in database.");
+  }
+  
+  const copyCurrent = (isCaption && !replyMsg) ? ctx.message.message_id : null;
+  sendBroadcast(ctx, targetIds, broadcastMsg, replyMsg ? replyMsg.message_id : null, copyCurrent)
+      .catch(err => console.error("Broadcast Error:", err));
+      
+  await ctx.reply("✅ <b>Broadcast has been moved to background.</b>\n\nYou can continue using the bot while it sends messages.", { parse_mode: 'HTML' });
+});
 
 const express = require('express');
 const app = express();

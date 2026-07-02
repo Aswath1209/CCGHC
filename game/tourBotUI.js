@@ -1,6 +1,5 @@
-const { InlineKeyboard, InputFile } = require('grammy');
+const { InlineKeyboard } = require('grammy');
 const tourManager = require('./tourManager');
-const { generateScoreboardImage } = require('./scoreboardGenerator');
 
 module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTARY, CCL_GIFS, GIF_EVENTS) {
   const POWER_SURGE_ACTIVATED_GIFS = [
@@ -54,6 +53,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               p.wickets = 0;
               p.runsConceded = 0;
               p.ballsBowled = 0;
+              p.dotBalls = 0;
               p.halfCenturyAnnounced = false;
               p.centuryAnnounced = false;
               p.threeWicketHaulAnnounced = false;
@@ -695,21 +695,6 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       text += `───────────────────`;
 
-      const imageTitle = tour.name
-          ? `${tour.name.toUpperCase()} SCORECARD`
-          : 'LIVE MATCH SCORECARD';
-
-      try {
-          const buffer = await generateScoreboardImage(tour, imageTitle, null);
-          if (buffer) {
-              await ctx.replyWithPhoto(new InputFile(buffer, 'scorecard.png'));
-              await ctx.reply(text, { parse_mode: 'HTML' });
-              return;
-          }
-      } catch (err) {
-          console.error("Failed to generate/send scoreboard image, falling back to text:", err);
-      }
-
       await ctx.reply(text, { parse_mode: 'HTML' });
   });
 
@@ -998,26 +983,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               let msg = `🏆 <b>${resultText}!</b> 🎉`;
               if (res.motm) msg += `\n🎖 <b>POTM:</b> ${escapeHtml(res.motm.first_name)}`;
               
-              try {
-                  const buffer = await generateScoreboardImage(tour, resultText, potmName);
-                  if (buffer) {
-                      const caption = res.motm
-                          ? `🏆 ${resultText}!\n🎖 POTM: ${res.motm.first_name}`
-                          : `🏆 ${resultText}!`;
-                      try {
-                          await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), { caption });
-                      } catch (photoErr) {
-                          console.error("Final scoreboard photo send failed, retrying once:", photoErr);
-                          await sleep(1500);
-                          await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), { caption });
-                      }
-                  } else {
-                      await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
-                  }
-              } catch (e) {
-                  console.error("Failed to generate/send TV scorecard image:", e);
-                  await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
-              }
+              await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
               
               tourManager.deleteTour(tour.id);
           } else if (res.inningsEnded) {

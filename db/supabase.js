@@ -143,6 +143,108 @@ async function getLeaderboard(type = 'coins') {
   return data;
 }
 
+// Local file/database utilities
+const fs = require('fs');
+const path = require('path');
+const GROUPS_FILE = path.join(__dirname, 'discovered_groups.json');
+const LAST_BROADCAST_FILE = path.join(__dirname, 'last_broadcast.json');
+
+function loadJSONFile(filePath, defaultVal = []) {
+  try {
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch (e) {
+    console.error(`Error reading ${filePath}:`, e);
+  }
+  return defaultVal;
+}
+
+function saveJSONFile(filePath, data) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error(`Error writing ${filePath}:`, e);
+  }
+}
+
+async function recordGroupInteraction(chatId) {
+  const groups = loadJSONFile(GROUPS_FILE);
+  if (!groups.includes(chatId)) {
+    groups.push(chatId);
+    saveJSONFile(GROUPS_FILE, groups);
+  }
+}
+
+async function getAllGroupIds() {
+  return loadJSONFile(GROUPS_FILE);
+}
+
+async function getAllUserIds() {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase.from('cricket_users').select('user_id');
+    if (error) {
+      console.error("Error fetching all user IDs:", error);
+      return [];
+    }
+    return (data || []).map(u => u.user_id);
+  } catch (e) {
+    console.error("Exception in getAllUserIds:", e);
+    return [];
+  }
+}
+
+async function saveBroadcastMessage(chatId, messageId) {
+  const messages = loadJSONFile(LAST_BROADCAST_FILE);
+  messages.push({ chatId: Number(chatId), messageId: Number(messageId) });
+  saveJSONFile(LAST_BROADCAST_FILE, messages);
+}
+
+async function getLastBroadcastMessages() {
+  return loadJSONFile(LAST_BROADCAST_FILE);
+}
+
+async function clearLastBroadcastMessages() {
+  saveJSONFile(LAST_BROADCAST_FILE, []);
+}
+
+async function getUserRank(userId, type = 'coins') {
+  if (!supabase) return { rank: 0, total: 0, value: 0 };
+  try {
+    const { data: user, error: userErr } = await supabase
+      .from('cricket_users')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+      
+    if (userErr || !user) {
+      return { rank: 0, total: 0, value: 0 };
+    }
+    
+    const value = user[type] || 0;
+    
+    const { count: higherCount } = await supabase
+      .from('cricket_users')
+      .select('user_id', { count: 'exact', head: true })
+      .gt(type, value);
+      
+    const { count: totalCount } = await supabase
+      .from('cricket_users')
+      .select('user_id', { count: 'exact', head: true });
+      
+    return {
+      rank: (higherCount || 0) + 1,
+      total: totalCount || 0,
+      value: value
+    };
+  } catch (e) {
+    console.error("Error in getUserRank:", e);
+    return { rank: 0, total: 0, value: 0 };
+  }
+}
+
 module.exports = {
   supabase,
   INITIAL_COINS,
@@ -152,5 +254,12 @@ module.exports = {
   updateCoins,
   claimDaily,
   recordMatchEnd,
-  getLeaderboard
+  getLeaderboard,
+  getUserRank,
+  recordGroupInteraction,
+  getAllGroupIds,
+  getAllUserIds,
+  saveBroadcastMessage,
+  getLastBroadcastMessages,
+  clearLastBroadcastMessages
 };

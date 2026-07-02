@@ -134,7 +134,8 @@ function joinTeam(tourId, user, teamKey) {
         runsConceded: 0,
         ballsBowled: 0,
         fours: 0,
-        sixes: 0
+        sixes: 0,
+        dotBalls: 0
     });
     userTourMap.set(user.id, tourId);
 
@@ -412,7 +413,8 @@ function rebatPlayer(tourId, hostId, teamChar, playerIndex) {
         runsConceded: 0,
         ballsBowled: 0,
         fours: 0,
-        sixes: 0
+        sixes: 0,
+        dotBalls: 0
     };
     team.players.push(rebatObj);
     return rebatObj;
@@ -572,10 +574,12 @@ function submitPlay(tourId, userId, rawInput) {
         if (bowler.wickets === undefined) bowler.wickets = 0;
         if (bowler.runsConceded === undefined) bowler.runsConceded = 0;
         if (bowler.ballsBowled === undefined) bowler.ballsBowled = 0;
+        if (bowler.dotBalls === undefined) bowler.dotBalls = 0;
         bowler.ballsBowled++;
         bowlerName = bowler.first_name;
         if (isWicket) {
             bowler.wickets++;
+            bowler.dotBalls++; // A wicket is also a dot ball (0 runs conceded)
             bowler.consecutiveWickets = (bowler.consecutiveWickets || 0) + 1;
             if (bowler.consecutiveWickets === 3) {
                 hitHattrick = true;
@@ -590,6 +594,9 @@ function submitPlay(tourId, userId, rawInput) {
             }
         } else {
             bowler.runsConceded += batNum;
+            if (batNum === 0) {
+                bowler.dotBalls++;
+            }
             bowler.consecutiveWickets = 0;
         }
     }
@@ -682,7 +689,7 @@ function submitPlay(tourId, userId, rawInput) {
 
 function calculateMOTM(tour, winnerTeamId) {
     let bestPlayer = null;
-    let maxPoints = -1;
+    let maxPoints = -99999;
     
     const eligibleTeams = [];
     if (winnerTeamId === 'teamA') {
@@ -695,9 +702,83 @@ function calculateMOTM(tour, winnerTeamId) {
     
     const allPlayers = eligibleTeams.flatMap(t => t.players);
     for (const p of allPlayers) {
-        const points = (p.runs || 0) + (p.wickets || 0) * 20;
-        if (points > maxPoints) {
-            maxPoints = points;
+        let pts = 0;
+        
+        // 1. Batting Runs
+        const runs = p.runs || 0;
+        pts += runs;
+        
+        // 2. Fours and Sixes
+        pts += (p.fours || 0) * 1;
+        pts += (p.sixes || 0) * 2;
+        
+        // 3. Batting Milestones (non-stacking)
+        if (runs >= 100) {
+            pts += 16;
+        } else if (runs >= 50) {
+            pts += 8;
+        } else if (runs >= 30) {
+            pts += 4;
+        }
+        
+        // 4. Strike Rate (for min 3 balls faced)
+        const ballsFaced = p.balls || 0;
+        if (ballsFaced >= 3) {
+            const sr = (runs / ballsFaced) * 100;
+            if (sr > 170) pts += 6;
+            else if (sr >= 150) pts += 4;
+            else if (sr >= 130) pts += 2;
+            else if (sr >= 60 && sr < 70) pts -= 2;
+            else if (sr >= 50 && sr < 60) pts -= 4;
+            else if (sr < 50) pts -= 6;
+        }
+        
+        // 5. Wickets
+        const wickets = p.wickets || 0;
+        pts += wickets * 25;
+        
+        // 6. Wicket Hauls (non-stacking)
+        if (wickets >= 5) {
+            pts += 16;
+        } else if (wickets >= 3) {
+            pts += 8;
+        }
+        
+        // 7. Dot Balls
+        pts += (p.dotBalls || 0) * 1;
+        
+        // 8. Economy Rate (for min 3 balls bowled)
+        const ballsBowled = p.ballsBowled || 0;
+        const runsConceded = p.runsConceded || 0;
+        if (ballsBowled >= 3) {
+            const econ = (runsConceded / ballsBowled) * 6;
+            if (econ < 5) pts += 6;
+            else if (econ < 7) pts += 4;
+            else if (econ < 9) pts += 2;
+            else if (econ > 15) pts -= 6;
+            else if (econ > 13) pts -= 4;
+            else if (econ > 11) pts -= 2;
+        }
+        
+        // 9. Tie-breaker (fractional points)
+        // Primary tie-breaker: wickets (+0.01 per wicket)
+        // Secondary tie-breaker: runs (+0.001 per run)
+        // Third: fewer runs conceded (-0.0001 per run conceded)
+        // Fourth: fewer balls faced (-0.00001 per ball faced)
+        // Fifth: fewer balls bowled (-0.000001 per ball bowled)
+        let tieBreaker = 0;
+        tieBreaker += wickets * 0.01;
+        tieBreaker += runs * 0.001;
+        tieBreaker -= runsConceded * 0.0001;
+        tieBreaker -= ballsFaced * 0.00001;
+        tieBreaker -= ballsBowled * 0.000001;
+        
+        const totalPoints = pts + tieBreaker;
+        
+        // Avoid players with 0/no performance at all if possible
+        const hasPerformance = runs > 0 || wickets > 0 || ballsBowled > 0 || ballsFaced > 0;
+        if (hasPerformance && totalPoints > maxPoints) {
+            maxPoints = totalPoints;
             bestPlayer = p;
         }
     }
