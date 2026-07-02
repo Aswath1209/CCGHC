@@ -138,53 +138,63 @@ async function getLeaderboard(type = 'coins') {
   // type is 'coins' or 'wins'
   const { data } = await supabase.from('cricket_users')
     .select('*')
+    .gte('user_id', 0)
     .order(type, { ascending: false })
     .limit(10);
   return data;
 }
 
-// Local file/database utilities
-const fs = require('fs');
-const path = require('path');
-const GROUPS_FILE = path.join(__dirname, 'discovered_groups.json');
-const LAST_BROADCAST_FILE = path.join(__dirname, 'last_broadcast.json');
-
-function loadJSONFile(filePath, defaultVal = []) {
+// Database-backed system configuration utilities
+async function getSystemData(systemId, defaultVal = []) {
+  if (!supabase) return defaultVal;
   try {
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf-8');
-      return JSON.parse(content);
+    const { data, error } = await supabase
+      .from('cricket_users')
+      .select('first_name')
+      .eq('user_id', systemId)
+      .single();
+      
+    if (error || !data || !data.first_name) {
+      return defaultVal;
     }
+    return JSON.parse(data.first_name);
   } catch (e) {
-    console.error(`Error reading ${filePath}:`, e);
+    console.error(`Error loading system data for ${systemId}:`, e);
+    return defaultVal;
   }
-  return defaultVal;
 }
 
-function saveJSONFile(filePath, data) {
+async function saveSystemData(systemId, value) {
+  if (!supabase) return;
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    await supabase.from('cricket_users').upsert({
+      user_id: systemId,
+      first_name: JSON.stringify(value),
+      coins: 0,
+      wins: 0,
+      losses: 0
+    });
   } catch (e) {
-    console.error(`Error writing ${filePath}:`, e);
+    console.error(`Error saving system data for ${systemId}:`, e);
   }
 }
 
 async function recordGroupInteraction(chatId) {
-  const groups = loadJSONFile(GROUPS_FILE);
+  const groups = await getSystemData(-1);
   if (!groups.includes(chatId)) {
     groups.push(chatId);
-    saveJSONFile(GROUPS_FILE, groups);
+    await saveSystemData(-1, groups);
   }
 }
 
 async function getAllGroupIds() {
-  return loadJSONFile(GROUPS_FILE);
+  return getSystemData(-1);
 }
 
 async function getAllUserIds() {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase.from('cricket_users').select('user_id');
+    const { data, error } = await supabase.from('cricket_users').select('user_id').gte('user_id', 0);
     if (error) {
       console.error("Error fetching all user IDs:", error);
       return [];
@@ -197,17 +207,17 @@ async function getAllUserIds() {
 }
 
 async function saveBroadcastMessage(chatId, messageId) {
-  const messages = loadJSONFile(LAST_BROADCAST_FILE);
+  const messages = await getSystemData(-2);
   messages.push({ chatId: Number(chatId), messageId: Number(messageId) });
-  saveJSONFile(LAST_BROADCAST_FILE, messages);
+  await saveSystemData(-2, messages);
 }
 
 async function getLastBroadcastMessages() {
-  return loadJSONFile(LAST_BROADCAST_FILE);
+  return getSystemData(-2);
 }
 
 async function clearLastBroadcastMessages() {
-  saveJSONFile(LAST_BROADCAST_FILE, []);
+  await saveSystemData(-2, []);
 }
 
 async function getUserRank(userId, type = 'coins') {
@@ -228,11 +238,13 @@ async function getUserRank(userId, type = 'coins') {
     const { count: higherCount } = await supabase
       .from('cricket_users')
       .select('user_id', { count: 'exact', head: true })
+      .gte('user_id', 0)
       .gt(type, value);
       
     const { count: totalCount } = await supabase
       .from('cricket_users')
-      .select('user_id', { count: 'exact', head: true });
+      .select('user_id', { count: 'exact', head: true })
+      .gte('user_id', 0);
       
     return {
       rank: (higherCount || 0) + 1,
