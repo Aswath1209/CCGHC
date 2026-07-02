@@ -93,11 +93,11 @@ function drawTextWithEmojis(ctx, text, x, y, fontSpec, emojiFontFamily = 'Noto C
   const primaryFont = `${sizeAndStyle} "${primaryFamily}", "Noto Color Emoji", "Noto Sans KR", "Noto Egyptian", "Noto Tai Tham", "Noto Math", "DejaVu Sans", sans-serif`;
   const emojiFont = `${sizeAndStyle} "${emojiFontFamily}"`;
   
-  const segments = str.split(/(\p{RGI_Emoji})/v);
+  const segments = str.split(/(\p{Emoji_Presentation})/u);
   const activeSegments = segments.filter(seg => seg !== '');
   
   const details = activeSegments.map(seg => {
-    const isEmoji = /^\p{RGI_Emoji}$/v.test(seg);
+    const isEmoji = /^\p{Emoji_Presentation}$/u.test(seg);
     ctx.save();
     ctx.font = isEmoji ? emojiFont : primaryFont;
     const metrics = ctx.measureText(seg);

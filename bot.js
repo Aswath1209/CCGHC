@@ -811,13 +811,28 @@ bot.command('generate', async (ctx) => {
       if (arg === 'score') {
           await ctx.replyWithChatAction("upload_photo");
 
-          const { generateScoreboardImage } = require('./game/scoreboardGenerator');
+          let generateScoreboardImage;
+          try {
+              const generator = require('./game/scoreboardGenerator');
+              generateScoreboardImage = generator.generateScoreboardImage;
+          } catch (requireErr) {
+              console.error("Failed to require scoreboardGenerator:", requireErr);
+              return ctx.reply(`❌ Error loading scoreboard generator: <code>${escapeHtml(requireErr.message)}</code>\n\nStack: <code>${escapeHtml(requireErr.stack)}</code>`, { parse_mode: 'HTML' });
+          }
+
           const { InputFile } = require('grammy');
           const exampleTour = buildExampleScoreboardMatch();
-          const buffer = await generateScoreboardImage(exampleTour, "India won by 25 runs", "Virat Kohli");
+          
+          let buffer;
+          try {
+              buffer = await generateScoreboardImage(exampleTour, "India won by 25 runs", "Virat Kohli");
+          } catch (genErr) {
+              console.error("Failed to generate scoreboard image:", genErr);
+              return ctx.reply(`❌ Error generating scoreboard image: <code>${escapeHtml(genErr.message)}</code>\n\nStack: <code>${escapeHtml(genErr.stack)}</code>`, { parse_mode: 'HTML' });
+          }
 
           if (!buffer) {
-              return ctx.reply("❌ Failed to generate example scoreboard image.");
+              return ctx.reply("❌ Failed to generate example scoreboard image (buffer is empty).");
           }
 
           await ctx.replyWithPhoto(new InputFile(buffer, 'scorecard.png'));
