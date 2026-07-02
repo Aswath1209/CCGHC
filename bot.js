@@ -2062,9 +2062,99 @@ bot.on(['message:text', 'message:caption'], async (ctx, next) => {
   await ctx.reply("✅ <b>Broadcast has been moved to background.</b>\n\nYou can continue using the bot while it sends messages.", { parse_mode: 'HTML' });
 });
 
+bot.command('stopbroadcast', async (ctx) => {
+  if (!isBotAdmin(ctx.from.id)) return;
+  activeBroadcastCancel = true;
+  await ctx.reply("⏳ <b>Signal sent to stop the active broadcast.</b>\nIt will cease on the next message iteration.", { parse_mode: 'HTML' });
+});
+
+bot.command(['revertbroadcast', 'deletebroadcast'], async (ctx) => {
+  if (!isBotAdmin(ctx.from.id)) return;
+  
+  const messages = await sb.getLastBroadcastMessages();
+  if (messages.length === 0) {
+      return ctx.reply("❌ No broadcast messages in database to revert, or they have already been reverted.");
+  }
+  
+  const total = messages.length;
+  let success = 0;
+  let failed = 0;
+  
+  const statusMsg = await ctx.reply(`🗑️ <b>Reverting last broadcast...</b>\n\nDeleting ${total} messages. Progress: 0/${total}`, { parse_mode: 'HTML' });
+  
+  for (let i = 0; i < total; i++) {
+      const item = messages[i];
+      try {
+          // Unpin the message if possible first
+          await bot.api.unpinChatMessage(item.chatId, item.messageId).catch(() => {});
+          // Delete message
+          await bot.api.deleteMessage(item.chatId, item.messageId);
+          success++;
+      } catch (e) {
+          failed++;
+      }
+      
+      if (i % 10 === 0 || i === total - 1) {
+          try {
+              await bot.api.editMessageText(ctx.chat.id, statusMsg.message_id,
+                  `🗑️ <b>Reverting last broadcast...</b> (${i + 1}/${total})\n\n` +
+                  `✅ Deleted: ${success}\n` +
+                  `❌ Failed: ${failed}`,
+                  { parse_mode: 'HTML' }
+              );
+          } catch (e) {}
+      }
+      
+      // Delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  // Clear the database tracking after reverting
+  await sb.clearLastBroadcastMessages();
+  
+  await ctx.reply(`🏁 <b>Revert Complete</b>\n\n✅ Successfully deleted: ${success}\n❌ Failed/Skipped: ${failed}`, { parse_mode: 'HTML' });
+});
+
+bot.command('listgroups', async (ctx) => {
+  console.log(`[Admin Command] /listgroups triggered by user ID ${ctx.from.id}`);
+  if (!isBotAdmin(ctx.from.id)) {
+      return ctx.reply("❌ This is a Super Admin only command.");
+  }
+  const groupIds = await sb.getAllGroupIds();
+  if (groupIds.length === 0) {
+      return ctx.reply("📁 No groups found in the database.");
+  }
+  
+  const statusMsg = await ctx.reply("⏳ Fetching active group titles...");
+  
+  // Resolve up to 100 groups in parallel to prevent rate limit issues
+  const chunk = groupIds.slice(0, 100); 
+  const promises = chunk.map(async (id) => {
+      try {
+          const chat = await bot.api.getChat(id);
+          return { id, title: chat.title || 'Group', success: true };
+      } catch (e) {
+          return { id, title: 'Unknown Group (Bot kicked/chat inactive)', success: false };
+      }
+  });
+  
+  const results = await Promise.all(promises);
+  
+  let msg = `<b>📁 Active Groups in Database (${results.length}):</b>\n\n`;
+  results.forEach(res => {
+      msg += `• <b>${escapeHtml(res.title)}</b>\n  <code>${res.id}</code>\n`;
+  });
+  
+  if (groupIds.length > 100) {
+      msg += `\n<i>...and ${groupIds.length - 100} more groups in DB.</i>`;
+  }
+  
+  await bot.api.editMessageText(ctx.chat.id, statusMsg.message_id, msg, { parse_mode: 'HTML' });
+});
+
 // DM Text Message Handlers
-bot.on('message:text', async (ctx) => {
-    if (ctx.chat.type !== 'private') return; 
+bot.on('message:text', async (ctx, next) => {
+    if (ctx.chat.type !== 'private') return next(); 
     
     const userId = ctx.from.id;
     const txt = ctx.message.text.trim();
@@ -2076,7 +2166,7 @@ bot.on('message:text', async (ctx) => {
     }
     
     const game = gameManager.getUserGame(userId);
-    if (!game || game.state !== 'PLAYING') return; 
+    if (!game || game.state !== 'PLAYING') return next(); 
     
     const res = gameManager.submitPlay(game.id, userId, txt);
     if (!res.success) {
@@ -2407,96 +2497,6 @@ async function sendBroadcast(ctx, targetIds, messageText, replyMessageId, copyCu
         } catch (e) {}
     }
 }
-
-bot.command('stopbroadcast', async (ctx) => {
-  if (!isBotAdmin(ctx.from.id)) return;
-  activeBroadcastCancel = true;
-  await ctx.reply("⏳ <b>Signal sent to stop the active broadcast.</b>\nIt will cease on the next message iteration.", { parse_mode: 'HTML' });
-});
-
-bot.command(['revertbroadcast', 'deletebroadcast'], async (ctx) => {
-  if (!isBotAdmin(ctx.from.id)) return;
-  
-  const messages = await sb.getLastBroadcastMessages();
-  if (messages.length === 0) {
-      return ctx.reply("❌ No broadcast messages in database to revert, or they have already been reverted.");
-  }
-  
-  const total = messages.length;
-  let success = 0;
-  let failed = 0;
-  
-  const statusMsg = await ctx.reply(`🗑️ <b>Reverting last broadcast...</b>\n\nDeleting ${total} messages. Progress: 0/${total}`, { parse_mode: 'HTML' });
-  
-  for (let i = 0; i < total; i++) {
-      const item = messages[i];
-      try {
-          // Unpin the message if possible first
-          await bot.api.unpinChatMessage(item.chatId, item.messageId).catch(() => {});
-          // Delete message
-          await bot.api.deleteMessage(item.chatId, item.messageId);
-          success++;
-      } catch (e) {
-          failed++;
-      }
-      
-      if (i % 10 === 0 || i === total - 1) {
-          try {
-              await bot.api.editMessageText(ctx.chat.id, statusMsg.message_id,
-                  `🗑️ <b>Reverting last broadcast...</b> (${i + 1}/${total})\n\n` +
-                  `✅ Deleted: ${success}\n` +
-                  `❌ Failed: ${failed}`,
-                  { parse_mode: 'HTML' }
-              );
-          } catch (e) {}
-      }
-      
-      // Delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 50));
-  }
-  
-  // Clear the database tracking after reverting
-  await sb.clearLastBroadcastMessages();
-  
-  await ctx.reply(`🏁 <b>Revert Complete</b>\n\n✅ Successfully deleted: ${success}\n❌ Failed/Skipped: ${failed}`, { parse_mode: 'HTML' });
-});
-
-bot.command('listgroups', async (ctx) => {
-  console.log(`[Admin Command] /listgroups triggered by user ID ${ctx.from.id}`);
-  if (!isBotAdmin(ctx.from.id)) {
-      return ctx.reply("❌ This is a Super Admin only command.");
-  }
-  const groupIds = await sb.getAllGroupIds();
-  if (groupIds.length === 0) {
-      return ctx.reply("📁 No groups found in the database.");
-  }
-  
-  const statusMsg = await ctx.reply("⏳ Fetching active group titles...");
-  
-  // Resolve up to 100 groups in parallel to prevent rate limit issues
-  const chunk = groupIds.slice(0, 100); 
-  const promises = chunk.map(async (id) => {
-      try {
-          const chat = await bot.api.getChat(id);
-          return { id, title: chat.title || 'Group', success: true };
-      } catch (e) {
-          return { id, title: 'Unknown Group (Bot kicked/chat inactive)', success: false };
-      }
-  });
-  
-  const results = await Promise.all(promises);
-  
-  let msg = `<b>📁 Active Groups in Database (${results.length}):</b>\n\n`;
-  results.forEach(res => {
-      msg += `• <b>${escapeHtml(res.title)}</b>\n  <code>${res.id}</code>\n`;
-  });
-  
-  if (groupIds.length > 100) {
-      msg += `\n<i>...and ${groupIds.length - 100} more groups in DB.</i>`;
-  }
-  
-  await bot.api.editMessageText(ctx.chat.id, statusMsg.message_id, msg, { parse_mode: 'HTML' });
-});
 
 const express = require('express');
 const app = express();
