@@ -1356,10 +1356,10 @@ bot.on('callback_query:data', async (ctx) => {
               const isChosen = z.id === zoneId;
               
               let label = "";
-              if (z.type.type === "fielder") label = `🔴 Fielder`;
-              else if (z.type.type === "single") label = `🟡 Single`;
-              else if (z.type.type === "gap") label = `🟢 Gap`;
-              else if (z.type.type === "jackpot") label = `⭐ Jackpot`;
+              if (z.type.type === "fielder") label = "🔴";
+              else if (z.type.type === "single") label = "🟡";
+              else if (z.type.type === "gap") label = "🟢";
+              else if (z.type.type === "jackpot") label = "⭐";
               
               if (isChosen) {
                   label += " 👈";
