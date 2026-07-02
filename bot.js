@@ -472,6 +472,7 @@ try {
     { command: 'broadcast', description: 'SuperAdmin: Send broadcast to users and groups' },
     { command: 'broadcast_users', description: 'SuperAdmin: Send broadcast to users DMs' },
     { command: 'broadcast_groups', description: 'SuperAdmin: Send broadcast to groups' },
+    { command: 'listgroups', description: 'SuperAdmin: List active groups in DB' },
     { command: 'stopbroadcast', description: 'SuperAdmin: Stop active broadcast' },
     { command: 'revertbroadcast', description: 'SuperAdmin: Revert/delete last broadcast' },
     { command: 'help', description: 'Commands list' }
@@ -1130,6 +1131,7 @@ bot.command('help', async (ctx) => {
     "📢 /broadcast [msg] - Broadcast to users and groups\n" +
     "📢 /broadcast_users [msg] - Broadcast to users DMs\n" +
     "📢 /broadcast_groups [msg] - Broadcast to groups\n" +
+    "📁 /listgroups - List active groups in DB\n" +
     "🛑 /stopbroadcast - Stop active broadcast\n" +
     "🗑️ /revertbroadcast - Revert/delete last broadcast",
     { parse_mode: 'HTML' }
@@ -1968,21 +1970,39 @@ bot.on(['message:text', 'message:caption'], async (ctx, next) => {
   const broadcastMsgText = rawText.slice(offsetShift);
   
   let shouldPin = false;
+  let specificTargetIds = null;
   let textToBroadcast = broadcastMsgText;
-  let pinOffsetShift = 0;
+  let parsedOffset = 0;
   
-  if (broadcastMsgText.startsWith('-pin ') || broadcastMsgText.startsWith('--pin ')) {
-      shouldPin = true;
-      const pinMatch = broadcastMsgText.match(/^--?pin\s+/);
-      pinOffsetShift = pinMatch ? pinMatch[0].length : 0;
-      textToBroadcast = broadcastMsgText.slice(pinOffsetShift);
-  } else if (broadcastMsgText.trim() === '-pin' || broadcastMsgText.trim() === '--pin') {
-      shouldPin = true;
-      textToBroadcast = '';
-      pinOffsetShift = broadcastMsgText.length;
+  while (true) {
+      const remainingText = textToBroadcast;
+      
+      // 1. Match pin flag
+      const pinMatch = remainingText.match(/^--?pin(?:\s+|$)/i);
+      if (pinMatch) {
+          shouldPin = true;
+          const consumedLength = pinMatch[0].length;
+          parsedOffset += consumedLength;
+          textToBroadcast = remainingText.slice(consumedLength);
+          continue;
+      }
+      
+      // 2. Match targets flag (e.g. -g or -groups or -u or -users or -target)
+      const targetMatch = remainingText.match(/^--(?:groups?|users?|targets?|g|u|t)\s+([-0-9,]+)(?:\s+|$)/i) || 
+                          remainingText.match(/^-(?:groups?|users?|targets?|g|u|t)\s+([-0-9,]+)(?:\s+|$)/i);
+      if (targetMatch) {
+          const idsStr = targetMatch[1];
+          specificTargetIds = idsStr.split(',').map(id => Number(id.trim())).filter(id => !isNaN(id));
+          const consumedLength = targetMatch[0].length;
+          parsedOffset += consumedLength;
+          textToBroadcast = remainingText.slice(consumedLength);
+          continue;
+      }
+      
+      break;
   }
   
-  const totalOffsetShift = offsetShift + pinOffsetShift;
+  const totalOffsetShift = offsetShift + parsedOffset;
   
   const isCaption = !ctx.message.text && ctx.message.caption;
   const rawEntities = isCaption ? ctx.message.caption_entities : ctx.message.entities;
@@ -2007,7 +2027,7 @@ bot.on(['message:text', 'message:caption'], async (ctx, next) => {
   const replyMsg = ctx.message.reply_to_message;
   
   if (!textToBroadcast && !replyMsg && !isCaption) {
-      return ctx.reply(`❌ Please provide a message.\n\n<b>Usage 1:</b> /${cmd} Hello world!\n<b>Usage 2:</b> Reply to ANY message (with bold, images, etc.) with /${cmd} to preserve exact formatting!\n<b>Usage 3:</b> Upload an image/media and write /${cmd} Your caption here!\n\n💡 Add <code>-pin</code> to pin the broadcast message (e.g. <code>/${cmd} -pin Hello!</code> or reply with <code>/${cmd} -pin</code>)`, { parse_mode: 'HTML' });
+      return ctx.reply(`❌ Please provide a message.\n\n<b>Usage 1:</b> /${cmd} Hello world!\n<b>Usage 2:</b> Reply to ANY message (with bold, images, etc.) with /${cmd} to preserve exact formatting!\n<b>Usage 3:</b> Upload an image/media and write /${cmd} Your caption here!\n\n💡 Add <code>-pin</code> to pin the broadcast message (e.g. <code>/${cmd} -pin Hello!</code>)\n💡 Add <code>-g ID1,ID2</code> to target specific groups (e.g. <code>/${cmd} -g -10012345,-10098765 Hello!</code>)`, { parse_mode: 'HTML' });
   }
   
   let targetIds = [];
@@ -2025,6 +2045,14 @@ bot.on(['message:text', 'message:caption'], async (ctx, next) => {
   
   if (targetIds.length === 0) {
       return ctx.reply("❌ No target chats found in database.");
+  }
+  
+  if (specificTargetIds && specificTargetIds.length > 0) {
+      const originalCount = targetIds.length;
+      targetIds = targetIds.filter(id => specificTargetIds.includes(id));
+      if (targetIds.length === 0) {
+          return ctx.reply(`❌ None of the specified target IDs were found in the bot's database.\n\nType <code>/listgroups</code> to see active groups and their IDs.`, { parse_mode: 'HTML' });
+      }
   }
   
   const copyCurrent = (isCaption && !replyMsg) ? ctx.message.message_id : null;
@@ -2431,6 +2459,40 @@ bot.command(['revertbroadcast', 'deletebroadcast'], async (ctx) => {
   await sb.clearLastBroadcastMessages();
   
   await ctx.reply(`🏁 <b>Revert Complete</b>\n\n✅ Successfully deleted: ${success}\n❌ Failed/Skipped: ${failed}`, { parse_mode: 'HTML' });
+});
+
+bot.command('listgroups', async (ctx) => {
+  if (!isBotAdmin(ctx.from.id)) return;
+  const groupIds = await sb.getAllGroupIds();
+  if (groupIds.length === 0) {
+      return ctx.reply("📁 No groups found in the database.");
+  }
+  
+  const statusMsg = await ctx.reply("⏳ Fetching active group titles...");
+  
+  // Resolve up to 100 groups in parallel to prevent rate limit issues
+  const chunk = groupIds.slice(0, 100); 
+  const promises = chunk.map(async (id) => {
+      try {
+          const chat = await bot.api.getChat(id);
+          return { id, title: chat.title || 'Group', success: true };
+      } catch (e) {
+          return { id, title: 'Unknown Group (Bot kicked/chat inactive)', success: false };
+      }
+  });
+  
+  const results = await Promise.all(promises);
+  
+  let msg = `<b>📁 Active Groups in Database (${results.length}):</b>\n\n`;
+  results.forEach(res => {
+      msg += `• <b>${escapeHtml(res.title)}</b>\n  <code>${res.id}</code>\n`;
+  });
+  
+  if (groupIds.length > 100) {
+      msg += `\n<i>...and ${groupIds.length - 100} more groups in DB.</i>`;
+  }
+  
+  await bot.api.editMessageText(ctx.chat.id, statusMsg.message_id, msg, { parse_mode: 'HTML' });
 });
 
 const express = require('express');
