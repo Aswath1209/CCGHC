@@ -253,7 +253,7 @@ function startMatch(chatId, matchNum, hostUser) {
   const tourRes = tourManager.createTour(chatId, hostUser, matchName);
   if (!tourRes.success) return { success: false, error: tourRes.error };
 
-  const tour = tourManager.getTour(tourRes.tourId);
+  const tour = tourRes.tour;
   
   // Set match configs
   tour.config.overs = tri.config.overs;
