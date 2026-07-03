@@ -33,7 +33,7 @@ function deleteTriSeries(chatId) {
 function createTriSeries(chatId, hostUser, rounds = 2) {
   const key = chatId.toString();
   // Clean up any stale tours in this group first
-  const activeT = [...tourManager.getAllTours()].find(t => t.chatId.toString() === chatId.toString());
+  const activeT = [...tourManager.getAllTours()].find(t => t.chatId && t.chatId.toString() === chatId.toString());
   if (activeT) {
     tourManager.deleteTour(activeT.id);
   }
@@ -213,7 +213,7 @@ function startMatch(chatId, matchNum, hostUser) {
   if (!tri) return { success: false, error: 'Tri-Series not found.' };
   
   // Clean up any stale tours in this group first
-  const activeT = [...tourManager.getAllTours()].find(t => t.chatId.toString() === chatId.toString());
+  const activeT = [...tourManager.getAllTours()].find(t => t.chatId && t.chatId.toString() === chatId.toString());
   if (activeT) {
     tourManager.deleteTour(activeT.id);
   }
@@ -262,6 +262,7 @@ function startMatch(chatId, matchNum, hostUser) {
   // Roster injection
   tour.teamA.name = team1.name;
   tour.teamA.captainId = team1.captainId;
+  tour.teamA.customName = true;
   tour.teamA.players = team1.players.map(p => ({
     id: p.id,
     first_name: p.first_name,
@@ -278,6 +279,7 @@ function startMatch(chatId, matchNum, hostUser) {
 
   tour.teamB.name = team2.name;
   tour.teamB.captainId = team2.captainId;
+  tour.teamB.customName = true;
   tour.teamB.players = team2.players.map(p => ({
     id: p.id,
     first_name: p.first_name,

@@ -293,6 +293,44 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       }
   }
 
+  function renderTriStatusText(tri) {
+    const standings = triManager.getStandingsSorted(tri);
+    
+    let text = `📊 <b>TRI-SERIES STANDINGS</b> 📊\n`;
+    text += `───────────────────\n`;
+    standings.forEach((team, idx) => {
+      const stats = tri.pointsTable[team.key];
+      text += `${idx + 1}. <b>${escapeHtml(team.name)}</b>: ` +
+              `Played: <b>${stats.played}</b> | ` +
+              `Won: <b>${stats.won}</b> | ` +
+              `Points: <b>${team.pts}</b> | ` +
+              `NRR: <code>${team.nrr.toFixed(3)}</code>\n`;
+    });
+    text += `───────────────────\n\n`;
+    
+    text += `📅 <b>SCHEDULE & RESULTS</b>\n`;
+    tri.matches.forEach(m => {
+      const teamAVal = tri[m.team1Key];
+      const teamBVal = tri[m.team2Key];
+      const team1 = teamAVal ? teamAVal.name : 'TBD';
+      const team2 = teamBVal ? teamBVal.name : 'TBD';
+      
+      let statusStr = '';
+      if (m.state === 'COMPLETED') {
+        statusStr = `✅ Winner: <b>${tri[m.winner]?.name || 'None'}</b> (${m.resultText || 'Forfeit'})`;
+      } else if (m.state === 'PLAYING') {
+        statusStr = `🏏 <b>Active Match</b>`;
+      } else {
+        statusStr = `⏳ <i>Pending</i>`;
+      }
+      
+      const matchName = m.isFinal ? `<b>Grand Final</b>` : `<b>Match ${m.num}</b>`;
+      text += `${matchName}: ${escapeHtml(team1)} vs ${escapeHtml(team2)}\n   👉 ${statusStr}\n\n`;
+    });
+    
+    return text;
+  }
+
   bot.command('triseries', async (ctx) => {
     if (ctx.chat.type === 'private') return ctx.reply("Tri-Series can only be started in groups.");
     const args = ctx.message.text.split(' ');
@@ -330,29 +368,29 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     const res = triManager.startMatch(ctx.chat.id, matchNum, { id: ctx.from.id, first_name: ctx.from.first_name });
     if (!res.success) return ctx.reply("❌ " + res.error);
 
-    await ctx.reply(`🏏 <b>${escapeHtml(res.team1Name)} vs ${escapeHtml(res.team2Name)} Starting!</b>\n\nCaptains, set your batting and bowling orders to start!`, { parse_mode: 'HTML' });
-    await ctx.reply(renderLobby(res.tour), { reply_markup: getLobbyKeyboard(res.tour), parse_mode: 'HTML' });
+    // Auto-start standard tour to go straight to Toss phase
+    const startRes = tourManager.startTour(res.tour.id, res.tour.hostId);
+    if (!startRes.success) return ctx.reply("❌ Failed to start match: " + startRes.error);
+    
+    const tour = startRes.tour;
+    const capA = tour.teamA.players.find(p => p.id === tour.teamA.captainId) || tour.teamA.players[0];
+    
+    const kb = new InlineKeyboard()
+        .text("Heads 🪙", `tour_tosschoice_${tour.id}_heads`)
+        .text("Tails 🪙", `tour_tosschoice_${tour.id}_tails`);
+        
+    await ctx.reply(
+        `🏏 <b>${escapeHtml(res.team1Name)} vs ${escapeHtml(res.team2Name)}</b>\n\n` +
+        `🪙 <b>Toss Phase</b> 🪙\n\n` +
+        `👉 Captain of <b>${escapeHtml(tour.teamA.name)}</b> (<a href="tg://user?id=${capA.id}">${escapeHtml(capA.first_name)}</a>), choose Heads or Tails:`,
+        { reply_markup: kb, parse_mode: 'HTML' }
+    );
   });
 
   bot.command('tristatus', async (ctx) => {
     const tri = triManager.getTriSeries(ctx.chat.id);
     if (!tri) return ctx.reply("⚠️ No active Tri-Series found in this group.");
-    
-    try {
-      const buffer = await generatePointsTableImage(tri);
-      if (buffer) {
-        const { InputFile } = require('grammy');
-        await ctx.replyWithPhoto(new InputFile(buffer, 'points_table.png'), {
-          caption: `📊 <b>Tri-Series Standings</b>`,
-          parse_mode: 'HTML'
-        });
-      } else {
-        await ctx.reply("❌ Failed to generate points table image.");
-      }
-    } catch (e) {
-      console.error(e);
-      await ctx.reply("❌ Error generating points table.");
-    }
+    await ctx.reply(renderTriStatusText(tri), { parse_mode: 'HTML' });
   });
 
   bot.command('freewin', async (ctx) => {
@@ -1428,16 +1466,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   try {
                       const triRes = triManager.recordMatchEnd(tour.chatId, tour.triMatchNum, tour);
                       if (triRes) {
-                          const ptBuffer = await generatePointsTableImage(triRes.tri);
-                          const { InputFile } = require('grammy');
-                          
                           let cap = `📊 <b>Tri-Series Points Table updated after Match ${tour.triMatchNum}!</b>`;
                           if (triRes.match.isFinal) {
                               cap = `🏆 <b>TRI-SERIES CONCLUDED!</b> 🏆`;
                           }
                           
-                          await ctx.api.sendPhoto(tour.chatId, new InputFile(ptBuffer, 'points_table.png'), {
-                              caption: cap,
+                          await ctx.api.sendMessage(tour.chatId, `${cap}\n\n` + renderTriStatusText(triRes.tri), {
                               parse_mode: 'HTML'
                           });
                           
@@ -1565,19 +1599,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   tri.state = 'SCHEDULED';
                   ctx.answerCallbackQuery("Tournament started!");
                   
-                  try {
-                      const ptBuffer = await generatePointsTableImage(tri);
-                      const { InputFile } = require('grammy');
-                      
-                      await ctx.editMessageText(`🚀 <b>Tri-Series Tournament Started!</b>\n\nStandings and schedule board loaded below. The host can start Match 1 by typing /match 1`, { parse_mode: 'HTML' });
-                      await ctx.api.sendPhoto(ctx.chat.id, new InputFile(ptBuffer, 'points_table.png'), {
-                          caption: `📊 <b>Tri-Series Points Table & Schedule</b>\n👉 Host, start the first match with: <code>/match 1</code>`,
-                          parse_mode: 'HTML'
-                      });
-                  } catch (err) {
-                      console.error("Error drawing schedule at start:", err);
-                      await ctx.editMessageText(`🚀 <b>Tri-Series Tournament Started!</b>\n\n👉 Host, start the first match with: <code>/match 1</code>`, { parse_mode: 'HTML' });
-                  }
+                  const statusText = `🚀 <b>Tri-Series Tournament Started!</b>\n\n` + renderTriStatusText(tri) +
+                                     `\n👉 Host, start the first match with: <code>/match 1</code>`;
+                  await ctx.editMessageText(statusText, { reply_markup: undefined, parse_mode: 'HTML' });
                   return;
               }
               if (data.startsWith('tri_cancel_')) {
@@ -1669,16 +1693,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   const triRes = res.res;
                   if (triRes) {
                       try {
-                          const ptBuffer = await generatePointsTableImage(triRes.tri);
-                          const { InputFile } = require('grammy');
-                          
                           let cap = `📊 <b>Tri-Series Points Table updated after Match ${triRes.match.num}!</b>`;
                           if (triRes.match.isFinal) {
                               cap = `🏆 <b>TRI-SERIES CONCLUDED!</b> 🏆`;
                           }
                           
-                          await ctx.api.sendPhoto(triRes.tri.chatId, new InputFile(ptBuffer, 'points_table.png'), {
-                              caption: cap,
+                          await ctx.api.sendMessage(triRes.tri.chatId, `${cap}\n\n` + renderTriStatusText(triRes.tri), {
                               parse_mode: 'HTML'
                           });
                           
