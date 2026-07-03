@@ -92,7 +92,7 @@ function createTriSeries(chatId, hostUser, rounds = 2) {
 function joinTeam(chatId, user, teamKey) {
   const tri = getTriSeries(chatId);
   if (!tri) return { success: false, error: 'Tri-Series not found.' };
-  if (tri.state !== 'LOBBY') return { success: false, error: 'Cannot change rosters once a match is active!' };
+  if (tri.state === 'PLAYING') return { success: false, error: 'Cannot change rosters while a match is currently playing!' };
 
   const targetTeam = tri[teamKey];
   if (!targetTeam) return { success: false, error: 'Invalid team selected.' };
@@ -170,7 +170,7 @@ function renameTeam(chatId, teamKey, newName) {
 function removePlayer(chatId, playerId) {
   const tri = getTriSeries(chatId);
   if (!tri) return { success: false, error: 'Tri-Series not found.' };
-  if (tri.state !== 'LOBBY') return { success: false, error: 'Cannot edit rosters mid-match!' };
+  if (tri.state === 'PLAYING') return { success: false, error: 'Cannot change rosters while a match is currently playing!' };
 
   let removed = false;
   let teamName = '';
@@ -264,12 +264,14 @@ function startMatch(chatId, matchNum, hostUser) {
   tour.teamA.captainId = team1.captainId;
   tour.teamA.customName = true;
   tour.teamA.players = [];
+  tour.teamA.triTeamKey = match.team1Key;
   team1.players.forEach(p => tourManager.joinTeam(tour.id, { id: p.id, first_name: p.first_name, username: p.username || '' }, 'teamA'));
 
   tour.teamB.name = team2.name;
   tour.teamB.captainId = team2.captainId;
   tour.teamB.customName = true;
   tour.teamB.players = [];
+  tour.teamB.triTeamKey = match.team2Key;
   team2.players.forEach(p => tourManager.joinTeam(tour.id, { id: p.id, first_name: p.first_name, username: p.username || '' }, 'teamB'));
 
   // Link to TriSeries
@@ -343,8 +345,8 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
     return null;
   };
 
-  const keyA = getTriKey(tour.teamA.name);
-  const keyB = getTriKey(tour.teamB.name);
+  const keyA = tour.teamA.triTeamKey || getTriKey(tour.teamA.name);
+  const keyB = tour.teamB.triTeamKey || getTriKey(tour.teamB.name);
 
   if (winnerKeyOverride) {
     winnerKey = winnerKeyOverride;

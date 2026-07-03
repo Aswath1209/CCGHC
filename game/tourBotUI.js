@@ -1,4 +1,4 @@
-const { InlineKeyboard } = require('grammy');
+const { InlineKeyboard, InputFile } = require('grammy');
 const tourManager = require('./tourManager');
 
 module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTARY, CCL_GIFS, GIF_EVENTS) {
@@ -317,7 +317,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       let statusStr = '';
       if (m.state === 'COMPLETED') {
-        statusStr = `✅ Winner: <b>${tri[m.winner]?.name || 'None'}</b> (${m.resultText || 'Forfeit'})`;
+        if (m.winner === 'tie') {
+          statusStr = `🤝 <b>Tied</b> (${m.resultText || 'Match tied'})`;
+        } else {
+          const winnerName = (m.winner && tri[m.winner]) ? tri[m.winner].name : '';
+          statusStr = `✅ <b>${escapeHtml(winnerName || m.resultText || 'Unknown')}</b>`;
+          if (m.resultText) statusStr += ` (${m.resultText})`;
+        }
       } else if (m.state === 'PLAYING') {
         statusStr = `🏏 <b>Active Match</b>`;
       } else {
@@ -329,6 +335,61 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     });
     
     return text;
+  }
+
+  function renderTriScheduleText(tri) {
+    let text = `📅 <b>SCHEDULE & RESULTS</b>\n`;
+    text += `───────────────────\n`;
+    tri.matches.forEach(m => {
+      const teamAVal = tri[m.team1Key];
+      const teamBVal = tri[m.team2Key];
+      const team1 = teamAVal ? teamAVal.name : 'TBD';
+      const team2 = teamBVal ? teamBVal.name : 'TBD';
+      
+      let statusStr = '';
+      if (m.state === 'COMPLETED') {
+        if (m.winner === 'tie') {
+          statusStr = `🤝 <b>Tied</b> (${m.resultText || 'Match tied'})`;
+        } else {
+          const winnerName = (m.winner && tri[m.winner]) ? tri[m.winner].name : '';
+          statusStr = `✅ <b>${escapeHtml(winnerName || m.resultText || 'Unknown')}</b>`;
+          if (m.resultText) statusStr += ` (${m.resultText})`;
+        }
+      } else if (m.state === 'PLAYING') {
+        statusStr = `🏏 <b>Active Match</b>`;
+      } else {
+        statusStr = `⏳ <i>Pending</i>`;
+      }
+      
+      const matchName = m.isFinal ? `<b>Grand Final</b>` : `<b>Match ${m.num}</b>`;
+      text += `${matchName}: ${escapeHtml(team1)} vs ${escapeHtml(team2)}\n   👉 ${statusStr}\n\n`;
+    });
+    return text;
+  }
+
+  async function sendTriStatusUpdate(ctx, chatId, tri, caption = '') {
+    try {
+      const imageBuffer = await generatePointsTableImage(tri);
+      await ctx.api.sendPhoto(chatId, new InputFile(imageBuffer, 'points_table.png'), {
+        caption: caption,
+        parse_mode: 'HTML'
+      });
+    } catch (err) {
+      console.error("Failed to generate or send points table image:", err);
+      // Fallback: send text standings
+      let fallbackText = caption ? `${caption}\n\n` : '';
+      fallbackText += `📊 <b>TRI-SERIES STANDINGS</b> 📊\n`;
+      fallbackText += `───────────────────\n`;
+      const standings = triManager.getStandingsSorted(tri);
+      standings.forEach((team, idx) => {
+        const stats = tri.pointsTable[team.key];
+        fallbackText += `${idx + 1}. <b>${escapeHtml(team.name)}</b>: Played: <b>${stats.played}</b> | Won: <b>${stats.won}</b> | Points: <b>${team.pts}</b> | NRR: <code>${team.nrr.toFixed(3)}</code>\n`;
+      });
+      await ctx.api.sendMessage(chatId, fallbackText, { parse_mode: 'HTML' });
+    }
+    
+    // Send schedule & results
+    await ctx.api.sendMessage(chatId, renderTriScheduleText(tri), { parse_mode: 'HTML' });
   }
 
   bot.command('triseries', async (ctx) => {
@@ -390,7 +451,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   bot.command('tristatus', async (ctx) => {
     const tri = triManager.getTriSeries(ctx.chat.id);
     if (!tri) return ctx.reply("⚠️ No active Tri-Series found in this group.");
-    await ctx.reply(renderTriStatusText(tri), { parse_mode: 'HTML' });
+    await sendTriStatusUpdate(ctx, ctx.chat.id, tri);
   });
 
   bot.command('freewin', async (ctx) => {
@@ -560,8 +621,19 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const res = triManager.renameTeam(tri.chatId, teamKey, txt);
           if (!res.success) return ctx.reply("❌ " + res.error);
           
+          // Sync to active tour match if one is playing
+          if (tri.activeTourId) {
+              const tour = tourManager.getTour(tri.activeTourId);
+              if (tour) {
+                  if (tour.teamA.triTeamKey === teamKey) tour.teamA.name = res.teamName;
+                  if (tour.teamB.triTeamKey === teamKey) tour.teamB.name = res.teamName;
+              }
+          }
+          
           await ctx.reply(`✅ Team renamed to: <b>${res.teamName}</b>`, { parse_mode: 'HTML' });
-          await updateLobbyMessage(ctx, tri);
+          if (tri.state === 'LOBBY') {
+              await updateLobbyMessage(ctx, tri);
+          }
           return;
       }
       
@@ -998,14 +1070,37 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const args = ctx.message.text.split(' ');
-      const teamChar = args[1]?.toUpperCase();
+      const teamArg = args[1];
       const index = parseInt(args[2]);
       
-      if (!teamChar || (teamChar !== 'A' && teamChar !== 'B') || isNaN(index)) {
-          return ctx.reply("Usage: /rebat [A/B] [playerIndex]");
+      if (!teamArg || isNaN(index)) {
+          const nameA = tour.teamA.name;
+          const nameB = tour.teamB.name;
+          return ctx.reply(`Usage: /rebat [team] [playerIndex]\n\nTeams: <b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>\nExample: <code>/rebat ${escapeHtml(nameA)} 1</code>`, { parse_mode: 'HTML' });
       }
       
-      const teamKey = teamChar === 'A' ? 'teamA' : 'teamB';
+      const teamArgUp = teamArg.toUpperCase();
+      let teamKey = null;
+      let teamChar = null;
+      if (teamArgUp === 'A') {
+          teamKey = 'teamA'; teamChar = 'A';
+      } else if (teamArgUp === 'B') {
+          teamKey = 'teamB'; teamChar = 'B';
+      } else {
+          const argLower = teamArg.toLowerCase();
+          if (tour.teamA.name.toLowerCase().includes(argLower)) {
+              teamKey = 'teamA'; teamChar = 'A';
+          } else if (tour.teamB.name.toLowerCase().includes(argLower)) {
+              teamKey = 'teamB'; teamChar = 'B';
+          }
+      }
+      
+      if (!teamKey) {
+          const nameA = tour.teamA.name;
+          const nameB = tour.teamB.name;
+          return ctx.reply(`❌ Team not found. Use:\n<b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>`, { parse_mode: 'HTML' });
+      }
+      
       const team = tour[teamKey];
       
       if (ctx.from.id !== tour.hostId && ctx.from.id !== team.captainId) {
@@ -1014,6 +1109,19 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const res = tourManager.rebatPlayer(tour.id, tour.hostId, teamChar, index);
       if (res) {
+          if (tour.triSeriesId) {
+              const tri = triManager.getTriSeries(tour.triSeriesId);
+              if (tri) {
+                  const triTeamKey = teamKey === 'teamA' ? tour.teamA.triTeamKey : tour.teamB.triTeamKey;
+                  if (triTeamKey && tri[triTeamKey]) {
+                      tri[triTeamKey].players.push({
+                          id: res.id,
+                          first_name: res.first_name,
+                          username: res.username || ''
+                      });
+                  }
+              }
+          }
           const cleanName = res.first_name.replace(/\s*\(rebat\)/gi, '');
           await ctx.reply(`🔄 <b>${escapeHtml(cleanName)} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
           if (tour.state === 'LOBBY') {
@@ -1322,11 +1430,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const hasBowlingMilestone = res.hitThreeWickets || res.hitHattrick || res.hitFiveWickets;
 
           if (isWicket) {
-              const deliveryKey = "out_" + bowlStr.toLowerCase().replace(/\s+/g, '');
-              await sendEventUpdate(ctx, tour.chatId, deliveryKey, cleanBatsmanName, cleanBowlerName, isDuck && hasBowlingMilestone);
+              await sendEventUpdate(ctx, tour.chatId, "out", cleanBatsmanName, cleanBowlerName, isDuck && hasBowlingMilestone);
           } else {
-              const comboKey = batStr + "_" + bowlStr.toLowerCase().replace(/\s+/g, '');
-              await sendEventUpdate(ctx, tour.chatId, comboKey, cleanBatsmanName, cleanBowlerName);
+              await sendEventUpdate(ctx, tour.chatId, batStr, cleanBatsmanName, cleanBowlerName);
           }
           await sleep(1000);
 
@@ -1471,9 +1577,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                               cap = `🏆 <b>TRI-SERIES CONCLUDED!</b> 🏆`;
                           }
                           
-                          await ctx.api.sendMessage(tour.chatId, `${cap}\n\n` + renderTriStatusText(triRes.tri), {
-                              parse_mode: 'HTML'
-                          });
+                          await sendTriStatusUpdate(ctx, tour.chatId, triRes.tri, cap);
                           
                           if (triRes.match.isFinal) {
                               const awards = triManager.calculateAwards(triRes.tri);
@@ -1613,7 +1717,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   tri.state = 'SCHEDULED';
                   await ctx.answerCallbackQuery("Tournament started!");
                   
-                  const statusText = `🚀 <b>Tri-Series Tournament Started!</b>\n\n` + renderTriStatusText(tri) +
+                  const statusText = `🚀 <b>Tri-Series Tournament Started!</b>\n\n` + renderTriScheduleText(tri) +
                                      `\n👉 Host, start the first match with: <code>/match 1</code>`;
                   await ctx.editMessageText(statusText, { parse_mode: 'HTML' });
                   return;
@@ -1712,9 +1816,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                               cap = `🏆 <b>TRI-SERIES CONCLUDED!</b> 🏆`;
                           }
                           
-                          await ctx.api.sendMessage(triRes.tri.chatId, `${cap}\n\n` + renderTriStatusText(triRes.tri), {
-                              parse_mode: 'HTML'
-                          });
+                          await sendTriStatusUpdate(ctx, triRes.tri.chatId, triRes.tri, cap);
                           
                           if (triRes.match.isFinal) {
                               const awards = triManager.calculateAwards(triRes.tri);
