@@ -338,8 +338,8 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
 
   // Let's identify the maps to correct keys
   const getTriKey = (tourTeamName) => {
-    if (tourTeamName === tri[team1Key].name) return team1Key;
-    if (tourTeamName === tri[team2Key].name) return team2Key;
+    if (team1Key && tri[team1Key] && tourTeamName === tri[team1Key].name) return team1Key;
+    if (team2Key && tri[team2Key] && tourTeamName === tri[team2Key].name) return team2Key;
     return null;
   };
 
