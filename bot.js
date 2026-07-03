@@ -758,7 +758,7 @@ bot.command('profile', async (ctx) => {
   }
 });
 
-const cardCooldowns = new Map();
+const activeGenerations = new Set();
 const CARD_COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes cooldown per user
 
 function buildExampleScoreboardMatch() {
@@ -848,14 +848,21 @@ bot.command('generate', async (ctx) => {
       }
 
       const now = Date.now();
-      const lastUsed = cardCooldowns.get(ctx.from.id) || 0;
-      if (now - lastUsed < CARD_COOLDOWN_MS) {
+      const lastUsed = await sb.getCardCooldown(ctx.from.id);
+      const isAdmin = isBotAdmin(ctx.from.id);
+      if (!isAdmin && now - lastUsed < CARD_COOLDOWN_MS) {
           const remainingMs = CARD_COOLDOWN_MS - (now - lastUsed);
           const minutes = Math.floor(remainingMs / 60000);
           const seconds = Math.ceil((remainingMs % 60000) / 1000);
           const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
           return ctx.reply(`⏳ Please wait <b>${timeStr}</b> before generating another card.`, { parse_mode: 'HTML' });
       }
+
+      if (activeGenerations.has(ctx.from.id)) {
+          console.log(`Blocked duplicate /generate card execution for user ${ctx.from.id}`);
+          return;
+      }
+      activeGenerations.add(ctx.from.id);
 
       await ctx.replyWithChatAction("upload_photo");
 
@@ -904,10 +911,15 @@ bot.command('generate', async (ctx) => {
           caption: `👤 <b>${user.first_name}'s Player Card</b>\n\n<i>This is a preview mockup of the Visual Profile card.</i>`,
           parse_mode: 'HTML'
       });
-      cardCooldowns.set(ctx.from.id, Date.now());
+      
+      if (!isAdmin) {
+          await sb.setCardCooldown(ctx.from.id, Date.now());
+      }
   } catch (err) {
       console.error("Error generating player card:", err);
       await ctx.reply("❌ Failed to generate player card.");
+  } finally {
+      activeGenerations.delete(ctx.from.id);
   }
 });
 
@@ -916,7 +928,7 @@ bot.command('mycard', async (ctx) => {
       // Removed private chat restriction so it can be used in Group Chats!
       
       const now = Date.now();
-      const lastUsed = cardCooldowns.get(ctx.from.id) || 0;
+      const lastUsed = await sb.getCardCooldown(ctx.from.id);
       const isAdmin = isBotAdmin(ctx.from.id);
       const THIRTY_MINUTES = 30 * 60 * 1000;
       
@@ -928,6 +940,12 @@ bot.command('mycard', async (ctx) => {
           const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
           return ctx.reply(`⏳ Please wait <b>${timeStr}</b> before generating another card.`, { parse_mode: 'HTML' });
       }
+
+      if (activeGenerations.has(ctx.from.id)) {
+          console.log(`Blocked duplicate /mycard execution for user ${ctx.from.id}`);
+          return;
+      }
+      activeGenerations.add(ctx.from.id);
 
       await ctx.replyWithChatAction("upload_photo");
 
@@ -1026,10 +1044,15 @@ bot.command('mycard', async (ctx) => {
           caption: `👑 <b>${user.first_name}'s Official Player Card</b>\n\nUse <code>/mycard</code> to generate yours!`,
           parse_mode: 'HTML'
       });
-      cardCooldowns.set(ctx.from.id, Date.now());
+      
+      if (!isAdmin) {
+          await sb.setCardCooldown(ctx.from.id, Date.now());
+      }
   } catch (err) {
       console.error("Error generating player card:", err);
       await ctx.reply("❌ Failed to generate player card.");
+  } finally {
+      activeGenerations.delete(ctx.from.id);
   }
 });
 

@@ -257,6 +257,27 @@ async function getUserRank(userId, type = 'coins') {
   }
 }
 
+async function getCardCooldown(userId) {
+  const cooldowns = await getSystemData(-3, {});
+  return cooldowns[userId] || 0;
+}
+
+async function setCardCooldown(userId, timestamp) {
+  const cooldowns = await getSystemData(-3, {});
+  cooldowns[userId] = timestamp;
+  
+  // Clean up old cooldowns older than 30 minutes to keep the row small
+  const now = Date.now();
+  const THIRTY_MINUTES = 30 * 60 * 1000;
+  for (const uid in cooldowns) {
+    if (now - cooldowns[uid] > THIRTY_MINUTES) {
+      delete cooldowns[uid];
+    }
+  }
+  
+  await saveSystemData(-3, cooldowns);
+}
+
 module.exports = {
   supabase,
   INITIAL_COINS,
@@ -273,5 +294,7 @@ module.exports = {
   getAllUserIds,
   saveBroadcastMessage,
   getLastBroadcastMessages,
-  clearLastBroadcastMessages
+  clearLastBroadcastMessages,
+  getCardCooldown,
+  setCardCooldown
 };
