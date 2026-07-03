@@ -1589,9 +1589,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   const teamKey = parts[3];
                   
                   const res = triManager.joinTeam(chatId, { id: userId, first_name: ctx.from.first_name, username: ctx.from.username || '' }, teamKey);
-                  if (!res.success) return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+                  if (!res.success) return await ctx.answerCallbackQuery({ text: res.error, show_alert: true });
                   
-                  ctx.answerCallbackQuery(`Roster updated!`);
+                  await ctx.answerCallbackQuery(`Roster updated!`);
                   const tri = triManager.getTriSeries(chatId);
                   await ctx.editMessageText(renderTriLobby(tri), { reply_markup: getTriLobbyKeyboard(tri), parse_mode: 'HTML' });
                   return;
@@ -1600,36 +1600,36 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   const parts = data.split('_');
                   const chatId = parts[2];
                   const tri = triManager.getTriSeries(chatId);
-                  if (!tri) return ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
+                  if (!tri) return await ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
                   
                   if (ctx.from.id !== tri.hostId) {
-                      return ctx.answerCallbackQuery({ text: "Only the host can start the tournament.", show_alert: true });
+                      return await ctx.answerCallbackQuery({ text: "Only the host can start the tournament.", show_alert: true });
                   }
                   
                   if (tri.teamA.players.length === 0 || tri.teamB.players.length === 0 || tri.teamC.players.length === 0) {
-                      return ctx.answerCallbackQuery({ text: "All 3 teams must have at least 1 registered player to start!", show_alert: true });
+                      return await ctx.answerCallbackQuery({ text: "All 3 teams must have at least 1 registered player to start!", show_alert: true });
                   }
                   
                   tri.state = 'SCHEDULED';
-                  ctx.answerCallbackQuery("Tournament started!");
+                  await ctx.answerCallbackQuery("Tournament started!");
                   
                   const statusText = `🚀 <b>Tri-Series Tournament Started!</b>\n\n` + renderTriStatusText(tri) +
                                      `\n👉 Host, start the first match with: <code>/match 1</code>`;
-                  await ctx.editMessageText(statusText, { reply_markup: undefined, parse_mode: 'HTML' });
+                  await ctx.editMessageText(statusText, { parse_mode: 'HTML' });
                   return;
               }
               if (data.startsWith('tri_cancel_')) {
                   const parts = data.split('_');
                   const chatId = parts[2];
                   const tri = triManager.getTriSeries(chatId);
-                  if (!tri) return ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
+                  if (!tri) return await ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
                   
                   if (ctx.from.id !== tri.hostId) {
-                      return ctx.answerCallbackQuery({ text: "Only the host can cancel the tournament.", show_alert: true });
+                      return await ctx.answerCallbackQuery({ text: "Only the host can cancel the tournament.", show_alert: true });
                   }
                   
                   triManager.deleteTriSeries(chatId);
-                  ctx.answerCallbackQuery("Tournament cancelled!");
+                  await ctx.answerCallbackQuery("Tournament cancelled!");
                   await ctx.editMessageText("🛑 Tri-Series tournament was cancelled by the host.");
                   return;
               }
@@ -1639,13 +1639,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   const winnerTeamKey = parts[3];
                   
                   const tri = triManager.getTriSeries(triId);
-                  if (!tri) return ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
+                  if (!tri) return await ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
                   if (ctx.from.id !== tri.hostId) {
-                      return ctx.answerCallbackQuery({ text: "Only the host can award a free win.", show_alert: true });
+                      return await ctx.answerCallbackQuery({ text: "Only the host can award a free win.", show_alert: true });
                   }
                   
                   const match = tri.matches.find(m => m.num === tri.currentMatchNum);
-                  if (!match) return ctx.answerCallbackQuery({ text: "Match not found.", show_alert: true });
+                  if (!match) return await ctx.answerCallbackQuery({ text: "Match not found.", show_alert: true });
                   
                   const loserTeamKey = match.team1Key === winnerTeamKey ? match.team2Key : match.team1Key;
                   const winnerName = tri[winnerTeamKey].name;
@@ -1655,7 +1655,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                       .text(`✅ Confirm Forfeit`, `tri_fwconfirm_${triId}_${winnerTeamKey}`)
                       .text(`❌ Cancel`, `tri_fwcancel_${triId}`);
                       
-                  ctx.answerCallbackQuery();
+                  await ctx.answerCallbackQuery();
                   await ctx.editMessageText(
                       `❓ <b>Confirm Free Win</b>\n\n` +
                       `Are you sure you want to award a <b>Free Win</b> to <b>${escapeHtml(winnerName)}</b>?\n\n` +
@@ -1668,12 +1668,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   const parts = data.split('_');
                   const triId = parts[2];
                   const tri = triManager.getTriSeries(triId);
-                  if (!tri) return ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
+                  if (!tri) return await ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
                   if (ctx.from.id !== tri.hostId) {
-                      return ctx.answerCallbackQuery({ text: "Only the host can cancel this action.", show_alert: true });
+                      return await ctx.answerCallbackQuery({ text: "Only the host can cancel this action.", show_alert: true });
                   }
                   
-                  ctx.answerCallbackQuery("Cancelled.");
+                  await ctx.answerCallbackQuery("Cancelled.");
                   await ctx.editMessageText("❌ Awarding of Free Win has been cancelled.");
                   return;
               }
@@ -1683,13 +1683,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   const winnerTeamKey = parts[3];
                   
                   const tri = triManager.getTriSeries(triId);
-                  if (!tri) return ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
+                  if (!tri) return await ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
                   if (ctx.from.id !== tri.hostId) {
-                      return ctx.answerCallbackQuery({ text: "Only the host can confirm a free win.", show_alert: true });
+                      return await ctx.answerCallbackQuery({ text: "Only the host can confirm a free win.", show_alert: true });
                   }
                   
                   const match = tri.matches.find(m => m.num === tri.currentMatchNum);
-                  if (!match) return ctx.answerCallbackQuery({ text: "Match not found.", show_alert: true });
+                  if (!match) return await ctx.answerCallbackQuery({ text: "Match not found.", show_alert: true });
                   
                   const loserTeamKey = match.team1Key === winnerTeamKey ? match.team2Key : match.team1Key;
                   const winnerName = tri[winnerTeamKey].name;
@@ -1697,10 +1697,10 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   
                   const res = triManager.giveFreeWin(triId, winnerTeamKey);
                   if (!res.success) {
-                      return ctx.answerCallbackQuery({ text: res.error, show_alert: true });
+                      return await ctx.answerCallbackQuery({ text: res.error, show_alert: true });
                   }
                   
-                  ctx.answerCallbackQuery("Free Win confirmed!");
+                  await ctx.answerCallbackQuery("Free Win confirmed!");
                   await ctx.editMessageText(`🏆 <b>${escapeHtml(winnerName)}</b> has been awarded a <b>Free Win</b> against <b>${escapeHtml(loserName)}</b>!`, { parse_mode: 'HTML' });
                   
                   // Post points table / handle finish
