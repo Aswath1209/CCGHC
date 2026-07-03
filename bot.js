@@ -410,6 +410,127 @@ const MATCHED_SCENES = {
                 "🔥 Magic from <b>{bowler}</b>! A hat-trick of wickets!"
             ]
         }
+    ],
+    "out_yorker": [
+        {
+            "gif": "https://media.giphy.com/media/trVKor40BRBF649Wad/giphy.gif",
+            "commentaries": [
+                "💥 <b>CLEAN BOWLED!</b> <b>{bowler}</b> fires in a toe-crushing yorker and disturbs the woodwork! <b>{batsman}</b> is gone!",
+                "🪵 The stumps are shattered! A bullet yorker from <b>{bowler}</b> leaves <b>{batsman}</b> flat-footed and clean bowled!",
+                "🎯 Right in the blockhole! <b>{bowler}</b> delivers a perfect yorker. <b>{batsman}</b> couldn't get the bat down in time! OUT!"
+            ]
+        }
+    ],
+    "out_bouncer": [
+        {
+            "gif": "https://media.giphy.com/media/fXcP4RuOgAah2g9dOb/giphy.gif",
+            "commentaries": [
+                "💀 <b>OUT!</b> <b>{bowler}</b> sets up the trap with a vicious bouncer! <b>{batsman}</b> goes for the pull, gets a top-edge, and is caught!",
+                "🧤 Caught behind! <b>{batsman}</b> tries to hook/pull <b>{bowler}</b>'s nasty bouncer, but only manages a glove straight to the keeper!",
+                "😱 Taken! <b>{batsman}</b> is hurried by the short ball from <b>{bowler}</b> and spoons a simple catch to deep fine leg!"
+            ]
+        }
+    ],
+    "out_slower": [
+        {
+            "gif": "https://media.giphy.com/media/trVKor40BRBF649Wad/giphy.gif",
+            "commentaries": [
+                "🐢 <b>DECEIVED BY THE SLOWER ONE!</b> <b>{batsman}</b> swings way too early at <b>{bowler}</b>'s slower ball and gets clean bowled!",
+                "🤡 Foiled by lack of pace! <b>{batsman}</b> tries to loft <b>{bowler}</b>'s slower delivery but only chips it straight to mid-on! Caught!",
+                "🛑 Soft dismissal! <b>{bowler}</b> rolls their fingers over the ball, and <b>{batsman}</b> lobs it right back to the bowler!"
+            ]
+        }
+    ],
+    "out_knuckle": [
+        {
+            "gif": "https://media.giphy.com/media/Wq3WRGe9N5HkSqjITT/giphy.gif",
+            "commentaries": [
+                "🧙‍♂️ <b>BAMBOOZLED!</b> <b>{bowler}</b> bowls a brilliant knuckle ball. <b>{batsman}</b> had absolutely no clue and is clean bowled!",
+                "🤷‍♂️ Played too early! <b>{batsman}</b> is completely out of position by <b>{bowler}</b>'s knuckle ball and gets caught at cover!"
+            ]
+        }
+    ],
+    "out_legcutter": [
+        {
+            "gif": "https://media.giphy.com/media/trVKor40BRBF649Wad/giphy.gif",
+            "commentaries": [
+                "⚡ <b>EDGED AND TAKEN!</b> <b>{bowler}</b>'s leg cutter grips, spins away, takes the outside edge of <b>{batsman}</b>'s bat, and goes straight to slips!",
+                "🏏 Played inside the line! <b>{batsman}</b> was beaten by the cut from <b>{bowler}</b> and loses their off stump!"
+            ]
+        }
+    ],
+    "6_bouncer": [
+        {
+            "gif": "https://media3.giphy.com/media/v1.Y2lkPTZjMDliOTUya3R1eHhuaW85Mno1OTlycmJ2OXFibnA5NW5qc3Vid3djbXZkMjZ0NyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oKIPoelgPeRrfqKlO/giphy.gif",
+            "commentaries": [
+                "🚀 <b>HOOKED FOR SIX!</b> <b>{batsman}</b> anticipates the short ball from <b>{bowler}</b> and launches it over deep square leg!",
+                "🏟️ Smashed! <b>{batsman}</b> rides the bounce of <b>{bowler}</b>'s bouncer and pulls it high into the crowd for a massive SIX!",
+                "💥 Top-class batting! <b>{batsman}</b> greets <b>{bowler}</b>'s short ball with a thunderous hook shot that clears the ropes!"
+            ]
+        }
+    ],
+    "6_yorker": [
+        {
+            "gif": "https://media.giphy.com/media/kDXtscxqmTgm9XIWXk/giphy.gif",
+            "commentaries": [
+                "🚁 <b>HELICOPTER SHOT!</b> <b>{batsman}</b> digests the yorker from <b>{bowler}</b> and whips it off the pads for a sensational SIX!",
+                "🤯 How did that go for six?! <b>{batsman}</b> digs out <b>{bowler}</b>'s yorker and somehow lofts it over the bowler's head for a maximum!"
+            ]
+        }
+    ],
+    "6_slower": [
+        {
+            "gif": "https://media.giphy.com/media/tBfzeRunuQrP2kuTEb/giphy.gif",
+            "commentaries": [
+                "🍿 <b>SPOTTED EARLY!</b> <b>{batsman}</b> waits for <b>{bowler}</b>'s slower delivery and sends it sailing over long-on for SIX!",
+                "💣 Absolute carnage! <b>{batsman}</b> tracks the slower ball and muscles it out of the stadium!"
+            ]
+        }
+    ],
+    "4_bouncer": [
+        {
+            "gif": "https://media0.giphy.com/media/3o7btXfjIjTcU64YdG/giphy.gif",
+            "commentaries": [
+                "🏏 Hammered away! <b>{batsman}</b> pulls <b>{bowler}</b>'s short ball in front of square for a cracking boundary!",
+                "⚡ <b>{batsman}</b> rolls the wrists over the bounce of <b>{bowler}</b>'s bouncer to guide it safely to the fence!"
+            ]
+        }
+    ],
+    "4_yorker": [
+        {
+            "gif": "https://media0.giphy.com/media/3o7btXfjIjTcU64YdG/giphy.gif",
+            "commentaries": [
+                "🎯 Squeezed past third man! <b>{batsman}</b> digs out the yorker from <b>{bowler}</b> and finds the gap for four!",
+                "💎 Elegant! <b>{batsman}</b> opens the face of the bat at the last second to guide the yorker past slips for a boundary!"
+            ]
+        }
+    ],
+    "0_yorker": [
+        {
+            "gif": null,
+            "commentaries": [
+                "🛡️ Squeezed out! A perfect yorker from <b>{bowler}</b>, but <b>{batsman}</b> manages to block it. No run.",
+                "🥵 Toe-crusher! <b>{batsman}</b> barely manages to get the bat down to stop <b>{bowler}</b>'s yorker."
+            ]
+        }
+    ],
+    "0_bouncer": [
+        {
+            "gif": null,
+            "commentaries": [
+                "💨 Whoosh! <b>{bowler}</b> sends a fast bouncer past <b>{batsman}</b>'s ears. Batsman ducks safely.",
+                "beaten by the bounce! <b>{batsman}</b> swings blindly at <b>{bowler}</b>'s bouncer and connects with thin air!"
+            ]
+        }
+    ],
+    "0_slower": [
+        {
+            "gif": null,
+            "commentaries": [
+                "🧐 Tricked! <b>{batsman}</b> swings way too early at <b>{bowler}</b>'s slower ball. Good change of pace.",
+                "🤨 Play and miss! <b>{batsman}</b> was completely fooled by the pace of <b>{bowler}</b>'s delivery."
+            ]
+        }
     ]
 };
 
@@ -2246,7 +2367,15 @@ bot.on('message:text', async (ctx, next) => {
 
 
 async function sendEventUpdate(ctx, chatId, eventKey, batsmanName = "Batsman", bowlerName = "Bowler", isDuck = false) {
-  const scenes = MATCHED_SCENES[eventKey] || [];
+  let scenes = MATCHED_SCENES[eventKey] || [];
+  if (scenes.length === 0) {
+      if (eventKey.startsWith("out_")) {
+          scenes = MATCHED_SCENES["out"] || [];
+      } else if (eventKey.includes("_")) {
+          const baseRunKey = eventKey.split("_")[0];
+          scenes = MATCHED_SCENES[baseRunKey] || [];
+      }
+  }
   if (scenes.length === 0) return;
 
   const scene = scenes[Math.floor(Math.random() * scenes.length)];
@@ -2256,7 +2385,7 @@ async function sendEventUpdate(ctx, chatId, eventKey, batsmanName = "Batsman", b
 
   text = text.replace(/{batsman}/g, batsmanName).replace(/{bowler}/g, bowlerName);
 
-  if (eventKey === "out" && isDuck) {
+  if (eventKey.startsWith("out") && isDuck) {
       text += "\n🦆 <b>Dismissed for a duck!</b>";
   }
 

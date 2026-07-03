@@ -862,9 +862,11 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const hasBowlingMilestone = res.hitThreeWickets || res.hitHattrick || res.hitFiveWickets;
 
           if (isWicket) {
-              await sendEventUpdate(ctx, tour.chatId, "out", cleanBatsmanName, cleanBowlerName, isDuck && hasBowlingMilestone);
+              const deliveryKey = "out_" + bowlStr.toLowerCase().replace(/\s+/g, '');
+              await sendEventUpdate(ctx, tour.chatId, deliveryKey, cleanBatsmanName, cleanBowlerName, isDuck && hasBowlingMilestone);
           } else {
-              await sendEventUpdate(ctx, tour.chatId, batStr, cleanBatsmanName, cleanBowlerName);
+              const comboKey = batStr + "_" + bowlStr.toLowerCase().replace(/\s+/g, '');
+              await sendEventUpdate(ctx, tour.chatId, comboKey, cleanBatsmanName, cleanBowlerName);
           }
           await sleep(1000);
 
