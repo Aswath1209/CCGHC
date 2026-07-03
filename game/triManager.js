@@ -263,40 +263,14 @@ function startMatch(chatId, matchNum, hostUser) {
   tour.teamA.name = team1.name;
   tour.teamA.captainId = team1.captainId;
   tour.teamA.customName = true;
-  tour.teamA.players = team1.players.map(p => ({
-    id: p.id,
-    first_name: p.first_name,
-    username: p.username,
-    score: 0,
-    wickets: 0,
-    runs: 0,
-    balls: 0,
-    fours: 0,
-    sixes: 0,
-    runsConceded: 0,
-    ballsBowled: 0
-  }));
+  tour.teamA.players = [];
+  team1.players.forEach(p => tourManager.joinTeam(tour.id, { id: p.id, first_name: p.first_name, username: p.username || '' }, 'teamA'));
 
   tour.teamB.name = team2.name;
   tour.teamB.captainId = team2.captainId;
   tour.teamB.customName = true;
-  tour.teamB.players = team2.players.map(p => ({
-    id: p.id,
-    first_name: p.first_name,
-    username: p.username,
-    score: 0,
-    wickets: 0,
-    runs: 0,
-    balls: 0,
-    fours: 0,
-    sixes: 0,
-    runsConceded: 0,
-    ballsBowled: 0
-  }));
-
-  // Re-register userTourMap mappings
-  tour.teamA.players.forEach(p => tourManager.joinTeam(tour.id, p, 'teamA'));
-  tour.teamB.players.forEach(p => tourManager.joinTeam(tour.id, p, 'teamB'));
+  tour.teamB.players = [];
+  team2.players.forEach(p => tourManager.joinTeam(tour.id, { id: p.id, first_name: p.first_name, username: p.username || '' }, 'teamB'));
 
   // Link to TriSeries
   tour.triSeriesId = tri.id;
