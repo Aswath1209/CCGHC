@@ -809,6 +809,21 @@ function getUserTour(userId) { const id = userTourMap.get(userId); return id ? t
 function deleteTour(tourId) {
     const tour = tours.get(tourId);
     if (!tour) return;
+    
+    if (tour.triSeriesId) {
+        try {
+            const triManager = require('./triManager');
+            const tri = triManager.getTriSeries(tour.chatId);
+            if (tri && tri.state === 'PLAYING') {
+                tri.state = 'LOBBY';
+                tri.currentMatchNum = null;
+                tri.activeTourId = null;
+            }
+        } catch (e) {
+            console.error("Error during Tri-Series cleanup in deleteTour:", e);
+        }
+    }
+    
     tour.teamA.players.forEach(p => userTourMap.delete(p.id));
     tour.teamB.players.forEach(p => userTourMap.delete(p.id));
     userTourMap.delete(tour.hostId);

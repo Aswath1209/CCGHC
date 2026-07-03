@@ -580,12 +580,17 @@ try {
     { command: 'remove_player', description: 'Remove player from match' },
     { command: 'adda', description: 'Add player to Team A' },
     { command: 'addb', description: 'Add player to Team B' },
+    { command: 'addc', description: 'Add player to Team C (Tri-Series)' },
     { command: 'teamname', description: 'Rename your team' },
-    { command: 'set_overs', description: 'Set max overs for Tour match' },
-    { command: 'set_wickets', description: 'Set max wickets for Tour match' },
+    { command: 'set_overs', description: 'Set max overs for Tour/Tri-Series' },
+    { command: 'set_wickets', description: 'Set max wickets for Tour/Tri-Series' },
     { command: 'powersurge', description: 'Toggle Power Surge (Tour mode)' },
     { command: 'endtour', description: 'Forcibly end Tour match' },
-    { command: 'tourhelp', description: 'Show Tour guide' },
+    { command: 'triseries', description: 'Start a Tri-Series tournament lobby' },
+    { command: 'match', description: 'Start specific Tri-Series match' },
+    { command: 'tristatus', description: 'View Tri-Series points table' },
+    { command: 'freewin', description: 'Award free win to a team (Tri-Series Host)' },
+    { command: 'tourhelp', description: 'Show Tour & Tri-Series guide' },
     { command: 'profile', description: 'View your stats' },
     { command: 'mycard', description: 'Show premium player card' },
     { command: 'top', description: 'Show global leaderboards (Runs, Wickets, MVPs, Ducks, Highscores)' },
@@ -646,6 +651,8 @@ bot.command('ping', async (ctx) => {
 
   const activeGames = [...gameManager.getAllGames()];
   const activeTours = [...tourManager.getAllTours()];
+  const triManager = require('./game/triManager');
+  const activeTris = triManager.getAllTriSeries();
 
   const matchGroups = new Set();
   activeGames.forEach(g => {
@@ -656,6 +663,11 @@ bot.command('ping', async (ctx) => {
   activeTours.forEach(t => {
     if (t.chatId && t.chatId < 0) {
       matchGroups.add(t.chatId);
+    }
+  });
+  activeTris.forEach(tri => {
+    if (tri.chatId && tri.chatId < 0) {
+      matchGroups.add(tri.chatId);
     }
   });
 
@@ -687,7 +699,8 @@ bot.command('ping', async (ctx) => {
     `🏏 <b>Matches In Progress:</b>\n` +
     `🔹 <b>1v1 Matches:</b> <code>${activeGames.length}</code>\n` +
     `🔹 <b>Tour Lobbies & Matches:</b> <code>${activeTours.length}</code>\n` +
-    `🔹 <b>Total Active Games:</b> <code>${activeGames.length + activeTours.length}</code>`;
+    `🔹 <b>Tri-Series Tournaments:</b> <code>${activeTris.length}</code>\n` +
+    `🔹 <b>Total Active Games:</b> <code>${activeGames.length + activeTours.length + activeTris.length}</code>`;
 
   await ctx.api.editMessageText(ctx.chat.id, msg.message_id, responseText, { parse_mode: 'HTML' });
 });
