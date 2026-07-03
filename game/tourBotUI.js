@@ -983,7 +983,22 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               let msg = `🏆 <b>${resultText}!</b> 🎉`;
               if (res.motm) msg += `\n🎖 <b>POTM:</b> ${escapeHtml(res.motm.first_name)}`;
               
-              await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
+              try {
+                  const { generateScoreboardImage } = require('./scoreboardGenerator');
+                  const { InputFile } = require('grammy');
+                  const buffer = await generateScoreboardImage(tour, resultText, potmName);
+                  if (buffer) {
+                      await ctx.api.sendPhoto(tour.chatId, new InputFile(buffer, 'scorecard.png'), {
+                          caption: msg,
+                          parse_mode: 'HTML'
+                      });
+                  } else {
+                      await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
+                  }
+              } catch (imgErr) {
+                  console.error("Error generating or sending match scoreboard image:", imgErr);
+                  await ctx.api.sendMessage(tour.chatId, msg, { parse_mode: 'HTML' });
+              }
               
               tourManager.deleteTour(tour.id);
           } else if (res.inningsEnded) {
