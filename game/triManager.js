@@ -32,6 +32,12 @@ function deleteTriSeries(chatId) {
 
 function createTriSeries(chatId, hostUser, rounds = 2) {
   const key = chatId.toString();
+  // Clean up any stale tours in this group first
+  const activeT = [...tourManager.getAllTours()].find(t => t.chatId.toString() === chatId.toString());
+  if (activeT) {
+    tourManager.deleteTour(activeT.id);
+  }
+
   if (triSeriesMap.has(key)) {
     return { success: false, error: "A Tri-Series is already active in this group!" };
   }
@@ -205,6 +211,13 @@ function setWickets(chatId, wickets) {
 function startMatch(chatId, matchNum, hostUser) {
   const tri = getTriSeries(chatId);
   if (!tri) return { success: false, error: 'Tri-Series not found.' };
+  
+  // Clean up any stale tours in this group first
+  const activeT = [...tourManager.getAllTours()].find(t => t.chatId.toString() === chatId.toString());
+  if (activeT) {
+    tourManager.deleteTour(activeT.id);
+  }
+
   if (tri.state === 'PLAYING') return { success: false, error: 'A match is already active in this Tri-Series!' };
 
   const matchIdx = tri.matches.findIndex(m => m.num === parseInt(matchNum));
@@ -455,7 +468,7 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
   match.resultText = resultText;
 
   // 5. Clean up active match states
-  tri.state = 'LOBBY';
+  tri.state = 'SCHEDULED';
   tri.currentMatchNum = null;
   tri.activeTourId = null;
 

@@ -815,7 +815,7 @@ function deleteTour(tourId) {
             const triManager = require('./triManager');
             const tri = triManager.getTriSeries(tour.chatId);
             if (tri && tri.state === 'PLAYING') {
-                tri.state = 'LOBBY';
+                tri.state = 'SCHEDULED';
                 tri.currentMatchNum = null;
                 tri.activeTourId = null;
             }

@@ -265,7 +265,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     text += `\n` + renderTeam(tri.teamC, '🟢');
     text += `───────────────────\n`;
     text += `Host: <a href="tg://user?id=${tri.hostId}">Host</a>\n\n`;
-    text += `<i>Join a team below! Use /captain [A/B/C] to appoint a captain, /teamname [name] to rename your team, and /match [1-6] to start matches once players are ready!</i>`;
+    text += `<i>Join a team below! Use /captain [A/B/C] to appoint a captain, /teamname [name] to rename your team, and click Start Tournament when players are ready!</i>`;
     return text;
   }
 
@@ -275,7 +275,22 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       .text("Join Team B 🔵", `tri_join_${tri.id}_teamB`)
       .text("Join Team C 🟢", `tri_join_${tri.id}_teamC`)
       .row()
+      .text("Start Tournament 🚀", `tri_start_${tri.id}`)
       .text("Cancel Tournament ❌", `tri_cancel_${tri.id}`);
+  }
+
+  async function updateLobbyMessage(ctx, tri) {
+      if (!tri || !tri.lobbyMessageId) return;
+      try {
+          await ctx.api.editMessageText(ctx.chat.id, tri.lobbyMessageId, renderTriLobby(tri), {
+              reply_markup: getTriLobbyKeyboard(tri),
+              parse_mode: 'HTML'
+          });
+      } catch (err) {
+          if (!err.message?.includes("message is not modified")) {
+              console.error("Error editing lobby message:", err);
+          }
+      }
   }
 
   bot.command('triseries', async (ctx) => {
@@ -288,7 +303,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     const res = triManager.createTriSeries(ctx.chat.id, { id: ctx.from.id, first_name: ctx.from.first_name }, rounds);
     if (!res.success) return ctx.reply("❌ " + res.error);
     
-    await ctx.reply(renderTriLobby(res.tri), { reply_markup: getTriLobbyKeyboard(res.tri), parse_mode: 'HTML' });
+    const msg = await ctx.reply(renderTriLobby(res.tri), { reply_markup: getTriLobbyKeyboard(res.tri), parse_mode: 'HTML' });
+    res.tri.lobbyMessageId = msg.message_id;
   });
 
   bot.command('match', async (ctx) => {
@@ -394,11 +410,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const args = ctx.message.text.split(' ');
           const overs = parseInt(args[1]);
           if (isNaN(overs) || overs < 1 || overs > 20) {
-              return ctx.reply("Usage: /set_overs [1-20]");
+               return ctx.reply("Usage: /set_overs [1-20]");
           }
           
           triManager.setOvers(tri.chatId, overs);
-          return ctx.reply(`⚙️ <b>Overs updated to:</b> <code>${overs}</code> overs for Tri-Series.`, { parse_mode: 'HTML' });
+          await ctx.reply(`⚙️ <b>Overs updated to:</b> <code>${overs}</code> overs for Tri-Series.`, { parse_mode: 'HTML' });
+          await updateLobbyMessage(ctx, tri);
+          return;
       }
 
       const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
@@ -432,7 +450,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           }
           
           triManager.setWickets(tri.chatId, wickets);
-          return ctx.reply(`⚙️ <b>Wickets updated to:</b> <code>${wickets}</code> wickets for Tri-Series.`, { parse_mode: 'HTML' });
+          await ctx.reply(`⚙️ <b>Wickets updated to:</b> <code>${wickets}</code> wickets for Tri-Series.`, { parse_mode: 'HTML' });
+          await updateLobbyMessage(ctx, tri);
+          return;
       }
 
       const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
@@ -502,7 +522,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           const res = triManager.renameTeam(tri.chatId, teamKey, txt);
           if (!res.success) return ctx.reply("❌ " + res.error);
           
-          return ctx.reply(`✅ Team renamed to: <b>${res.teamName}</b>`, { parse_mode: 'HTML' });
+          await ctx.reply(`✅ Team renamed to: <b>${res.teamName}</b>`, { parse_mode: 'HTML' });
+          await updateLobbyMessage(ctx, tri);
+          return;
       }
       
       const tour = tourManager.getUserTour(ctx.from.id);
@@ -555,7 +577,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
           const res = triManager.appointCaptain(tri.chatId, targetUserId, teamKey);
           if (res.success) {
-              return ctx.reply(`👑 <b>${escapeHtml(first_name)}</b> is now the captain of <b>${escapeHtml(res.teamName)}</b>!`, { parse_mode: 'HTML' });
+          await ctx.reply(`👑 <b>${escapeHtml(first_name)}</b> is now the captain of <b>${escapeHtml(res.teamName)}</b>!`, { parse_mode: 'HTML' });
+          await updateLobbyMessage(ctx, tri);
+          return;
           } else {
               return ctx.reply("❌ Failed to appoint captain.");
           }
@@ -634,7 +658,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               const teamKey = 'team' + targetChar;
               const res = triManager.joinTeam(tri.chatId, { id: targetUser.id, first_name: targetUser.first_name, username: targetUser.username || '' }, teamKey);
               if (res.success) {
-                  return ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(res.teamName)}</b>!`, { parse_mode: 'HTML' });
+                  await ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(res.teamName)}</b>!`, { parse_mode: 'HTML' });
+                  await updateLobbyMessage(ctx, tri);
+                  return;
               } else {
                   return ctx.reply(`❌ ${res.error}`);
               }
@@ -743,7 +769,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
               const res = triManager.removePlayer(tri.chatId, targetUserId);
               if (res.success) {
-                  return ctx.reply(`🚪 <b>${escapeHtml(first_name)}</b> was removed from <b>${escapeHtml(res.teamName)}</b>.`, { parse_mode: 'HTML' });
+                  await ctx.reply(`🚪 <b>${escapeHtml(first_name)}</b> was removed from <b>${escapeHtml(res.teamName)}</b>.`, { parse_mode: 'HTML' });
+                  await updateLobbyMessage(ctx, tri);
+                  return;
               } else {
                   return ctx.reply("❌ Failed to remove player.");
               }
@@ -1518,6 +1546,38 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   ctx.answerCallbackQuery(`Roster updated!`);
                   const tri = triManager.getTriSeries(chatId);
                   await ctx.editMessageText(renderTriLobby(tri), { reply_markup: getTriLobbyKeyboard(tri), parse_mode: 'HTML' });
+                  return;
+              }
+              if (data.startsWith('tri_start_')) {
+                  const parts = data.split('_');
+                  const chatId = parts[2];
+                  const tri = triManager.getTriSeries(chatId);
+                  if (!tri) return ctx.answerCallbackQuery({ text: "Tournament not found.", show_alert: true });
+                  
+                  if (ctx.from.id !== tri.hostId) {
+                      return ctx.answerCallbackQuery({ text: "Only the host can start the tournament.", show_alert: true });
+                  }
+                  
+                  if (tri.teamA.players.length === 0 || tri.teamB.players.length === 0 || tri.teamC.players.length === 0) {
+                      return ctx.answerCallbackQuery({ text: "All 3 teams must have at least 1 registered player to start!", show_alert: true });
+                  }
+                  
+                  tri.state = 'SCHEDULED';
+                  ctx.answerCallbackQuery("Tournament started!");
+                  
+                  try {
+                      const ptBuffer = await generatePointsTableImage(tri);
+                      const { InputFile } = require('grammy');
+                      
+                      await ctx.editMessageText(`🚀 <b>Tri-Series Tournament Started!</b>\n\nStandings and schedule board loaded below. The host can start Match 1 by typing /match 1`, { parse_mode: 'HTML' });
+                      await ctx.api.sendPhoto(ctx.chat.id, new InputFile(ptBuffer, 'points_table.png'), {
+                          caption: `📊 <b>Tri-Series Points Table & Schedule</b>\n👉 Host, start the first match with: <code>/match 1</code>`,
+                          parse_mode: 'HTML'
+                      });
+                  } catch (err) {
+                      console.error("Error drawing schedule at start:", err);
+                      await ctx.editMessageText(`🚀 <b>Tri-Series Tournament Started!</b>\n\n👉 Host, start the first match with: <code>/match 1</code>`, { parse_mode: 'HTML' });
+                  }
                   return;
               }
               if (data.startsWith('tri_cancel_')) {
