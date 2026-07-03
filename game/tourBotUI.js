@@ -1486,6 +1486,20 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                                   await ctx.api.sendMessage(tour.chatId, awardMsg, { parse_mode: 'HTML' });
                               }
                               triManager.deleteTriSeries(tour.chatId);
+                          } else {
+                              const groupMatchesDone = triRes.tri.matches.filter(m => !m.isFinal).every(m => m.state === 'COMPLETED');
+                              const finalMatchDone = triRes.tri.matches.find(m => m.isFinal)?.state === 'COMPLETED';
+                              if (groupMatchesDone && !finalMatchDone) {
+                                  const finalMatch = triRes.tri.matches.find(m => m.isFinal);
+                                  const team1Name = triRes.tri[finalMatch.team1Key].name;
+                                  const team2Name = triRes.tri[finalMatch.team2Key].name;
+                                  
+                                  const finalAnnounce = `🏁 <b>League Stage Completed!</b> 🏁\n\n` +
+                                                        `Top two teams advancing to the Grand Final:\n` +
+                                                        `🥇 <b>${escapeHtml(team1Name)}</b> vs 🥈 <b>${escapeHtml(team2Name)}</b>\n\n` +
+                                                        `👉 Host, start the Grand Final match with: <code>/match final</code>`;
+                                  await ctx.api.sendMessage(tour.chatId, finalAnnounce, { parse_mode: 'HTML' });
+                              }
                           }
                       }
                   } catch (ptErr) {
@@ -1713,6 +1727,20 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                                   await ctx.api.sendMessage(triRes.tri.chatId, awardMsg, { parse_mode: 'HTML' });
                               }
                               triManager.deleteTriSeries(triRes.tri.chatId);
+                          } else {
+                              const groupMatchesDone = triRes.tri.matches.filter(m => !m.isFinal).every(m => m.state === 'COMPLETED');
+                              const finalMatchDone = triRes.tri.matches.find(m => m.isFinal)?.state === 'COMPLETED';
+                              if (groupMatchesDone && !finalMatchDone) {
+                                  const finalMatch = triRes.tri.matches.find(m => m.isFinal);
+                                  const team1Name = triRes.tri[finalMatch.team1Key].name;
+                                  const team2Name = triRes.tri[finalMatch.team2Key].name;
+                                  
+                                  const finalAnnounce = `🏁 <b>League Stage Completed!</b> 🏁\n\n` +
+                                                        `Top two teams advancing to the Grand Final:\n` +
+                                                        `🥇 <b>${escapeHtml(team1Name)}</b> vs 🥈 <b>${escapeHtml(team2Name)}</b>\n\n` +
+                                                        `👉 Host, start the Grand Final match with: <code>/match final</code>`;
+                                  await ctx.api.sendMessage(triRes.tri.chatId, finalAnnounce, { parse_mode: 'HTML' });
+                              }
                           }
                       } catch (ptErr) {
                           console.error("Error sending points table image / awards after free win:", ptErr);
