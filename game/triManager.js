@@ -217,6 +217,13 @@ function startMatch(chatId, matchNum, hostUser) {
   if (activeT) {
     tourManager.deleteTour(activeT.id);
   }
+  
+  // Also clear any stale userTourMap entry for the host to prevent
+  // "already in active match" false-positive from createTour
+  const hostExisting = tourManager.getUserTour(hostUser.id);
+  if (hostExisting && hostExisting.chatId?.toString() !== chatId.toString()) {
+    tourManager.deleteTour(hostExisting.id);
+  }
 
   if (tri.state === 'PLAYING') return { success: false, error: 'A match is already active in this Tri-Series!' };
 
@@ -254,6 +261,7 @@ function startMatch(chatId, matchNum, hostUser) {
   if (!tourRes.success) return { success: false, error: tourRes.error };
 
   const tour = tourRes.tour;
+  if (!tour || !tour.config) return { success: false, error: 'Failed to initialize match. Please try again.' };
   
   // Set match configs
   tour.config.overs = tri.config.overs;
@@ -345,8 +353,17 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
     return null;
   };
 
-  const keyA = tour.teamA.triTeamKey || getTriKey(tour.teamA.name);
-  const keyB = tour.teamB.triTeamKey || getTriKey(tour.teamB.name);
+  // Resolve tri-team keys: priority = triTeamKey property > name match > direct match schedule key
+  let keyA = tour.teamA.triTeamKey || getTriKey(tour.teamA.name);
+  let keyB = tour.teamB.triTeamKey || getTriKey(tour.teamB.name);
+  
+  // Final fallback: match schedule directly assigns team1Key→teamA and team2Key→teamB in startMatch
+  if (!keyA && team1Key) keyA = team1Key;
+  if (!keyB && team2Key) keyB = team2Key;
+  
+  if (!keyA || !keyB) {
+    console.warn(`[recordMatchEnd] Could not resolve tri team keys for match ${matchNum}. keyA=${keyA}, keyB=${keyB}`);
+  }
 
   if (winnerKeyOverride) {
     winnerKey = winnerKeyOverride;
@@ -366,21 +383,19 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
     }
   }
 
-  // 2. Accumulate NRR data if not forfeit
-  if (!winnerKeyOverride && winnerKey !== 'tie') {
-    const isABatFirst = tour.firstBattingTeamId === 'teamA';
-    
+  // 2. Accumulate NRR data if not forfeit (also update for ties)
+  if (!winnerKeyOverride) {
     // Team A bat stats
     const tARuns = scoreA;
     // Standard NRR rule: if bowled out, count full quota of balls
-    const tABallsFaced = (tour.teamA.wickets === tour.config.wickets) ? (tour.config.overs * 6) : (tour.innings1Balls || (tour.innings === 1 ? tour.balls : tour.config.overs * 6));
+    const tABallsFaced = (tour.teamA.wickets >= tour.config.wickets) ? (tour.config.overs * 6) : (tour.innings1Balls || (tour.innings === 1 ? tour.balls : tour.config.overs * 6));
     
     // Team B bat stats
     const tBRuns = scoreB;
-    const tBBallsFaced = (tour.teamB.wickets === tour.config.wickets) ? (tour.config.overs * 6) : (tour.innings2Balls || (tour.innings === 2 ? tour.balls : tour.config.overs * 6));
+    const tBBallsFaced = (tour.teamB.wickets >= tour.config.wickets) ? (tour.config.overs * 6) : (tour.innings2Balls || (tour.innings === 2 ? tour.balls : tour.config.overs * 6));
 
     if (keyA && keyB) {
-      // Update Standings
+      // Update NRR Standings
       tri.pointsTable[keyA].runsScored += tARuns;
       tri.pointsTable[keyA].ballsFaced += tABallsFaced;
       tri.pointsTable[keyA].runsConceded += tBRuns;

@@ -4,7 +4,7 @@ const tours = new Map();
 const userTourMap = new Map(); // userId -> tourId
 const chatTourMap = new Map(); // chatId -> tourId
 
-const TOUR_EXPIRE_HOURS = 2; // longer expire for tours
+const TOUR_EXPIRE_HOURS = 8; // Extended expiry to cover long tri-series sessions
 
 function generateTourId() {
   return Math.floor(10000 + Math.random() * 90000).toString();
@@ -798,6 +798,18 @@ function cleanupExpiredGames() {
   const now = Date.now();
   for (const [key, t] of tours.entries()) {
     if (now - t.createdAt > TOUR_EXPIRE_HOURS * 3600000) {
+      // Never expire a tour that is part of an active Tri-Series match
+      if (t.triSeriesId) {
+        try {
+          const triManager = require('./triManager');
+          const tri = triManager.getTriSeries(t.chatId);
+          if (tri && tri.state === 'PLAYING' && tri.activeTourId === t.id) {
+            // Refresh the createdAt to prevent expiry mid-match
+            t.createdAt = now;
+            continue;
+          }
+        } catch (e) {}
+      }
       deleteTour(key);
     }
   }

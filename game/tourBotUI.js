@@ -1532,8 +1532,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               
               // Restore main match stats for POTM & career stats recording if Super Over occurred
               if (tour.mainMatchTeamA) {
+                  const savedTriKeyA = tour.teamA.triTeamKey;
+                  const savedTriKeyB = tour.teamB.triTeamKey;
                   tour.teamA = tour.mainMatchTeamA;
                   tour.teamB = tour.mainMatchTeamB;
+                  // Re-apply triTeamKey that was lost by the restore
+                  if (savedTriKeyA) tour.teamA.triTeamKey = savedTriKeyA;
+                  if (savedTriKeyB) tour.teamB.triTeamKey = savedTriKeyB;
                   res.motm = tourManager.calculateMOTM(tour, winnerTeamId);
               }
               
