@@ -242,6 +242,24 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   const triManager = require('./triManager');
   const { generatePointsTableImage } = require('./pointsTableGenerator');
 
+  function checkActiveGame(chatId) {
+      const activeTour = [...tourManager.getAllTours()].find(t => t.chatId === chatId);
+      if (activeTour) return 'Tour Match';
+
+      const activeTri = triManager.getTriSeries(chatId);
+      if (activeTri) return 'Tri-Series Tournament';
+
+      const gameManager = require('./gameManager');
+      const activeCcl = [...gameManager.getAllGames()].find(m => m.chatId === chatId);
+      if (activeCcl) return 'CCL Match';
+
+      const handCricketManager = require('./handCricketManager');
+      const activeHc = Array.from(handCricketManager.getLobbies().values()).some(lobby => lobby.chatId === chatId && lobby.state !== 'FINISHED');
+      if (activeHc) return 'Hand Cricket Match';
+
+      return null;
+  }
+
   function renderTriLobby(tri) {
     let text = `🏆 <b>TRI-SERIES LOBBY</b> 🏆\n`;
     text += `Overs: <b>${tri.config.overs}</b> | Wickets: <b>${tri.config.wickets}</b> | Format: <b>${tri.rounds}x Round Robin</b>\n`;
@@ -457,6 +475,10 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
   bot.command('triseries', async (ctx) => {
     if (ctx.chat.type === 'private') return ctx.reply("Tri-Series can only be started in groups.");
+    const activeGameType = checkActiveGame(ctx.chat.id);
+    if (activeGameType) {
+        return ctx.reply(`⚠️ There is already an active <b>${activeGameType}</b> in this group. Please end/cancel it first before starting a new game.`, { parse_mode: 'HTML' });
+    }
     const args = ctx.message.text.split(' ');
     // Default rounds is 2 (double round robin)
     let rounds = 2;
@@ -604,6 +626,10 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
   bot.command('tour', async (ctx) => {
     if (ctx.chat.type === 'private') return ctx.reply("Tour matches can only be started in groups.");
+    const activeGameType = checkActiveGame(ctx.chat.id);
+    if (activeGameType) {
+        return ctx.reply(`⚠️ There is already an active <b>${activeGameType}</b> in this group. Please end/cancel it first before starting a new game.`, { parse_mode: 'HTML' });
+    }
     const tourName = ctx.message.text.split(' ').slice(1).join(' ').trim();
     const res = tourManager.createTour(ctx.chat.id, { id: ctx.from.id, first_name: ctx.from.first_name }, tourName);
     if (!res.success) return ctx.reply("❌ " + res.error);
@@ -1414,13 +1440,17 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('endtour', async (ctx) => {
-      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
-      if (!tour) return ctx.reply("No active Tour match in this chat.");
+      const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      const tri = triManager.getTriSeries(ctx.chat.id);
+
+      if (!tour && !tri) {
+          return ctx.reply("No active Tour match or Tri-Series tournament found in this chat.");
+      }
       
-      const isHost = tour.hostId === ctx.from.id;
+      const isHost = (tour && tour.hostId === ctx.from.id) || (tri && tri.hostId === ctx.from.id);
       const isAdmin = await isGCAdmin(ctx);
       if (!isHost && !isAdmin) {
-          return ctx.reply("❌ Only the host or a group administrator can end the tour.");
+          return ctx.reply("❌ Only the host or a group administrator can end active sessions.");
       }
       
       const text = ctx.message.text.trim().toLowerCase();
@@ -1428,15 +1458,28 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const isConfirm = parts[1] === 'confirm';
       
       if (isConfirm) {
-          tourManager.deleteTour(tour.id);
-          await ctx.reply("🛑 <b>The Tour match has been ended.</b>", { parse_mode: 'HTML' });
+          let msg = "";
+          if (tour) {
+              tourManager.deleteTour(tour.id);
+              msg += "🛑 <b>The Tour match has been ended.</b>\n";
+          }
+          if (tri) {
+              triManager.deleteTriSeries(tri.chatId);
+              msg += "🛑 <b>The Tri-Series tournament has been cancelled.</b>\n";
+          }
+          await ctx.reply(msg.trim(), { parse_mode: 'HTML' });
       } else {
-          await ctx.reply(
-              "⚠️ <b>WARNING: Ending Tour Match</b>\n\n" +
-              "Are you sure you want to end this Tour match? All current progress will be lost.\n\n" +
-              "To confirm, type:\n<code>/endtour confirm</code>",
-              { parse_mode: 'HTML' }
-          );
+          let warningText = "⚠️ <b>WARNING: Ending Active Session</b>\n\n";
+          if (tour && tri) {
+              warningText += "There is an active <b>Tour match</b> AND a <b>Tri-Series tournament</b> in this chat.\n" +
+                             "Are you sure you want to end/cancel <b>both</b>? All current progress will be lost.\n\n";
+          } else if (tour) {
+              warningText += "Are you sure you want to end this Tour match? All current progress will be lost.\n\n";
+          } else if (tri) {
+              warningText += "Are you sure you want to cancel the entire Tri-Series tournament? All standings and progress will be lost.\n\n";
+          }
+          warningText += "To confirm, type:\n<code>/endtour confirm</code>";
+          await ctx.reply(warningText, { parse_mode: 'HTML' });
       }
   });
 

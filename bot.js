@@ -1343,8 +1343,29 @@ bot.command('daily', async (ctx) => {
   else await ctx.reply(`⏳ ${result.error}`);
 });
 
+function checkActiveGame(chatId) {
+    const activeTour = [...tourManager.getAllTours()].find(t => t.chatId === chatId);
+    if (activeTour) return 'Tour Match';
+
+    const triManager = require('./game/triManager');
+    const activeTri = triManager.getTriSeries(chatId);
+    if (activeTri) return 'Tri-Series Tournament';
+
+    const activeCcl = [...gameManager.getAllGames()].find(m => m.chatId === chatId);
+    if (activeCcl) return 'CCL Match';
+
+    const activeHc = Array.from(handCricketManager.getLobbies().values()).some(lobby => lobby.chatId === chatId && lobby.state !== 'FINISHED');
+    if (activeHc) return 'Hand Cricket Match';
+
+    return null;
+}
+
 bot.command('cricket', async (ctx) => {
     if (ctx.chat.type === 'private') return ctx.reply("Hand Cricket must be played in group chats.");
+    const activeGameType = checkActiveGame(ctx.chat.id);
+    if (activeGameType) {
+        return ctx.reply(`⚠️ There is already an active <b>${activeGameType}</b> in this group. Please end/cancel it first before starting a new game.`, { parse_mode: 'HTML' });
+    }
     
     const user = { id: ctx.from.id, first_name: ctx.from.first_name };
     const dbUser = await sb.getUser(user.id, user.first_name);
@@ -1365,6 +1386,10 @@ bot.command('cricket', async (ctx) => {
 
 bot.command('ccl', async (ctx) => {
   if (ctx.chat.type === 'private') return ctx.reply("CCL matches must be played in group chats.");
+  const activeGameType = checkActiveGame(ctx.chat.id);
+  if (activeGameType) {
+      return ctx.reply(`⚠️ There is already an active <b>${activeGameType}</b> in this group. Please end/cancel it first before starting a new game.`, { parse_mode: 'HTML' });
+  }
   
   const args = ctx.message.text.split(' ');
   const bet = parseInt(args[1]) || 0;
