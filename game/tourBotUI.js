@@ -418,8 +418,8 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       if (match.isFinal) {
           // 1. Send trophy winning celebration gif
           const celebrationGifs = [
-              "https://giphy.com/gifs/cricket-swing-impact-z32P9WzGqw9lT9HO3O",
-              "https://giphy.com/gifs/homeofcricket-cricket-mcc-lords-RTv6J5stVrIRgoZhNT"
+              "https://media.giphy.com/media/z32P9WzGqw9lT9HO3O/giphy.gif",
+              "https://media.giphy.com/media/RTv6J5stVrIRgoZhNT/giphy.gif"
           ];
           const randomGif = celebrationGifs[Math.floor(Math.random() * celebrationGifs.length)];
           const champName = tri[match.winner] ? tri[match.winner].name : "Champion Team";
