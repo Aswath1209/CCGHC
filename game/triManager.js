@@ -431,24 +431,86 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
   // 3. Accumulate Player Career Stats for Series Awards
   const updatePlayerStats = (tourTeam) => {
     tourTeam.players.forEach(p => {
-      const pidStr = p.id.toString();
+      const baseId = tourManager.getBasePlayerId(p.id);
+      if (!baseId) return;
+      const pidStr = baseId.toString();
+      const cleanName = p.first_name.replace(/\s*\(rebat\)/gi, '');
       if (!tri.stats[pidStr]) {
         tri.stats[pidStr] = {
-          name: p.first_name,
+          name: cleanName,
           runs: 0,
           ballsFaced: 0,
           wickets: 0,
           ballsBowled: 0,
-          runsConceded: 0
+          runsConceded: 0,
+          potsPoints: 0
         };
       }
       
       const stats = tri.stats[pidStr];
+      if (stats.potsPoints === undefined) stats.potsPoints = 0;
       stats.runs += p.runs || 0;
       stats.ballsFaced += p.balls || 0;
       stats.wickets += p.wickets || 0;
       stats.ballsBowled += p.ballsBowled || 0;
       stats.runsConceded += p.runsConceded || 0;
+
+      // Calculate Player of the Match style points for this player in this match
+      let matchPts = 0;
+      const runs = p.runs || 0;
+      matchPts += runs;
+      matchPts += (p.fours || 0) * 1;
+      matchPts += (p.sixes || 0) * 2;
+      
+      // Batting Milestones (non-stacking)
+      if (runs >= 100) matchPts += 16;
+      else if (runs >= 50) matchPts += 8;
+      else if (runs >= 30) matchPts += 4;
+      
+      // Strike Rate (for min 3 balls faced)
+      const ballsFaced = p.balls || 0;
+      if (ballsFaced >= 3) {
+          const sr = (runs / ballsFaced) * 100;
+          if (sr > 170) matchPts += 6;
+          else if (sr >= 150) matchPts += 4;
+          else if (sr >= 130) matchPts += 2;
+          else if (sr >= 60 && sr < 70) matchPts -= 2;
+          else if (sr >= 50 && sr < 60) matchPts -= 4;
+          else if (sr < 50) matchPts -= 6;
+      }
+      
+      // Wickets
+      const wickets = p.wickets || 0;
+      matchPts += wickets * 25;
+      
+      // Wicket Hauls (non-stacking)
+      if (wickets >= 5) matchPts += 16;
+      else if (wickets >= 3) matchPts += 8;
+      
+      // Dot Balls
+      matchPts += (p.dotBalls || 0) * 1;
+      
+      // Economy Rate (for min 3 balls bowled)
+      const ballsBowled = p.ballsBowled || 0;
+      const runsConceded = p.runsConceded || 0;
+      if (ballsBowled >= 3) {
+          const econ = (runsConceded / ballsBowled) * 6;
+          if (econ < 5) matchPts += 6;
+          else if (econ < 7) matchPts += 4;
+          else if (econ < 9) matchPts += 2;
+          else if (econ > 15) matchPts -= 6;
+          else if (econ > 13) matchPts -= 4;
+          else if (econ > 11) matchPts -= 2;
+      }
+
+      let tieBreaker = 0;
+      tieBreaker += wickets * 0.01;
+      tieBreaker += runs * 0.001;
+      tieBreaker -= runsConceded * 0.0001;
+      tieBreaker -= ballsFaced * 0.00001;
+      tieBreaker -= ballsBowled * 0.000001;
+
+      stats.potsPoints += (matchPts + tieBreaker);
     });
   };
 
@@ -509,8 +571,7 @@ function calculateAwards(tri) {
     wickets: s.wickets || 0,
     runsConceded: s.runsConceded || 0,
     ballsBowled: s.ballsBowled || 0,
-    // MVP / POTS points formula: runs * 1 + wickets * 20
-    potsPoints: (s.runs || 0) + (s.wickets || 0) * 20
+    potsPoints: s.potsPoints || 0
   }));
 
   if (players.length === 0) return null;
@@ -523,6 +584,61 @@ function calculateAwards(tri) {
   return { pots, mostRuns, mostWickets };
 }
 
+function addPlayerToRosterForce(chatId, user, teamKey) {
+  const tri = getTriSeries(chatId);
+  if (!tri) return false;
+  
+  const team = tri[teamKey];
+  if (!team) return false;
+  
+  const userIdStr = user.id.toString();
+  if (team.players.some(p => p.id.toString() === userIdStr)) return true; // already in team
+  
+  // Remove from any other team first
+  ['teamA', 'teamB', 'teamC'].forEach(key => {
+    const t = tri[key];
+    const idx = t.players.findIndex(p => p.id.toString() === userIdStr);
+    if (idx !== -1) {
+      t.players.splice(idx, 1);
+      if (t.captainId?.toString() === userIdStr) {
+        t.captainId = t.players.length > 0 ? t.players[0].id : null;
+      }
+    }
+  });
+  
+  team.players.push({
+    id: user.id,
+    first_name: user.first_name,
+    username: user.username || ''
+  });
+  userTriMap.set(userIdStr, chatId.toString());
+  
+  if (!team.captainId) {
+    team.captainId = user.id;
+  }
+  return true;
+}
+
+function removePlayerFromRosterForce(chatId, playerId) {
+  const tri = getTriSeries(chatId);
+  if (!tri) return false;
+  
+  let removed = false;
+  ['teamA', 'teamB', 'teamC'].forEach(key => {
+    const team = tri[key];
+    const idx = team.players.findIndex(p => p.id.toString() === playerId.toString());
+    if (idx !== -1) {
+      team.players.splice(idx, 1);
+      userTriMap.delete(playerId.toString());
+      if (team.captainId?.toString() === playerId.toString()) {
+        team.captainId = team.players.length > 0 ? team.players[0].id : null;
+      }
+      removed = true;
+    }
+  });
+  return removed;
+}
+
 function getAllTriSeries() {
   return Array.from(triSeriesMap.values());
 }
@@ -531,5 +647,6 @@ module.exports = {
   createTriSeries, getTriSeries, getUserTriSeries, deleteTriSeries,
   joinTeam, appointCaptain, renameTeam, removePlayer,
   setOvers, setWickets, startMatch, recordMatchEnd, giveFreeWin,
-  calculateAwards, getStandingsSorted, getAllTriSeries
+  calculateAwards, getStandingsSorted, getAllTriSeries,
+  addPlayerToRosterForce, removePlayerFromRosterForce
 };
