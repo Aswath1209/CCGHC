@@ -448,6 +448,16 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                              `🥎 <b>Most Wickets (Purple Cap):</b> ${escapeHtml(awards.mostWickets.name)} (${awards.mostWickets.wickets} wickets)\n\n` +
                              `Congratulations to all the award winners and the champion team! 🥳🎉`;
               await ctx.api.sendMessage(tri.chatId, awardMsg, { parse_mode: 'HTML' });
+
+              const potsUserId = parseInt(awards.pots.id);
+              if (!isNaN(potsUserId)) {
+                  try {
+                      const careerStatsHelper = require('../db/careerStats');
+                      await careerStatsHelper.incrementStats(potsUserId, { pots: 1 });
+                  } catch (err) {
+                      console.error("Failed to increment POTS stats:", err);
+                  }
+              }
           }
           
           // 4. Delete the Tri-Series

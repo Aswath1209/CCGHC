@@ -868,6 +868,7 @@ bot.command('profile', async (ctx) => {
         `💰 Purse: ${user.coins}🪙\n\n` +
         `📊 <b>Tour Record:</b>\n` +
         `🏆 MOTM Awards: <b>${stats.motm}</b>\n` +
+        `🏆 POTS Awards: <b>${stats.pots || 0}</b>\n` +
         `✅ Wins: <b>${stats.wins}</b>  |  ❌ Losses: <b>${stats.losses}</b>\n\n` +
         `🏏 <b>Career Batting:</b>\n` +
         `🔹 Innings: <b>${stats.batting_innings}</b>\n` +

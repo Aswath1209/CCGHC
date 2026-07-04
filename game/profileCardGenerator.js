@@ -226,8 +226,9 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   });
   ctx.restore();
 
-  // 4. Draw MOTM Badge Text
+  // 4. Draw MOTM and POTS Badge Text
   const motm = stats.motm || 0;
+  const pots = stats.pots || 0;
   ctx.save();
   ctx.fillStyle = '#e5d3a1'; // Soft cream/champagne color to match small star
   ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
@@ -235,7 +236,7 @@ async function generateProfileCard(user, stats, avatarBuffer) {
   ctx.shadowOffsetY = 2;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  drawFitCenteredText(ctx, `${motm} MOTM`, 629, 555.5, 200, {
+  drawFitCenteredText(ctx, `${motm} MOTM | ${pots} POTS`, 629, 555.5, 200, {
     startSize: 18,
     minSize: 12,
     family: 'Montserrat, "DejaVu Sans", Arial, sans-serif',

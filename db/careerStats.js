@@ -4,6 +4,8 @@ const sb = require('./supabase');
 
 const STATS_FILE = path.join(__dirname, 'career_stats.json');
 
+let hasPotsColumn = null;
+
 function readStats() {
     try {
         if (fs.existsSync(STATS_FILE)) {
@@ -101,7 +103,8 @@ async function getStats(userId) {
             best_wickets: 0,
             best_runs_conceded: 0,
             batting_innings: 0,
-            bowling_innings: 0
+            bowling_innings: 0,
+            pots: 0
         };
     }
 
@@ -126,7 +129,8 @@ async function getStats(userId) {
         best_wickets: rawStats.best_wickets || 0,
         best_runs_conceded: rawStats.best_runs_conceded || 0,
         batting_innings: rawStats.batting_innings || 0,
-        bowling_innings: rawStats.bowling_innings || 0
+        bowling_innings: rawStats.bowling_innings || 0,
+        pots: rawStats.pots || 0
     };
 
     const needsBackfill = (
@@ -166,6 +170,15 @@ async function incrementStats(userId, updates) {
     const key = String(userId);
     if (sb.supabase) {
         try {
+            if (hasPotsColumn === null) {
+                try {
+                    const { error } = await sb.supabase.from('cricket_career_stats').select('pots').limit(1);
+                    hasPotsColumn = !error;
+                } catch (e) {
+                    hasPotsColumn = false;
+                }
+            }
+
             const { data: existing } = await sb.supabase
                 .from('cricket_career_stats')
                 .select('*')
@@ -193,7 +206,8 @@ async function incrementStats(userId, updates) {
                 best_wickets: 0,
                 best_runs_conceded: 0,
                 batting_innings: 0,
-                bowling_innings: 0
+                bowling_innings: 0,
+                pots: 0
             };
             
             const currentBestW = current.best_wickets || 0;
@@ -241,6 +255,10 @@ async function incrementStats(userId, updates) {
                 batting_innings: (current.batting_innings || 0) + (updates.batting_innings || 0),
                 bowling_innings: (current.bowling_innings || 0) + (updates.bowling_innings || 0)
             };
+
+            if (hasPotsColumn) {
+                nextStats.pots = (current.pots || 0) + (updates.pots || 0);
+            }
             
             const { error: upsertErr } = await sb.supabase
                 .from('cricket_career_stats')
@@ -283,7 +301,8 @@ async function incrementStats(userId, updates) {
             best_wickets: 0,
             best_runs_conceded: 0,
             batting_innings: 0,
-            bowling_innings: 0
+            bowling_innings: 0,
+            pots: 0
         };
     }
     const s = data[key];
@@ -331,6 +350,7 @@ async function incrementStats(userId, updates) {
     s.best_runs_conceded = nextBestR;
     s.batting_innings = (s.batting_innings || 0) + (updates.batting_innings || 0);
     s.bowling_innings = (s.bowling_innings || 0) + (updates.bowling_innings || 0);
+    s.pots = (s.pots || 0) + (updates.pots || 0);
     
     writeStats(data);
     return s;
@@ -438,6 +458,7 @@ async function getTopLists() {
         best_runs_conceded: s.best_runs_conceded || 0,
         batting_innings: s.batting_innings || 0,
         bowling_innings: s.bowling_innings || 0,
+        pots: s.pots || 0,
         first_name: s.first_name,
         user_id: s.user_id
     }));
