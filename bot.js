@@ -1198,7 +1198,9 @@ function getTopMenuKeyboard() {
     .row()
     .text("⭐ Most MVPs", "top_mvps").text("🦆 Most Ducks", "top_ducks")
     .row()
-    .text("💥 Highest Score", "top_highscores").text("🔥 Best Bowling", "top_bestbowling");
+    .text("💥 Highest Score", "top_highscores").text("🔥 Best Bowling", "top_bestbowling")
+    .row()
+    .text("🍀 Most 4s", "top_fours").text("🚀 Most 6s", "top_sixes");
 }
 
 bot.command('top', async (ctx) => {
@@ -1628,6 +1630,12 @@ bot.on('callback_query:data', async (ctx) => {
                       return `${idx + 1}. <code>${escapeHtml(name)}</code> - <b>${p.best_wickets}/${p.best_runs_conceded}</b>`;
                   }).join('\n') + '\n';
               }
+          } else if (data === 'top_fours') {
+              title = "🍀 <b>Top 10 Fours (4s) Hit:</b>\n\n";
+              listContent = renderList(lists.topFours, 'fours');
+          } else if (data === 'top_sixes') {
+              title = "🚀 <b>Top 10 Sixes (6s) Hit:</b>\n\n";
+              listContent = renderList(lists.topSixes, 'sixes');
           }
 
           const kb = new InlineKeyboard().text("Back ⬅️", "top_menu");

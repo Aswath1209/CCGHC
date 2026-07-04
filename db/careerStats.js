@@ -478,13 +478,18 @@ async function getTopLists() {
         })
         .slice(0, 10);
 
+    const topFours = [...statsList].sort((a, b) => (b.fours || 0) - (a.fours || 0)).slice(0, 10);
+    const topSixes = [...statsList].sort((a, b) => (b.sixes || 0) - (a.sixes || 0)).slice(0, 10);
+
     return {
         topRuns,
         topWickets,
         topMvps,
         topDucks,
         topHighscores,
-        topBestBowling
+        topBestBowling,
+        topFours,
+        topSixes
     };
 }
 
