@@ -260,9 +260,17 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       return null;
   }
 
+  function getTeamEmoji(letter) {
+    const emojis = {
+      'A': '🔴', 'B': '🔵', 'C': '🟢', 'D': '🟡',
+      'E': '🟣', 'F': '🟤', 'G': '⚫', 'H': '⚪'
+    };
+    return emojis[letter] || '🏏';
+  }
+
   function renderTriLobby(tri) {
-    let text = `🏆 <b>TRI-SERIES LOBBY</b> 🏆\n`;
-    text += `Overs: <b>${tri.config.overs}</b> | Wickets: <b>${tri.config.wickets}</b> | Format: <b>${tri.rounds}x Round Robin</b>\n`;
+    let text = `🏆 <b>TOURNAMENT LOBBY</b> 🏆\n`;
+    text += `Overs: <b>${tri.config.overs}</b> | Wickets: <b>${tri.config.wickets}</b> | Qualifiers: <b>${tri.config.q}</b> | Format: <b>${tri.rounds}x Round Robin</b>\n`;
     text += `───────────────────\n\n`;
 
     const renderTeam = (team, colorEmoji) => {
@@ -278,23 +286,44 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       return t;
     };
 
-    text += renderTeam(tri.teamA, '🔴');
-    text += `\n` + renderTeam(tri.teamB, '🔵');
-    text += `\n` + renderTeam(tri.teamC, '🟢');
-    text += `───────────────────\n`;
+    const teamKeys = triManager.getTeamKeys(tri);
+    teamKeys.forEach((key, idx) => {
+      const letter = key.replace('team', '');
+      const emoji = getTeamEmoji(letter);
+      text += renderTeam(tri[key], emoji);
+      if (idx < teamKeys.length - 1) text += `\n`;
+    });
+
+    text += `\n───────────────────\n`;
     text += `Host: <a href="tg://user?id=${tri.hostId}">Host</a>\n\n`;
-    text += `<i>Join a team below! Use /captain [A/B/C] to appoint a captain, /teamname [name] to rename your team, and click Start Tournament when players are ready!</i>`;
+    text += `<i>Join a team below! Use /captain [A-H] to appoint a captain, /teamname [name] to rename your team, and click Start Tournament when players are ready!\n\n` +
+            `Commands:\n` +
+            `➕ /create_team - Add new team (max 8)\n` +
+            `➖ /remove_team [A-H] - Remove team\n` +
+            `⚙️ /q [2-4] - Set qualifier count (current: ${tri.config.q})</i>`;
     return text;
   }
 
   function getTriLobbyKeyboard(tri) {
-    return new InlineKeyboard()
-      .text("Join Team A 🔴", `tri_join_${tri.id}_teamA`)
-      .text("Join Team B 🔵", `tri_join_${tri.id}_teamB`)
-      .text("Join Team C 🟢", `tri_join_${tri.id}_teamC`)
-      .row()
-      .text("Start Tournament 🚀", `tri_start_${tri.id}`)
+    const kb = new InlineKeyboard();
+    const teamKeys = triManager.getTeamKeys(tri);
+    
+    teamKeys.forEach((key, idx) => {
+      const letter = key.replace('team', '');
+      const emoji = getTeamEmoji(letter);
+      kb.text(`Join Team ${letter} ${emoji}`, `tri_join_${tri.id}_${key}`);
+      if ((idx + 1) % 2 === 0) {
+        kb.row();
+      }
+    });
+    
+    if (teamKeys.length % 2 !== 0) {
+      kb.row();
+    }
+    
+    kb.text("Start Tournament 🚀", `tri_start_${tri.id}`)
       .text("Cancel Tournament ❌", `tri_cancel_${tri.id}`);
+    return kb;
   }
 
   async function updateLobbyMessage(ctx, tri) {
@@ -314,15 +343,16 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   function renderTriStatusText(tri) {
     const standings = triManager.getStandingsSorted(tri);
     
-    let text = `📊 <b>TRI-SERIES STANDINGS</b> 📊\n`;
+    let text = `📊 <b>TOURNAMENT STANDINGS</b> 📊\n`;
     text += `───────────────────\n`;
     standings.forEach((team, idx) => {
       const stats = tri.pointsTable[team.key];
+      const nrrSign = team.nrr >= 0 ? '+' : '';
       text += `${idx + 1}. <b>${escapeHtml(team.name)}</b>: ` +
               `Played: <b>${stats.played}</b> | ` +
               `Won: <b>${stats.won}</b> | ` +
               `Points: <b>${team.pts}</b> | ` +
-              `NRR: <code>${team.nrr.toFixed(3)}</code>\n`;
+              `NRR: <code>${nrrSign}${team.nrr.toFixed(3)}</code>\n`;
     });
     text += `───────────────────\n\n`;
     
@@ -445,54 +475,53 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               let awardMsg = `✨ <b>🏆 TRI-SERIES INDIVIDUAL AWARDS 🏆</b> ✨\n\n` +
                              `🥇 <b>Player of the Series (POTS):</b> ${escapeHtml(awards.pots.name)} (${Number(awards.pots.potsPoints.toFixed(2))} pts)\n` +
                              `🏃‍♂️ <b>Most Runs (Orange Cap):</b> ${escapeHtml(awards.mostRuns.name)} (${awards.mostRuns.runs} runs)\n` +
-                             `🥎 <b>Most Wickets (Purple Cap):</b> ${escapeHtml(awards.mostWickets.name)} (${awards.mostWickets.wickets} wickets)\n\n` +
-                             `Congratulations to all the award winners and the champion team! 🥳🎉`;
-              await ctx.api.sendMessage(tri.chatId, awardMsg, { parse_mode: 'HTML' });
-
-              const potsUserId = parseInt(awards.pots.id);
-              if (!isNaN(potsUserId)) {
-                  try {
-                      const careerStatsHelper = require('../db/careerStats');
-                      await careerStatsHelper.incrementStats(potsUserId, { pots: 1 });
-                  } catch (err) {
-                      console.error("Failed to increment POTS stats:", err);
-                  }
-              }
-          }
-          
-          // 4. Delete the Tri-Series
+                       // 4. Delete the Tri-Series
           triManager.deleteTriSeries(tri.chatId);
       } else {
           // Non-final match: send the points table and next-match announcement
-          let cap = `📊 <b>Tri-Series Points Table updated after Match ${match.num}!</b>`;
+          let cap = `📊 <b>Tournament Points Table updated after Match ${match.num}!</b>`;
           await sendTriStatusUpdate(ctx, tri.chatId, tri, cap);
           
-          const groupMatchesDone = tri.matches.filter(m => !m.isFinal).every(m => m.state === 'COMPLETED');
-          const finalMatchDone = tri.matches.find(m => m.isFinal)?.state === 'COMPLETED';
-          if (groupMatchesDone && !finalMatchDone) {
+          const groupMatchesDone = tri.matches.filter(m => !m.isPlayoff).every(m => m.state === 'COMPLETED');
+          if (groupMatchesDone) {
+              const pendingPlayoffs = tri.matches.filter(m => m.isPlayoff && m.state === 'PENDING');
               const finalMatch = tri.matches.find(m => m.isFinal);
-              const team1Name = tri[finalMatch.team1Key].name;
-              const team2Name = tri[finalMatch.team2Key].name;
               
-              const finalAnnounce = `🏁 <b>League Stage Completed!</b> 🏁\n\n` +
-                                    `Top two teams advancing to the Grand Final:\n` +
-                                    `🥇 <b>${escapeHtml(team1Name)}</b> vs 🥈 <b>${escapeHtml(team2Name)}</b>\n\n` +
-                                    `👉 Host, start the Grand Final match with: <code>/match final</code>`;
-              await ctx.api.sendMessage(tri.chatId, finalAnnounce, { parse_mode: 'HTML' });
+              if (pendingPlayoffs.length > 0) {
+                  // If we have some pending qualifier/semis
+                  const nextPlayoff = pendingPlayoffs.find(m => m.team1Key && m.team2Key);
+                  if (nextPlayoff) {
+                      let playoffAnnounce = `🏁 <b>League Stage Completed!</b> 🏁\n\n`;
+                      playoffAnnounce += `Playoff Schedule:\n`;
+                      pendingPlayoffs.forEach(pm => {
+                          const t1 = tri[pm.team1Key]?.name || 'TBD';
+                          const t2 = tri[pm.team2Key]?.name || 'TBD';
+                          playoffAnnounce += `👉 <b>${pm.name}</b>: ${escapeHtml(t1)} vs ${escapeHtml(t2)}\n`;
+                      });
+                      playoffAnnounce += `\n👉 Host, start the playoff matches with: <code>/match [match_number]</code>`;
+                      await ctx.api.sendMessage(tri.chatId, playoffAnnounce, { parse_mode: 'HTML' });
+                  }
+              } else if (finalMatch && finalMatch.team1Key && finalMatch.team2Key && finalMatch.state === 'PENDING') {
+                  const team1Name = tri[finalMatch.team1Key].name;
+                  const team2Name = tri[finalMatch.team2Key].name;
+                  const finalAnnounce = `🏆 <b>Grand Final Match Is Set!</b> 🏆\n\n` +
+                                        `🥇 <b>${escapeHtml(team1Name)}</b> vs 🥈 <b>${escapeHtml(team2Name)}</b>\n\n` +
+                                        `👉 Host, start the Grand Final match with: <code>/match ${finalMatch.num}</code>`;
+                  await ctx.api.sendMessage(tri.chatId, finalAnnounce, { parse_mode: 'HTML' });
+              }
           }
       }
   }
 
-  bot.command('triseries', async (ctx) => {
-    if (ctx.chat.type === 'private') return ctx.reply("Tri-Series can only be started in groups.");
+  bot.command(['triseries', 'tournament'], async (ctx) => {
+    if (ctx.chat.type === 'private') return ctx.reply("Tournaments can only be started in groups.");
     const activeGameType = checkActiveGame(ctx.chat.id);
     if (activeGameType) {
         return ctx.reply(`⚠️ There is already an active <b>${activeGameType}</b> in this group. Please end/cancel it first before starting a new game.`, { parse_mode: 'HTML' });
     }
     const args = ctx.message.text.split(' ');
-    // Default rounds is 2 (double round robin)
-    let rounds = 2;
-    if (args[1] === '1') rounds = 1;
+    let rounds = 1;
+    if (args[1] === '2') rounds = 2;
     
     const res = triManager.createTriSeries(ctx.chat.id, { id: ctx.from.id, first_name: ctx.from.first_name }, rounds);
     if (!res.success) return ctx.reply("❌ " + res.error);
@@ -501,34 +530,138 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     res.tri.lobbyMessageId = msg.message_id;
   });
 
+  bot.command('create_team', async (ctx) => {
+    const tri = triManager.getTriSeries(ctx.chat.id);
+    if (!tri) return ctx.reply("⚠️ No active tournament found in this group.");
+    if (ctx.from.id !== tri.hostId) return ctx.reply("❌ Only the host can create teams.");
+    
+    const res = triManager.createTeam(ctx.chat.id);
+    if (!res.success) return ctx.reply("❌ " + res.error);
+    
+    await ctx.reply(`➕ Added new team <b>${escapeHtml(res.teamName)}</b>!`, { parse_mode: 'HTML' });
+    await updateLobbyMessage(ctx, tri);
+  });
+
+  bot.command('remove_team', async (ctx) => {
+    const tri = triManager.getTriSeries(ctx.chat.id);
+    if (!tri) return ctx.reply("⚠️ No active tournament found in this group.");
+    if (ctx.from.id !== tri.hostId) return ctx.reply("❌ Only the host can remove teams.");
+    
+    const args = ctx.message.text.split(' ');
+    const teamChar = args[1];
+    if (!teamChar) return ctx.reply("Usage: /remove_team [A-H]");
+    
+    const res = triManager.removeTeam(ctx.chat.id, teamChar);
+    if (!res.success) return ctx.reply("❌ " + res.error);
+    
+    await ctx.reply(`➖ Removed Team ${teamChar.toUpperCase()} and shifted alphabetical order.`, { parse_mode: 'HTML' });
+    await updateLobbyMessage(ctx, tri);
+  });
+
+  bot.command('q', async (ctx) => {
+    const tri = triManager.getTriSeries(ctx.chat.id);
+    if (!tri) return ctx.reply("⚠️ No active tournament found in this group.");
+    if (ctx.from.id !== tri.hostId) return ctx.reply("❌ Only the host can set qualification count.");
+    
+    const args = ctx.message.text.split(' ');
+    const qVal = args[1];
+    if (!qVal) return ctx.reply(`Usage: /q [2-4] (current: ${tri.config.q})`);
+    
+    const res = triManager.setQ(ctx.chat.id, qVal);
+    if (!res.success) return ctx.reply("❌ " + res.error);
+    
+    await ctx.reply(`⚙️ Qualification count set to <b>${res.q}</b> teams!`, { parse_mode: 'HTML' });
+    if (tri.state === 'LOBBY') {
+        await updateLobbyMessage(ctx, tri);
+    }
+  });
+
   bot.command('match', async (ctx) => {
     const tri = triManager.getTriSeries(ctx.chat.id);
-    if (!tri) return ctx.reply("⚠️ No active Tri-Series found in this group.");
+    if (!tri) return ctx.reply("⚠️ No active tournament found in this group.");
     
     if (ctx.from.id !== tri.hostId) {
-      return ctx.reply("❌ Only the tournament host can start matches.");
+      return ctx.reply("❌ Only the tournament host can prepare matches.");
     }
 
     const args = ctx.message.text.split(' ');
     const matchVal = args[1]?.toLowerCase();
     
     if (!matchVal) {
-      return ctx.reply("Usage: /match [Match Number (1-6) or final]");
+      return ctx.reply("Usage: /match [Match Number]");
     }
 
-    let matchNum = matchVal;
-    if (matchVal === 'final') {
-      matchNum = tri.rounds === 1 ? '4' : '7';
-    }
+    let matchNum = parseInt(matchVal);
+    const match = tri.matches.find(m => m.num === matchNum);
+    if (!match) return ctx.reply("❌ Match number not found in schedule.");
 
-    const res = triManager.startMatch(ctx.chat.id, matchNum, { id: ctx.from.id, first_name: ctx.from.first_name });
+    if (match.state === 'COMPLETED') return ctx.reply("❌ This match has already been completed.");
+    if (match.state === 'PLAYING') return ctx.reply("❌ This match is already active.");
+
+    const team1Name = tri[match.team1Key]?.name || 'TBD';
+    const team2Name = tri[match.team2Key]?.name || 'TBD';
+
+    const ticketCode = `M_${tri.id}_${match.num}`;
+
+    await ctx.reply(
+      `🏟 <b>${escapeHtml(team1Name)} vs ${escapeHtml(team2Name)}</b> is ready to play!\n\n` +
+      `👉 To start in this group, run: <code>/playmatch</code>\n` +
+      `👉 To start in another group, copy and paste this command in that group:\n` +
+      `<code>/playmatch ${ticketCode}</code>\n\n` +
+      `<i>Note: Ensure the bot is added to the destination group!</i>`,
+      { parse_mode: 'HTML' }
+    );
+  });
+
+  bot.command('playmatch', async (ctx) => {
+    const args = ctx.message.text.split(' ');
+    const ticket = args[1];
+    
+    let mainChatId = ctx.chat.id;
+    let matchNum = null;
+    
+    if (ticket) {
+        const parts = ticket.split('_');
+        if (parts[0] === 'M' && parts[1] && parts[2]) {
+            mainChatId = parseInt(parts[1]);
+            matchNum = parseInt(parts[2]);
+        } else {
+            return ctx.reply("❌ Invalid match ticket format. Format: /playmatch M_[mainChatId]_[matchNum]");
+        }
+    } else {
+        const tri = triManager.getTriSeries(ctx.chat.id);
+        if (!tri) return ctx.reply("⚠️ No active tournament found in this group. Please specify a ticket to start a sub-match.");
+        
+        const pendingMatch = tri.matches.find(m => m.state === 'PENDING');
+        if (!pendingMatch) return ctx.reply("❌ No pending matches found in this tournament.");
+        matchNum = pendingMatch.num;
+    }
+    
+    const tri = triManager.getTriSeries(mainChatId);
+    if (!tri) return ctx.reply("⚠️ Tournament not found for the specified ticket.");
+    
+    const match = tri.matches.find(m => m.num === matchNum);
+    if (!match) return ctx.reply("❌ Match not found.");
+    
+    const team1 = tri[match.team1Key];
+    const team2 = tri[match.team2Key];
+    if (!team1 || !team2) return ctx.reply("❌ Match teams are not determined yet.");
+    
+    const isHost = tri.hostId === ctx.from.id;
+    const isCap1 = team1.captainId === ctx.from.id;
+    const isCap2 = team2.captainId === ctx.from.id;
+    
+    if (!isHost && !isCap1 && !isCap2) {
+        return ctx.reply("❌ Only the tournament host or captains of the playing teams can start the match.");
+    }
+    
+    const res = triManager.startMatch(mainChatId, matchNum, { id: tri.hostId, first_name: tri.hostName }, ctx.chat.id);
     if (!res.success) return ctx.reply("❌ " + res.error);
-
-    // Auto-start standard tour to go straight to Toss phase
-    const startRes = tourManager.startTour(res.tour.id, res.tour.hostId);
+    
+    const tour = res.tour;
+    const startRes = tourManager.startTour(tour.id, tour.hostId);
     if (!startRes.success) return ctx.reply("❌ Failed to start match: " + startRes.error);
     
-    const tour = startRes.tour;
     const capA = tour.teamA.players.find(p => p.id === tour.teamA.captainId) || tour.teamA.players[0];
     
     const kb = new InlineKeyboard()
@@ -541,17 +674,21 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         `👉 Captain of <b>${escapeHtml(tour.teamA.name)}</b> (<a href="tg://user?id=${capA.id}">${escapeHtml(capA.first_name)}</a>), choose Heads or Tails:`,
         { reply_markup: kb, parse_mode: 'HTML' }
     );
+    
+    if (ctx.chat.id !== mainChatId) {
+        await ctx.api.sendMessage(mainChatId, `🏟 <b>Match ${matchNum} (${escapeHtml(res.team1Name)} vs ${escapeHtml(res.team2Name)})</b> has started playing in group <code>${ctx.chat.title || ctx.chat.id}</code>!`);
+    }
   });
 
-  bot.command('tristatus', async (ctx) => {
+  bot.command(['status', 'tristatus'], async (ctx) => {
     const tri = triManager.getTriSeries(ctx.chat.id);
-    if (!tri) return ctx.reply("⚠️ No active Tri-Series found in this group.");
+    if (!tri) return ctx.reply("⚠️ No active tournament found in this group.");
     await sendTriStatusUpdate(ctx, ctx.chat.id, tri);
   });
 
-  bot.command(['trileaders', 'tristats'], async (ctx) => {
+  bot.command(['stats', 'tristats', 'leaders', 'trileaders'], async (ctx) => {
     const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
-    if (!tri) return ctx.reply("⚠️ No active Tri-Series found.");
+    if (!tri) return ctx.reply("⚠️ No active tournament found.");
 
     const players = Object.entries(tri.stats).map(([id, s]) => ({
       id,
@@ -565,14 +702,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
     }));
 
     if (players.length === 0) {
-      return ctx.reply("📊 No stats recorded yet for this Tri-Series.");
+      return ctx.reply("📊 No stats recorded yet for this tournament.");
     }
 
     const runsList = [...players].sort((a, b) => b.runs - a.runs).slice(0, 5);
     const wicketsList = [...players].sort((a, b) => b.wickets - a.wickets).slice(0, 5);
     const potsList = [...players].sort((a, b) => b.potsPoints - a.potsPoints).slice(0, 5);
 
-    let text = `🏆 <b>TRI-SERIES LEADERBOARDS</b> 🏆\n\n`;
+    let text = `🏆 <b>TOURNAMENT LEADERBOARDS</b> 🏆\n\n`;
     
     text += `🏃‍♂️ <b>Most Runs (Orange Cap)</b>\n`;
     text += `───────────────────\n`;
@@ -599,7 +736,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
   bot.command('freewin', async (ctx) => {
     const tri = triManager.getTriSeries(ctx.chat.id);
-    if (!tri) return ctx.reply("⚠️ No active Tri-Series found in this group.");
+    if (!tri) return ctx.reply("⚠️ No active tournament found in this group.");
 
     if (ctx.from.id !== tri.hostId) {
       return ctx.reply("❌ Only the tournament host can award a free win.");
@@ -650,7 +787,9 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   bot.command('set_overs', async (ctx) => {
       const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
       if (tri) {
-          const isAllowed = ctx.from.id === tri.hostId || ctx.from.id === tri.teamA.captainId || ctx.from.id === tri.teamB.captainId || ctx.from.id === tri.teamC.captainId;
+          const teamKeys = triManager.getTeamKeys(tri);
+          const isCap = teamKeys.some(key => tri[key].captainId === ctx.from.id);
+          const isAllowed = ctx.from.id === tri.hostId || isCap;
           if (!isAllowed) return ctx.reply("❌ Only the host or captains can change settings.");
           
           const args = ctx.message.text.split(' ');
@@ -667,7 +806,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   tour.maxBalls = overs * 6;
               }
           }
-          await ctx.reply(`⚙️ <b>Overs updated to:</b> <code>${overs}</code> overs for Tri-Series.`, { parse_mode: 'HTML' });
+          await ctx.reply(`⚙️ <b>Overs updated to:</b> <code>${overs}</code> overs for tournament.`, { parse_mode: 'HTML' });
           await updateLobbyMessage(ctx, tri);
           return;
       }
@@ -693,13 +832,15 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   bot.command('set_wickets', async (ctx) => {
       const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
       if (tri) {
-          const isAllowed = ctx.from.id === tri.hostId || ctx.from.id === tri.teamA.captainId || ctx.from.id === tri.teamB.captainId || ctx.from.id === tri.teamC.captainId;
+          const teamKeys = triManager.getTeamKeys(tri);
+          const isCap = teamKeys.some(key => tri[key].captainId === ctx.from.id);
+          const isAllowed = ctx.from.id === tri.hostId || isCap;
           if (!isAllowed) return ctx.reply("❌ Only the host or captains can change settings.");
           
           const args = ctx.message.text.split(' ');
           const wickets = parseInt(args[1]);
           if (isNaN(wickets) || wickets < 1 || wickets > 10) {
-              return ctx.reply("Usage: /set_wickets [1-10]");
+               return ctx.reply("Usage: /set_wickets [1-10]");
           }
           
           triManager.setWickets(tri.chatId, wickets);
@@ -711,7 +852,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   tour.teamB.inningsRemainingWickets = wickets;
               }
           }
-          await ctx.reply(`⚙️ <b>Wickets updated to:</b> <code>${wickets}</code> wickets for Tri-Series.`, { parse_mode: 'HTML' });
+          await ctx.reply(`⚙️ <b>Wickets updated to:</b> <code>${wickets}</code> wickets for tournament.`, { parse_mode: 'HTML' });
           await updateLobbyMessage(ctx, tri);
           return;
       }
@@ -774,9 +915,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
       if (tri) {
           let teamKey = null;
-          if (tri.teamA.captainId?.toString() === ctx.from.id.toString()) teamKey = 'teamA';
-          else if (tri.teamB.captainId?.toString() === ctx.from.id.toString()) teamKey = 'teamB';
-          else if (tri.teamC.captainId?.toString() === ctx.from.id.toString()) teamKey = 'teamC';
+          const teamKeys = triManager.getTeamKeys(tri);
+          for (const key of teamKeys) {
+              if (tri[key].captainId?.toString() === ctx.from.id.toString()) {
+                  teamKey = key;
+                  break;
+              }
+          }
           
           if (!teamKey) return ctx.reply("❌ Only the team captains can rename their teams.");
           
@@ -819,26 +964,32 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               targetUserId = ctx.message.reply_to_message.from.id;
               first_name = ctx.message.reply_to_message.from.first_name;
               
-              if (tri.teamA.players.some(p => p.id === targetUserId)) teamKey = 'teamA';
-              else if (tri.teamB.players.some(p => p.id === targetUserId)) teamKey = 'teamB';
-              else if (tri.teamC.players.some(p => p.id === targetUserId)) teamKey = 'teamC';
+              const teamKeys = triManager.getTeamKeys(tri);
+              for (const key of teamKeys) {
+                  if (tri[key].players.some(p => p.id === targetUserId)) {
+                      teamKey = key;
+                      break;
+                  }
+              }
           } else {
               const args = ctx.message.text.split(' ');
               const teamChar = args[1]?.toUpperCase();
               const index = parseInt(args[2]);
-              if (teamChar && (teamChar === 'A' || teamChar === 'B' || teamChar === 'C') && !isNaN(index)) {
+              if (teamChar && ['A','B','C','D','E','F','G','H'].includes(teamChar) && !isNaN(index)) {
                   teamKey = 'team' + teamChar;
                   const team = tri[teamKey];
-                  const player = team.players[index - 1];
-                  if (player) {
-                      targetUserId = player.id;
-                      first_name = player.first_name;
+                  if (team) {
+                      const player = team.players[index - 1];
+                      if (player) {
+                          targetUserId = player.id;
+                          first_name = player.first_name;
+                      }
                   }
               }
           }
 
           if (!targetUserId || !teamKey) {
-              return ctx.reply("Usage: Reply to a team player, or use `/captain [A/B/C] [index]`");
+              return ctx.reply("Usage: Reply to a team player, or use `/captain [A-H] [index]`");
           }
 
           const isHost = tri.hostId === ctx.from.id;
@@ -916,18 +1067,33 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       }
   });
 
-  bot.command(['adda', 'addb', 'addc'], async (ctx) => {
+  bot.command(['adda', 'addb', 'addc', 'addd', 'adde', 'addf', 'addg', 'addh', 'add'], async (ctx) => {
       const cmd = ctx.message.text.split(' ')[0].toLowerCase();
-      const targetChar = cmd.includes('adda') ? 'A' : (cmd.includes('addb') ? 'B' : 'C');
+      const args = ctx.message.text.split(' ');
+      let targetChar = null;
+
+      const match = cmd.match(/^\/add([a-h])$/);
+      if (match) {
+          targetChar = match[1].toUpperCase();
+      } else if (cmd === '/add') {
+          targetChar = args[1]?.toUpperCase();
+      }
+
+      if (!targetChar || !['A','B','C','D','E','F','G','H'].includes(targetChar)) {
+          return ctx.reply("Usage: Reply to a player with /add[a-h] or /add [A-H]");
+      }
       
       const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
       if (tri) {
-          const isHost = tri.hostId === ctx.from.id;
-          const isCapA = tri.teamA.captainId === ctx.from.id;
-          const isCapB = tri.teamB.captainId === ctx.from.id;
-          const isCapC = tri.teamC.captainId === ctx.from.id;
+          const targetTriKey = 'team' + targetChar;
+          if (!tri[targetTriKey]) {
+              return ctx.reply(`❌ Team ${targetChar} does not exist in this tournament.`);
+          }
 
-          if (!isHost && !isCapA && !isCapB && !isCapC) {
+          const isHost = tri.hostId === ctx.from.id;
+          const isCap = tri[targetTriKey].captainId === ctx.from.id;
+
+          if (!isHost && !isCap) {
               return ctx.reply("Only the host or team captains can add players.");
           }
 
@@ -939,8 +1105,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           if (!targetUser) return ctx.reply("Please reply to the user's message you want to add.");
 
           if (tri.state === 'LOBBY' || tri.state === 'SCHEDULED') {
-              const teamKey = 'team' + targetChar;
-              const res = triManager.joinTeam(tri.chatId, { id: targetUser.id, first_name: targetUser.first_name, username: targetUser.username || '' }, teamKey);
+              const res = triManager.joinTeam(tri.chatId, { id: targetUser.id, first_name: targetUser.first_name, username: targetUser.username || '' }, targetTriKey);
               if (res.success) {
                   await ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(res.teamName)}</b>!`, { parse_mode: 'HTML' });
                   if (tri.state === 'LOBBY') {
@@ -951,15 +1116,15 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   return ctx.reply(`❌ ${res.error}`);
               }
           } else if (tri.state === 'PLAYING') {
-              const tour = tourManager.getTour(tri.activeTourId);
-              if (!tour) return ctx.reply("Active match not found.");
-
-              const targetTriKey = 'team' + targetChar;
+              const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id) || tourManager.getTour(tri.activeTourId);
+              
               let tourTeamKey = null;
-              if (tour.teamA.triTeamKey === targetTriKey) tourTeamKey = 'teamA';
-              else if (tour.teamB.triTeamKey === targetTriKey) tourTeamKey = 'teamB';
+              if (tour) {
+                  if (tour.teamA.triTeamKey === targetTriKey) tourTeamKey = 'teamA';
+                  else if (tour.teamB.triTeamKey === targetTriKey) tourTeamKey = 'teamB';
+              }
 
-              if (!tourTeamKey) {
+              if (!tour || !tourTeamKey) {
                   triManager.addPlayerToRosterForce(tri.chatId, { id: targetUser.id, first_name: targetUser.first_name, username: targetUser.username || '' }, targetTriKey);
                   await ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(tri[targetTriKey].name)}</b> roster (Not playing in current match)!`, { parse_mode: 'HTML' });
                   return;
@@ -967,9 +1132,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
               const res = tourManager.joinTeam(tour.id, { id: targetUser.id, first_name: targetUser.first_name }, tourTeamKey);
               if (res.success) {
-                  // ALSO add to Tri-Series roster:
-                  const triTeamKey = 'team' + targetChar;
-                  triManager.addPlayerToRosterForce(tri.chatId, { id: targetUser.id, first_name: targetUser.first_name, username: targetUser.username || '' }, triTeamKey);
+                  triManager.addPlayerToRosterForce(tri.chatId, { id: targetUser.id, first_name: targetUser.first_name, username: targetUser.username || '' }, targetTriKey);
 
                   await ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(tour[tourTeamKey].name)}</b>!`, { parse_mode: 'HTML' });
                   if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
@@ -982,14 +1145,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           }
       }
 
-      if (targetChar === 'C') {
-          return ctx.reply("❌ /addc is only available in Tri-Series tournament mode.");
+      if (!['A', 'B'].includes(targetChar)) {
+          return ctx.reply("❌ That team is only available in tournament mode.");
       }
 
       const tour = tourManager.getUserTour(ctx.from.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
-      // Permission: host or captain
       const isHost = tour.hostId === ctx.from.id;
       const isCapA = tour.teamA.captainId === ctx.from.id;
       const isCapB = tour.teamB.captainId === ctx.from.id;
@@ -1018,7 +1180,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       }
   });
 
-  bot.command('remove_player', async (ctx) => {
+  bot.command(['remove_player', 'remove'], async (ctx) => {
       const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
       if (tri) {
           const isHost = tri.hostId === ctx.from.id;
@@ -1032,26 +1194,32 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               const args = ctx.message.text.split(' ');
               const teamChar = args[1]?.toUpperCase();
               const index = parseInt(args[2]);
-              if (teamChar && (teamChar === 'A' || teamChar === 'B' || teamChar === 'C') && !isNaN(index)) {
+              if (teamChar && ['A','B','C','D','E','F','G','H'].includes(teamChar) && !isNaN(index)) {
                   const teamKey = 'team' + teamChar;
                   const team = tri[teamKey];
-                  const player = team.players[index - 1];
-                  if (player) {
-                      targetUserId = player.id;
-                      first_name = player.first_name;
+                  if (team) {
+                      const player = team.players[index - 1];
+                      if (player) {
+                          targetUserId = player.id;
+                          first_name = player.first_name;
+                      }
                   }
               }
           }
 
           if (!targetUserId) {
-              return ctx.reply("Usage: Reply to a player with this command, or use `/remove_player [A/B/C] [index]`");
+              return ctx.reply("Usage: Reply to a player with this command, or use `/remove [A-H] [index]`");
           }
 
           if (tri.state === 'LOBBY' || tri.state === 'SCHEDULED') {
               let playerTeam = null;
-              if (tri.teamA.players.some(p => p.id.toString() === targetUserId.toString())) playerTeam = 'teamA';
-              else if (tri.teamB.players.some(p => p.id.toString() === targetUserId.toString())) playerTeam = 'teamB';
-              else if (tri.teamC.players.some(p => p.id.toString() === targetUserId.toString())) playerTeam = 'teamC';
+              const teamKeys = triManager.getTeamKeys(tri);
+              for (const key of teamKeys) {
+                  if (tri[key].players.some(p => p.id.toString() === targetUserId.toString())) {
+                      playerTeam = key;
+                      break;
+                  }
+              }
 
               if (!playerTeam) return ctx.reply("Player not found in any team.");
 
@@ -1069,18 +1237,23 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   return ctx.reply("❌ Failed to remove player.");
               }
           } else if (tri.state === 'PLAYING') {
-              const tour = tourManager.getTour(tri.activeTourId);
-              if (!tour) return ctx.reply("Active match not found.");
-
+              const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id) || tourManager.getTour(tri.activeTourId);
+              
               let teamKey = null;
-              if (tour.teamA.players.some(p => p.id === targetUserId)) teamKey = 'teamA';
-              else if (tour.teamB.players.some(p => p.id === targetUserId)) teamKey = 'teamB';
+              if (tour) {
+                  if (tour.teamA.players.some(p => p.id === targetUserId)) teamKey = 'teamA';
+                  else if (tour.teamB.players.some(p => p.id === targetUserId)) teamKey = 'teamB';
+              }
 
-              if (!teamKey) {
+              if (!tour || !teamKey) {
                   let triTeamKey = null;
-                  if (tri.teamA.players.some(p => p.id === targetUserId)) triTeamKey = 'teamA';
-                  else if (tri.teamB.players.some(p => p.id === targetUserId)) triTeamKey = 'teamB';
-                  else if (tri.teamC.players.some(p => p.id === targetUserId)) triTeamKey = 'teamC';
+                  const teamKeys = triManager.getTeamKeys(tri);
+                  for (const key of teamKeys) {
+                      if (tri[key].players.some(p => p.id === targetUserId)) {
+                          triTeamKey = key;
+                          break;
+                      }
+                  }
                   
                   if (triTeamKey) {
                       const isCaptain = tri[triTeamKey].captainId === ctx.from.id;
@@ -1097,7 +1270,6 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
 
               const res = tourManager.removePlayer(tour.id, ctx.from.id, targetUserId);
               if (res.success) {
-                  // ALSO remove from the Tri-Series team roster!
                   const triTeamKey = teamKey === 'teamA' ? tour.teamA.triTeamKey : tour.teamB.triTeamKey;
                   if (triTeamKey) {
                       triManager.removePlayerFromRosterForce(tri.chatId, targetUserId);
@@ -1141,7 +1313,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       }
       
       if (!targetUserId) {
-          return ctx.reply("Usage: Reply to a player with this command, or use `/remove_player [A/B] [index]`");
+          return ctx.reply("Usage: Reply to a player with this command, or use `/remove [A/B] [index]`");
       }
       
       const res = tourManager.removePlayer(tour.id, ctx.from.id, targetUserId);
@@ -1287,10 +1459,10 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
       
-      if (tri && tri.activeTourId === tour.id) {
-          // In Tri-Series, use explicit Tri-Series A/B/C labels
+      if (tri && (tri.activeTourId === tour.id || [...tourManager.getAllTours()].some(t => t.triSeriesId === tri.id && t.id === tour.id))) {
+          // In tournament, use explicit A-H labels
           const targetTriKey = 'team' + teamArgUp;
-          if (teamArgUp === 'A' || teamArgUp === 'B' || teamArgUp === 'C') {
+          if (['A','B','C','D','E','F','G','H'].includes(teamArgUp)) {
               if (tour.teamA.triTeamKey === targetTriKey) { teamKey = 'teamA'; teamChar = 'A'; }
               else if (tour.teamB.triTeamKey === targetTriKey) { teamKey = 'teamB'; teamChar = 'B'; }
           }
@@ -1907,15 +2079,15 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                       return await ctx.answerCallbackQuery({ text: "Only the host can start the tournament.", show_alert: true });
                   }
                   
-                  if (tri.teamA.players.length === 0 || tri.teamB.players.length === 0 || tri.teamC.players.length === 0) {
-                      return await ctx.answerCallbackQuery({ text: "All 3 teams must have at least 1 registered player to start!", show_alert: true });
+                  const startRes = triManager.startTournament(chatId);
+                  if (!startRes.success) {
+                      return await ctx.answerCallbackQuery({ text: startRes.error, show_alert: true });
                   }
                   
-                  tri.state = 'SCHEDULED';
                   await ctx.answerCallbackQuery("Tournament started!");
                   
-                  const statusText = `🚀 <b>Tri-Series Tournament Started!</b>\n\n` + renderTriScheduleText(tri) +
-                                     `\n👉 Host, start the first match with: <code>/match 1</code>`;
+                  const statusText = `🚀 <b>Tournament Started!</b>\n\n` + renderTriScheduleText(tri) +
+                                     `\n👉 Host, prepare the first match with: <code>/match 1</code>`;
                   await ctx.editMessageText(statusText, { parse_mode: 'HTML' });
                   return;
               }

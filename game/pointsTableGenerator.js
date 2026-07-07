@@ -38,8 +38,20 @@ async function generatePointsTableImage(tri) {
     } catch (err) {}
   }
 
+  const teamKeys = Object.keys(tri)
+    .filter(k => k.startsWith('team') && k.length === 5)
+    .sort();
+
   const W = 1600;
-  const H = 1000;
+  const rowHeight = 92;
+  const headerHeight = 310;
+  const tableBodyHeight = teamKeys.length * rowHeight;
+  
+  const matchesToDisplay = tri.matches || [];
+  const rowsCount = Math.ceil(matchesToDisplay.length / 2);
+  const scheduleBoxHeight = Math.max(120, 70 + (rowsCount * 35) + 20);
+  
+  const H = headerHeight + tableBodyHeight + scheduleBoxHeight + 80;
 
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
@@ -77,7 +89,7 @@ async function generatePointsTableImage(tri) {
   ctx.font = 'italic bold 56px Saira, "DejaVu Sans", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('TRI-SERIES POINTS TABLE', W / 2, 185);
+  ctx.fillText('TOURNAMENT POINTS TABLE', W / 2, 185);
   ctx.restore();
 
   // Subtitle
@@ -134,7 +146,7 @@ async function generatePointsTableImage(tri) {
   // Calculate NRR for each team
   const calculateNRR = (teamKey) => {
     const data = tri.pointsTable[teamKey];
-    if (data.played === 0) return 0;
+    if (!data || data.played === 0) return 0;
     
     const runsScored = data.runsScored || 0;
     const ballsFaced = data.ballsFaced || 0;
@@ -148,16 +160,16 @@ async function generatePointsTableImage(tri) {
   };
 
   // Sort teams by points desc, NRR desc
-  const teamKeys = ['teamA', 'teamB', 'teamC'];
+  const qLimit = tri.config.q || 2;
   const teamsData = teamKeys.map(key => {
     const nrrVal = calculateNRR(key);
     return {
       key,
       name: normalizeStyledText(tri[key].name).toUpperCase(),
-      p: tri.pointsTable[key].played,
-      w: tri.pointsTable[key].won,
-      l: tri.pointsTable[key].lost,
-      pts: tri.pointsTable[key].points,
+      p: tri.pointsTable[key]?.played || 0,
+      w: tri.pointsTable[key]?.won || 0,
+      l: tri.pointsTable[key]?.lost || 0,
+      pts: tri.pointsTable[key]?.points || 0,
       nrrVal,
       nrr: (nrrVal >= 0 ? '+' : '') + nrrVal.toFixed(3)
     };
@@ -172,7 +184,7 @@ async function generatePointsTableImage(tri) {
   let currentY = headerY + 40;
   teamsData.forEach((team, index) => {
     const rank = index + 1;
-    const qualified = rank <= 2; // Top 2 qualify for the Final
+    const qualified = rank <= qLimit;
 
     ctx.save();
     const rowGrad = ctx.createLinearGradient(tableX, currentY, tableX + tableWidth, currentY);
@@ -243,13 +255,13 @@ async function generatePointsTableImage(tri) {
     currentY += 92;
   });
 
-  // 6. Draw Tournament Schedule & History
+  // Draw Tournament Schedule & History
   const scheduleY = currentY + 20;
   ctx.save();
   ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.beginPath();
-  ctx.roundRect(tableX, scheduleY, tableWidth, 190, 20);
+  ctx.roundRect(tableX, scheduleY, tableWidth, scheduleBoxHeight, 20);
   ctx.fill();
   ctx.stroke();
   ctx.restore();
@@ -261,18 +273,15 @@ async function generatePointsTableImage(tri) {
   ctx.fillText('TOURNAMENT SCHEDULE & RESULTS', tableX + 30, scheduleY + 35);
   ctx.restore();
 
-  // Draw list of matches
+  // Draw list of matches in two columns
   const matchCol1X = tableX + 45;
   const matchCol2X = tableX + tableWidth / 2 + 20;
-
-  // Gather matches to display
-  const matchesToDisplay = tri.matches.slice(0, 6);
 
   ctx.save();
   ctx.textBaseline = 'middle';
   matchesToDisplay.forEach((m, idx) => {
-    const colX = idx < 3 ? matchCol1X : matchCol2X;
-    const rowY = scheduleY + 70 + (idx % 3) * 35;
+    const colX = idx < rowsCount ? matchCol1X : matchCol2X;
+    const rowY = scheduleY + 70 + (idx % rowsCount) * 35;
 
     const t1Name = tri[m.team1Key]?.name || 'TBD';
     const t2Name = tri[m.team2Key]?.name || 'TBD';
@@ -282,25 +291,27 @@ async function generatePointsTableImage(tri) {
     // Dot indicator
     ctx.beginPath();
     ctx.arc(colX, rowY, 6, 0, Math.PI * 2);
-    ctx.fillStyle = done ? '#10b981' : (tri.currentMatchNum === m.num ? '#60a5fa' : '#6b7280');
+    ctx.fillStyle = done ? '#10b981' : (m.state === 'PLAYING' ? '#60a5fa' : '#6b7280');
     ctx.fill();
 
     // Match label
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 18px "DejaVu Sans", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`MATCH ${m.num}: ${normalizeStyledText(t1Name)} vs ${normalizeStyledText(t2Name)}`, colX + 20, rowY);
+    
+    const displayName = m.name || `MATCH ${m.num}`;
+    ctx.fillText(`${displayName}: ${normalizeStyledText(t1Name)} vs ${normalizeStyledText(t2Name)}`, colX + 20, rowY);
 
     // Result/Status
-    ctx.fillStyle = done ? '#a3a3a3' : (tri.currentMatchNum === m.num ? '#60a5fa' : '#eab308');
+    ctx.fillStyle = done ? '#a3a3a3' : (m.state === 'PLAYING' ? '#60a5fa' : '#eab308');
     ctx.font = 'italic 16px "DejaVu Sans", sans-serif';
     ctx.textAlign = 'right';
-    const textLimit = idx < 3 ? tableX + tableWidth / 2 - 40 : tableX + tableWidth - 40;
+    const textLimit = idx < rowsCount ? tableX + tableWidth / 2 - 40 : tableX + tableWidth - 40;
     
     let statusText = 'SCHEDULED';
     if (m.state === 'COMPLETED') {
       statusText = m.resultText || 'COMPLETED';
-    } else if (tri.currentMatchNum === m.num) {
+    } else if (m.state === 'PLAYING') {
       statusText = 'LIVE NOW';
     }
     ctx.fillText(statusText, textLimit, rowY);

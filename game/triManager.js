@@ -1,7 +1,42 @@
+const fs = require('fs');
+const path = require('path');
 const tourManager = require('./tourManager');
 
-const triSeriesMap = new Map(); // chatId -> TriSeries
+const STATE_FILE = path.join(__dirname, '../db/tournament_state.json');
+
+const triSeriesMap = new Map(); // chatId -> Tournament
 const userTriMap = new Map();   // userId -> chatId
+
+function saveState() {
+  try {
+    const data = {
+      triSeries: Array.from(triSeriesMap.entries()),
+      userTri: Array.from(userTriMap.entries())
+    };
+    fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error("Failed to save tournament state:", e);
+  }
+}
+
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const content = fs.readFileSync(STATE_FILE, 'utf-8');
+      const data = JSON.parse(content);
+      if (data.triSeries) {
+        triSeriesMap.clear();
+        data.triSeries.forEach(([k, v]) => triSeriesMap.set(k, v));
+      }
+      if (data.userTri) {
+        userTriMap.clear();
+        data.userTri.forEach(([k, v]) => userTriMap.set(k, v));
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load tournament state:", e);
+  }
+}
 
 function getTriSeries(chatId) {
   return triSeriesMap.get(chatId.toString());
@@ -17,9 +52,9 @@ function deleteTriSeries(chatId) {
   if (!tri) return false;
   
   // Clean up user mappings
-  tri.teamA.players.forEach(p => userTriMap.delete(p.id.toString()));
-  tri.teamB.players.forEach(p => userTriMap.delete(p.id.toString()));
-  tri.teamC.players.forEach(p => userTriMap.delete(p.id.toString()));
+  getTeamKeys(tri).forEach(key => {
+    tri[key].players.forEach(p => userTriMap.delete(p.id.toString()));
+  });
   userTriMap.delete(tri.hostId.toString());
   
   if (tri.activeTourId) {
@@ -27,10 +62,17 @@ function deleteTriSeries(chatId) {
   }
   
   triSeriesMap.delete(chatId.toString());
+  saveState();
   return true;
 }
 
-function createTriSeries(chatId, hostUser, rounds = 2) {
+function getTeamKeys(tri) {
+  return Object.keys(tri)
+    .filter(k => k.startsWith('team') && k.length === 5)
+    .sort(); // Keep sorted alphabetically teamA, teamB, teamC, etc.
+}
+
+function createTriSeries(chatId, hostUser, rounds = 1) {
   const key = chatId.toString();
   // Clean up any stale tours in this group first
   const activeT = [...tourManager.getAllTours()].find(t => t.chatId && t.chatId.toString() === chatId.toString());
@@ -39,7 +81,7 @@ function createTriSeries(chatId, hostUser, rounds = 2) {
   }
 
   if (triSeriesMap.has(key)) {
-    return { success: false, error: "A Tri-Series is already active in this group!" };
+    return { success: false, error: "A tournament is already active in this group!" };
   }
   
   const tri = {
@@ -47,52 +89,132 @@ function createTriSeries(chatId, hostUser, rounds = 2) {
     chatId,
     hostId: hostUser.id,
     hostName: hostUser.first_name,
-    rounds: parseInt(rounds) || 2,
+    rounds: parseInt(rounds) || 1,
     state: 'LOBBY', // LOBBY, PLAYING, FINISHED
     config: {
       overs: 5,
-      wickets: 10
+      wickets: 10,
+      q: 2 // Default qualification count
     },
     teamA: { key: 'teamA', name: 'Team A', players: [], captainId: null, customName: false },
     teamB: { key: 'teamB', name: 'Team B', players: [], captainId: null, customName: false },
     teamC: { key: 'teamC', name: 'Team C', players: [], captainId: null, customName: false },
+    teamD: { key: 'teamD', name: 'Team D', players: [], captainId: null, customName: false },
     matches: [],
     currentMatchNum: null,
     activeTourId: null,
-    stats: {}, // userId -> { name: '', runs: 0, ballsFaced: 0, wickets: 0, ballsBowled: 0, runsConceded: 0 }
+    stats: {}, // userId -> stats
     pointsTable: {
       teamA: { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 },
       teamB: { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 },
-      teamC: { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 }
+      teamC: { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 },
+      teamD: { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 }
     }
   };
-
-  // Round 1 Schedule
-  tri.matches.push({ num: 1, team1Key: 'teamA', team2Key: 'teamB', state: 'PENDING', winner: null, resultText: '' });
-  tri.matches.push({ num: 2, team1Key: 'teamB', team2Key: 'teamC', state: 'PENDING', winner: null, resultText: '' });
-  tri.matches.push({ num: 3, team1Key: 'teamC', team2Key: 'teamA', state: 'PENDING', winner: null, resultText: '' });
-
-  // Round 2 Schedule if double round-robin
-  if (tri.rounds === 2) {
-    tri.matches.push({ num: 4, team1Key: 'teamB', team2Key: 'teamA', state: 'PENDING', winner: null, resultText: '' });
-    tri.matches.push({ num: 5, team1Key: 'teamC', team2Key: 'teamB', state: 'PENDING', winner: null, resultText: '' });
-    tri.matches.push({ num: 6, team1Key: 'teamA', team2Key: 'teamC', state: 'PENDING', winner: null, resultText: '' });
-  }
-
-  // The Final match
-  const finalNum = tri.rounds === 1 ? 4 : 7;
-  tri.matches.push({ num: finalNum, isFinal: true, team1Key: null, team2Key: null, state: 'PENDING', winner: null, resultText: '' });
 
   triSeriesMap.set(key, tri);
   userTriMap.set(hostUser.id.toString(), key);
   
+  saveState();
   return { success: true, tri };
+}
+
+function createTeam(chatId) {
+  const tri = getTriSeries(chatId);
+  if (!tri) return { success: false, error: 'Tournament not found.' };
+  if (tri.state !== 'LOBBY') return { success: false, error: 'Teams can only be added in the LOBBY state.' };
+
+  const keys = getTeamKeys(tri);
+  if (keys.length >= 8) {
+    return { success: false, error: 'Maximum 8 teams allowed!' };
+  }
+
+  // Next letter
+  const nextLetter = String.fromCharCode(65 + keys.length); // 65 is 'A'
+  const newKey = `team${nextLetter}`;
+
+  tri[newKey] = { key: newKey, name: `Team ${nextLetter}`, players: [], captainId: null, customName: false };
+  tri.pointsTable[newKey] = { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 };
+
+  saveState();
+  return { success: true, teamName: tri[newKey].name, teamKey: newKey };
+}
+
+function removeTeam(chatId, teamChar) {
+  const tri = getTriSeries(chatId);
+  if (!tri) return { success: false, error: 'Tournament not found.' };
+  if (tri.state !== 'LOBBY') return { success: false, error: 'Teams can only be removed in the LOBBY state.' };
+
+  const targetChar = teamChar.toUpperCase();
+  const targetKey = `team${targetChar}`;
+  const keys = getTeamKeys(tri);
+
+  if (!tri[targetKey]) {
+    return { success: false, error: `Team ${targetChar} does not exist.` };
+  }
+  if (keys.length <= 4) {
+    return { success: false, error: 'Minimum 4 teams are required!' };
+  }
+
+  // Unregister players from user map
+  tri[targetKey].players.forEach(p => userTriMap.delete(p.id.toString()));
+
+  // Shift logic
+  const idx = keys.indexOf(targetKey);
+  for (let i = idx; i < keys.length - 1; i++) {
+    const currentKey = keys[i];
+    const nextKey = keys[i + 1];
+    
+    tri[currentKey] = tri[nextKey];
+    tri[currentKey].key = currentKey;
+    
+    // Shift name if not custom
+    const nextLetter = nextKey.replace('team', '');
+    const currentLetter = currentKey.replace('team', '');
+    if (!tri[currentKey].customName && tri[currentKey].name === `Team ${nextLetter}`) {
+      tri[currentKey].name = `Team ${currentLetter}`;
+    }
+    
+    tri.pointsTable[currentKey] = tri.pointsTable[nextKey];
+  }
+
+  // Delete last key
+  const lastKey = keys[keys.length - 1];
+  delete tri[lastKey];
+  delete tri.pointsTable[lastKey];
+
+  // Adjust qualifies count if it exceeds total teams
+  const newLength = keys.length - 1;
+  if (tri.config.q >= newLength) {
+    tri.config.q = newLength - 1;
+  }
+
+  saveState();
+  return { success: true };
+}
+
+function setQ(chatId, q) {
+  const tri = getTriSeries(chatId);
+  if (!tri) return { success: false, error: 'Tournament not found.' };
+
+  const parsedQ = parseInt(q);
+  if (isNaN(parsedQ) || parsedQ < 2 || parsedQ > 4) {
+    return { success: false, error: 'Qualification count must be between 2 and 4.' };
+  }
+
+  const teamCount = getTeamKeys(tri).length;
+  if (parsedQ >= teamCount) {
+    return { success: false, error: `Qualification count must be strictly less than total teams (${teamCount}).` };
+  }
+
+  tri.config.q = parsedQ;
+  saveState();
+  return { success: true, q: parsedQ };
 }
 
 function joinTeam(chatId, user, teamKey) {
   const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
-  if (tri.state === 'PLAYING') return { success: false, error: 'Cannot change rosters while a match is currently playing!' };
+  if (!tri) return { success: false, error: 'Tournament not found.' };
 
   const targetTeam = tri[teamKey];
   if (!targetTeam) return { success: false, error: 'Invalid team selected.' };
@@ -107,11 +229,12 @@ function joinTeam(chatId, user, teamKey) {
     if (targetTeam.captainId?.toString() === userIdStr) {
       targetTeam.captainId = targetTeam.players.length > 0 ? targetTeam.players[0].id : null;
     }
+    saveState();
     return { success: true, action: 'left', teamName: targetTeam.name };
   }
 
   // Remove from any other team first
-  ['teamA', 'teamB', 'teamC'].forEach(key => {
+  getTeamKeys(tri).forEach(key => {
     const team = tri[key];
     const idx = team.players.findIndex(p => p.id.toString() === userIdStr);
     if (idx !== -1) {
@@ -136,12 +259,13 @@ function joinTeam(chatId, user, teamKey) {
     targetTeam.captainId = user.id;
   }
 
+  saveState();
   return { success: true, action: 'joined', teamName: targetTeam.name };
 }
 
 function appointCaptain(chatId, captainId, teamKey) {
   const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
+  if (!tri) return { success: false, error: 'Tournament not found.' };
   
   const team = tri[teamKey];
   if (!team) return { success: false, error: 'Invalid team.' };
@@ -152,30 +276,31 @@ function appointCaptain(chatId, captainId, teamKey) {
   }
 
   team.captainId = captainId;
+  saveState();
   return { success: true, teamName: team.name };
 }
 
 function renameTeam(chatId, teamKey, newName) {
   const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
+  if (!tri) return { success: false, error: 'Tournament not found.' };
 
   const team = tri[teamKey];
   if (!team) return { success: false, error: 'Invalid team.' };
 
   team.name = newName.substring(0, 20);
   team.customName = true;
+  saveState();
   return { success: true, teamName: team.name };
 }
 
 function removePlayer(chatId, playerId) {
   const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
-  if (tri.state === 'PLAYING') return { success: false, error: 'Cannot change rosters while a match is currently playing!' };
+  if (!tri) return { success: false, error: 'Tournament not found.' };
 
   let removed = false;
   let teamName = '';
 
-  ['teamA', 'teamB', 'teamC'].forEach(key => {
+  getTeamKeys(tri).forEach(key => {
     const team = tri[key];
     const idx = team.players.findIndex(p => p.id.toString() === playerId.toString());
     if (idx !== -1) {
@@ -189,55 +314,201 @@ function removePlayer(chatId, playerId) {
     }
   });
 
+  saveState();
   return { success: removed, teamName };
 }
 
 function setOvers(chatId, overs) {
   const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
+  if (!tri) return { success: false, error: 'Tournament not found.' };
   if (overs < 1 || overs > 20) return { success: false, error: 'Overs must be between 1 and 20.' };
   tri.config.overs = overs;
+  saveState();
   return { success: true, overs };
 }
 
 function setWickets(chatId, wickets) {
   const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
+  if (!tri) return { success: false, error: 'Tournament not found.' };
   if (wickets < 1 || wickets > 10) return { success: false, error: 'Wickets must be between 1 and 10.' };
   tri.config.wickets = wickets;
+  saveState();
   return { success: true, wickets };
 }
 
-function startMatch(chatId, matchNum, hostUser) {
-  const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
+function generateSchedule(tri) {
+  const teamKeys = getTeamKeys(tri);
+  const rounds = tri.rounds || 1;
+  const matches = [];
+  const list = [...teamKeys];
+  const n = list.length;
   
-  // Clean up any stale tours in this group first
-  const activeT = [...tourManager.getAllTours()].find(t => t.chatId && t.chatId.toString() === chatId.toString());
-  if (activeT) {
-    tourManager.deleteTour(activeT.id);
+  const hasBye = (n % 2 !== 0);
+  if (hasBye) {
+    list.push(null);
   }
   
-  // Also clear any stale userTourMap entry for the host to prevent
-  // "already in active match" false-positive from createTour
-  const hostExisting = tourManager.getUserTour(hostUser.id);
-  if (hostExisting && hostExisting.chatId?.toString() !== chatId.toString()) {
-    tourManager.deleteTour(hostExisting.id);
+  const numTeams = list.length;
+  const numRounds = numTeams - 1;
+  let matchNum = 1;
+  
+  for (let r = 0; r < numRounds; r++) {
+    for (let i = 0; i < numTeams / 2; i++) {
+      const t1 = list[i];
+      const t2 = list[numTeams - 1 - i];
+      if (t1 !== null && t2 !== null) {
+        matches.push({
+          num: matchNum++,
+          team1Key: t1,
+          team2Key: t2,
+          state: 'PENDING',
+          winner: null,
+          resultText: ''
+        });
+      }
+    }
+    list.splice(1, 0, list.pop());
   }
+  
+  if (rounds === 2) {
+    const r1Count = matches.length;
+    for (let i = 0; i < r1Count; i++) {
+      matches.push({
+        num: matchNum++,
+        team1Key: matches[i].team2Key,
+        team2Key: matches[i].team1Key,
+        state: 'PENDING',
+        winner: null,
+        resultText: ''
+      });
+    }
+  }
+  
+  tri.matches = matches;
+  tri.totalGroupMatches = matches.length;
+}
 
-  if (tri.state === 'PLAYING') return { success: false, error: 'A match is already active in this Tri-Series!' };
+function startTournament(chatId) {
+  const tri = getTriSeries(chatId);
+  if (!tri) return { success: false, error: 'Tournament not found.' };
+  
+  const teamKeys = getTeamKeys(tri);
+  if (teamKeys.length < 4) return { success: false, error: 'Tournament requires at least 4 teams!' };
+  
+  for (const key of teamKeys) {
+    if (tri[key].players.length === 0) {
+      return { success: false, error: `All teams must have at least 1 registered player! (${tri[key].name} is empty)` };
+    }
+  }
+  
+  generateSchedule(tri);
+  tri.state = 'SCHEDULED';
+  saveState();
+  return { success: true, tri };
+}
+
+function preparePlayoffs(tri) {
+  const q = tri.config.q;
+  const standings = getStandingsSorted(tri);
+  const matches = tri.matches.filter(m => !m.isPlayoff); // Keep only group matches
+  let nextNum = matches.length + 1;
+  
+  if (q === 2) {
+    matches.push({
+      num: nextNum,
+      isPlayoff: true,
+      isFinal: true,
+      name: '🏆 Grand Final',
+      team1Key: standings[0].key,
+      team2Key: standings[1].key,
+      state: 'PENDING',
+      winner: null,
+      resultText: ''
+    });
+  } else if (q === 3) {
+    matches.push({
+      num: nextNum,
+      isPlayoff: true,
+      isQualifier: true,
+      name: '🏏 Qualifier (2nd vs 3rd)',
+      team1Key: standings[1].key,
+      team2Key: standings[2].key,
+      state: 'PENDING',
+      winner: null,
+      resultText: ''
+    });
+    matches.push({
+      num: nextNum + 1,
+      isPlayoff: true,
+      isFinal: true,
+      name: '🏆 Grand Final',
+      team1Key: standings[0].key,
+      team2Key: null, // Winner of Qualifier
+      state: 'PENDING',
+      winner: null,
+      resultText: ''
+    });
+  } else if (q === 4) {
+    matches.push({
+      num: nextNum,
+      isPlayoff: true,
+      isSemi: true,
+      name: '🏏 Semi-Final 1 (1st vs 4th)',
+      team1Key: standings[0].key,
+      team2Key: standings[3].key,
+      state: 'PENDING',
+      winner: null,
+      resultText: ''
+    });
+    matches.push({
+      num: nextNum + 1,
+      isPlayoff: true,
+      isSemi: true,
+      name: '🏏 Semi-Final 2 (2nd vs 3rd)',
+      team1Key: standings[1].key,
+      team2Key: standings[2].key,
+      state: 'PENDING',
+      winner: null,
+      resultText: ''
+    });
+    matches.push({
+      num: nextNum + 2,
+      isPlayoff: true,
+      isFinal: true,
+      name: '🏆 Grand Final',
+      team1Key: null, // Winner SF1
+      team2Key: null, // Winner SF2
+      state: 'PENDING',
+      winner: null,
+      resultText: ''
+    });
+  }
+  
+  tri.matches = matches;
+}
+
+function startMatch(chatId, matchNum, hostUser, targetChatId = null) {
+  const tri = getTriSeries(chatId);
+  if (!tri) return { success: false, error: 'Tournament not found.' };
 
   const matchIdx = tri.matches.findIndex(m => m.num === parseInt(matchNum));
   if (matchIdx === -1) return { success: false, error: `Invalid Match Number: ${matchNum}` };
 
   const match = tri.matches[matchIdx];
   if (match.state === 'COMPLETED') return { success: false, error: `Match ${matchNum} has already been played!` };
+  if (match.state === 'PLAYING') return { success: false, error: `Match ${matchNum} is currently playing!` };
 
-  // If this is the Final, resolve who team1Key and team2Key are if not set
-  if (match.isFinal) {
+  // Resolve teams for playoffs if not fully set
+  if (match.isPlayoff) {
+    const q = tri.config.q;
     const standings = getStandingsSorted(tri);
-    match.team1Key = standings[0].key;
-    match.team2Key = standings[1].key;
+    if (match.isFinal) {
+      if (q === 2) {
+        match.team1Key = standings[0].key;
+        match.team2Key = standings[1].key;
+      }
+      // For q=3 and q=4, team1Key and team2Key are resolved sequentially as semis/qualifiers finish.
+    }
   }
 
   const team1 = tri[match.team1Key];
@@ -255,15 +526,23 @@ function startMatch(chatId, matchNum, hostUser) {
   if (!team1.captainId) team1.captainId = team1.players[0].id;
   if (!team2.captainId) team2.captainId = team2.players[0].id;
 
-  // Initialize a standard tour match
-  const matchName = match.isFinal ? '🏆 Tri-Series Grand Final' : `Tri-Series Match ${match.num}`;
-  const tourRes = tourManager.createTour(chatId, hostUser, matchName);
+  const matchName = match.name || `Match ${match.num}`;
+  
+  // Create tour in targetChatId (if simultaneous play) or local chatId
+  const playChatId = targetChatId || chatId;
+
+  // Clean up any stale tours in playChatId
+  const activeT = [...tourManager.getAllTours()].find(t => t.chatId && t.chatId.toString() === playChatId.toString());
+  if (activeT) {
+    tourManager.deleteTour(activeT.id);
+  }
+
+  const tourRes = tourManager.createTour(playChatId, hostUser, matchName);
   if (!tourRes.success) return { success: false, error: tourRes.error };
 
   const tour = tourRes.tour;
-  if (!tour || !tour.config) return { success: false, error: 'Failed to initialize match. Please try again.' };
+  if (!tour || !tour.config) return { success: false, error: 'Failed to initialize match.' };
   
-  // Set match configs
   tour.config.overs = tri.config.overs;
   tour.config.wickets = tri.config.wickets;
 
@@ -282,24 +561,24 @@ function startMatch(chatId, matchNum, hostUser) {
   tour.teamB.triTeamKey = match.team2Key;
   team2.players.forEach(p => tourManager.joinTeam(tour.id, { id: p.id, first_name: p.first_name, username: p.username || '' }, 'teamB'));
 
-  // Link to TriSeries
+  // Link to Tournament
   tour.triSeriesId = tri.id;
   tour.triMatchNum = match.num;
 
-  // Update TriSeries state
+  // Update match state
+  match.state = 'PLAYING';
   tri.state = 'PLAYING';
-  tri.currentMatchNum = match.num;
-  tri.activeTourId = tour.id;
 
+  saveState();
   return { success: true, tour, team1Name: team1.name, team2Name: team2.name };
 }
 
 function getStandingsSorted(tri) {
-  const teamKeys = ['teamA', 'teamB', 'teamC'];
+  const teamKeys = getTeamKeys(tri);
   
   const calculateNRR = (key) => {
     const data = tri.pointsTable[key];
-    if (data.played === 0) return 0;
+    if (!data || data.played === 0) return 0;
     const runsScored = data.runsScored || 0;
     const ballsFaced = data.ballsFaced || 0;
     const runsConceded = data.runsConceded || 0;
@@ -313,7 +592,7 @@ function getStandingsSorted(tri) {
   const list = teamKeys.map(key => ({
     key,
     name: tri[key].name,
-    pts: tri.pointsTable[key].points,
+    pts: tri.pointsTable[key]?.points || 0,
     nrr: calculateNRR(key)
   }));
 
@@ -335,7 +614,6 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
   const match = tri.matches[matchIdx];
 
   // 1. Gather stats from match
-  // Identify the winner of the tour match
   let winnerKey = ''; // 'team1' or 'team2' or 'tie'
   let resultText = '';
 
@@ -346,34 +624,25 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
   const team1Key = match.team1Key;
   const team2Key = match.team2Key;
 
-  // Let's identify the maps to correct keys
   const getTriKey = (tourTeamName) => {
     if (team1Key && tri[team1Key] && tourTeamName === tri[team1Key].name) return team1Key;
     if (team2Key && tri[team2Key] && tourTeamName === tri[team2Key].name) return team2Key;
     return null;
   };
 
-  // Resolve tri-team keys: priority = triTeamKey property > name match > direct match schedule key
   let keyA = tour.teamA.triTeamKey || getTriKey(tour.teamA.name);
   let keyB = tour.teamB.triTeamKey || getTriKey(tour.teamB.name);
   
-  // Final fallback: match schedule directly assigns team1Key→teamA and team2Key→teamB in startMatch
   if (!keyA && team1Key) keyA = team1Key;
   if (!keyB && team2Key) keyB = team2Key;
-  
-  if (!keyA || !keyB) {
-    console.warn(`[recordMatchEnd] Could not resolve tri team keys for match ${matchNum}. keyA=${keyA}, keyB=${keyB}`);
-  }
 
   if (winnerKeyOverride) {
     winnerKey = winnerKeyOverride;
     resultText = `Won by forfeit / Free Win`;
   } else {
     const firstBat = tour.firstBattingTeamId || 'teamA';
-    const secondBat = firstBat === 'teamA' ? 'teamB' : 'teamA';
     
     if (tour.mainMatchTeamA) {
-      // It was a super over win
       if (scoreA > scoreB) winnerKey = keyA;
       else if (scoreB > scoreA) winnerKey = keyB;
       else winnerKey = 'tie';
@@ -411,19 +680,18 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
     }
   }
 
-  // 2. Accumulate NRR data if not forfeit (also update for ties)
+  // 2. Accumulate NRR data if not forfeit
   if (!winnerKeyOverride) {
-    // Team A bat stats
     const tARuns = scoreA;
-    // Standard NRR rule: if bowled out, count full quota of balls
     const tABallsFaced = (tour.teamA.wickets >= tour.config.wickets) ? (tour.config.overs * 6) : (tour.innings1Balls || (tour.innings === 1 ? tour.balls : tour.config.overs * 6));
     
-    // Team B bat stats
     const tBRuns = scoreB;
     const tBBallsFaced = (tour.teamB.wickets >= tour.config.wickets) ? (tour.config.overs * 6) : (tour.innings2Balls || (tour.innings === 2 ? tour.balls : tour.config.overs * 6));
 
     if (keyA && keyB) {
-      // Update NRR Standings
+      if (!tri.pointsTable[keyA]) tri.pointsTable[keyA] = { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 };
+      if (!tri.pointsTable[keyB]) tri.pointsTable[keyB] = { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 };
+
       tri.pointsTable[keyA].runsScored += tARuns;
       tri.pointsTable[keyA].ballsFaced += tABallsFaced;
       tri.pointsTable[keyA].runsConceded += tBRuns;
@@ -438,6 +706,9 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
 
   // Update Played, Won, Lost, Points
   if (keyA && keyB) {
+    if (!tri.pointsTable[keyA]) tri.pointsTable[keyA] = { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 };
+    if (!tri.pointsTable[keyB]) tri.pointsTable[keyB] = { played: 0, won: 0, lost: 0, points: 0, runsScored: 0, ballsFaced: 0, runsConceded: 0, ballsBowled: 0 };
+
     tri.pointsTable[keyA].played += 1;
     tri.pointsTable[keyB].played += 1;
 
@@ -456,7 +727,7 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
     }
   }
 
-  // 3. Accumulate Player Career Stats for Series Awards
+  // 3. Accumulate Player Career Stats
   const updatePlayerStats = (tourTeam) => {
     tourTeam.players.forEach(p => {
       const baseId = tourManager.getBasePlayerId(p.id);
@@ -483,19 +754,16 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
       stats.ballsBowled += p.ballsBowled || 0;
       stats.runsConceded += p.runsConceded || 0;
 
-      // Calculate Player of the Match style points for this player in this match
       let matchPts = 0;
       const runs = p.runs || 0;
       matchPts += runs;
       matchPts += (p.fours || 0) * 1;
       matchPts += (p.sixes || 0) * 2;
       
-      // Batting Milestones (non-stacking)
       if (runs >= 100) matchPts += 16;
       else if (runs >= 50) matchPts += 8;
       else if (runs >= 30) matchPts += 4;
       
-      // Strike Rate (for min 3 balls faced)
       const ballsFaced = p.balls || 0;
       if (ballsFaced >= 3) {
           const sr = (runs / ballsFaced) * 100;
@@ -507,18 +775,14 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
           else if (sr < 50) matchPts -= 6;
       }
       
-      // Wickets
       const wickets = p.wickets || 0;
       matchPts += wickets * 25;
       
-      // Wicket Hauls (non-stacking)
       if (wickets >= 5) matchPts += 16;
       else if (wickets >= 3) matchPts += 8;
       
-      // Dot Balls
       matchPts += (p.dotBalls || 0) * 1;
       
-      // Economy Rate (for min 3 balls bowled)
       const ballsBowled = p.ballsBowled || 0;
       const runsConceded = p.runsConceded || 0;
       if (ballsBowled >= 3) {
@@ -550,43 +814,61 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
   match.winner = winnerKey;
   match.resultText = resultText;
 
-  // 5. Clean up active match states
-  tri.state = 'SCHEDULED';
-  tri.currentMatchNum = null;
-  tri.activeTourId = null;
-
-  // If this was the Final, finish the entire Tri-Series
-  if (match.isFinal) {
-    tri.state = 'FINISHED';
+  // 5. Check Progression
+  if (match.isPlayoff) {
+    const q = tri.config.q;
+    if (match.isFinal) {
+      tri.state = 'FINISHED';
+    } else {
+      if (q === 3 && match.isQualifier) {
+        const finalMatch = tri.matches.find(m => m.isFinal);
+        if (finalMatch) {
+          finalMatch.team2Key = winnerKey;
+        }
+      } else if (q === 4 && match.isSemi) {
+        const sfMatches = tri.matches.filter(m => m.isSemi);
+        const allSfDone = sfMatches.every(m => m.state === 'COMPLETED');
+        if (allSfDone) {
+          const finalMatch = tri.matches.find(m => m.isFinal);
+          if (finalMatch) {
+            // Find which matches they correspond to
+            finalMatch.team1Key = sfMatches[0].winner;
+            finalMatch.team2Key = sfMatches[1].winner;
+          }
+        }
+      }
+    }
   } else {
-    // If all group matches are done, prepare the Final match details
-    const groupMatchesDone = tri.matches.filter(m => !m.isFinal).every(m => m.state === 'COMPLETED');
+    // Check if all group stage matches are completed
+    const groupMatchesDone = tri.matches.filter(m => !m.isPlayoff).every(m => m.state === 'COMPLETED');
     if (groupMatchesDone) {
-      const finalMatch = tri.matches.find(m => m.isFinal);
-      const standings = getStandingsSorted(tri);
-      finalMatch.team1Key = standings[0].key;
-      finalMatch.team2Key = standings[1].key;
+      preparePlayoffs(tri);
     }
   }
 
+  saveState();
   return { match, tri };
 }
 
 function giveFreeWin(chatId, winnerKeyOverride) {
   const tri = getTriSeries(chatId);
-  if (!tri) return { success: false, error: 'Tri-Series not found.' };
-  if (tri.state !== 'PLAYING') return { success: false, error: 'No active match is currently playing!' };
-
-  const tour = tourManager.getTour(tri.activeTourId);
-  if (!tour) return { success: false, error: 'Active match state not found.' };
+  if (!tri) return { success: false, error: 'Tournament not found.' };
 
   const matchNum = tri.currentMatchNum;
-  const res = recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride);
+  if (!matchNum) return { success: false, error: 'No active match index found.' };
+
+  const match = tri.matches.find(m => m.num === matchNum);
+  if (!match || match.state !== 'PLAYING') return { success: false, error: 'Specified match is not active.' };
+
+  // If there's an active tour running, delete it
+  const activeT = [...tourManager.getAllTours()].find(t => t.triSeriesId === tri.id && t.triMatchNum === matchNum);
+  const res = recordMatchEnd(chatId, matchNum, activeT || { teamA: { name: tri[match.team1Key].name }, teamB: { name: tri[match.team2Key].name } }, winnerKeyOverride);
   
-  if (tour.id) {
-    tourManager.deleteTour(tour.id);
+  if (activeT) {
+    tourManager.deleteTour(activeT.id);
   }
 
+  saveState();
   return { success: true, res };
 }
 
@@ -604,7 +886,6 @@ function calculateAwards(tri) {
 
   if (players.length === 0) return null;
 
-  // Sort for individual stats
   const mostRuns = [...players].sort((a, b) => b.runs - a.runs)[0];
   const mostWickets = [...players].sort((a, b) => b.wickets - a.wickets)[0];
   const pots = [...players].sort((a, b) => b.potsPoints - a.potsPoints)[0];
@@ -623,7 +904,7 @@ function addPlayerToRosterForce(chatId, user, teamKey) {
   if (team.players.some(p => p.id.toString() === userIdStr)) return true; // already in team
   
   // Remove from any other team first
-  ['teamA', 'teamB', 'teamC'].forEach(key => {
+  getTeamKeys(tri).forEach(key => {
     const t = tri[key];
     const idx = t.players.findIndex(p => p.id.toString() === userIdStr);
     if (idx !== -1) {
@@ -644,6 +925,7 @@ function addPlayerToRosterForce(chatId, user, teamKey) {
   if (!team.captainId) {
     team.captainId = user.id;
   }
+  saveState();
   return true;
 }
 
@@ -652,7 +934,7 @@ function removePlayerFromRosterForce(chatId, playerId) {
   if (!tri) return false;
   
   let removed = false;
-  ['teamA', 'teamB', 'teamC'].forEach(key => {
+  getTeamKeys(tri).forEach(key => {
     const team = tri[key];
     const idx = team.players.findIndex(p => p.id.toString() === playerId.toString());
     if (idx !== -1) {
@@ -664,6 +946,7 @@ function removePlayerFromRosterForce(chatId, playerId) {
       removed = true;
     }
   });
+  saveState();
   return removed;
 }
 
@@ -671,10 +954,14 @@ function getAllTriSeries() {
   return Array.from(triSeriesMap.values());
 }
 
+// Load state immediately on startup
+loadState();
+
 module.exports = {
   createTriSeries, getTriSeries, getUserTriSeries, deleteTriSeries,
   joinTeam, appointCaptain, renameTeam, removePlayer,
   setOvers, setWickets, startMatch, recordMatchEnd, giveFreeWin,
   calculateAwards, getStandingsSorted, getAllTriSeries,
-  addPlayerToRosterForce, removePlayerFromRosterForce
+  addPlayerToRosterForce, removePlayerFromRosterForce,
+  createTeam, removeTeam, setQ, getTeamKeys, startTournament
 };
