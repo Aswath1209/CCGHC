@@ -238,9 +238,20 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       }
   }
 
-  // --- Tri-Series Helper Functions ---
   const triManager = require('./triManager');
   const { generatePointsTableImage } = require('./pointsTableGenerator');
+
+  function resolveActiveTriAndTour(ctx) {
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      let tri = null;
+      if (tour && tour.triSeriesId) {
+          tri = triManager.getTriSeries(tour.triSeriesId);
+      }
+      if (!tri) {
+          tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      }
+      return { tri, tour };
+  }
 
   function checkActiveGame(chatId) {
       const activeTour = [...tourManager.getAllTours()].find(t => t.chatId === chatId);
@@ -696,13 +707,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command(['status', 'tristatus'], async (ctx) => {
-    const tri = triManager.getTriSeries(ctx.chat.id);
-    if (!tri) return ctx.reply("⚠️ No active tournament found in this group.");
+    const { tri } = resolveActiveTriAndTour(ctx);
+    if (!tri) return ctx.reply("⚠️ No active tournament found.");
     await sendTriStatusUpdate(ctx, ctx.chat.id, tri);
   });
 
   bot.command(['stats', 'tristats', 'leaders', 'trileaders'], async (ctx) => {
-    const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+    const { tri } = resolveActiveTriAndTour(ctx);
     if (!tri) return ctx.reply("⚠️ No active tournament found.");
 
     const players = Object.entries(tri.stats).map(([id, s]) => ({
@@ -804,7 +815,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('set_overs', async (ctx) => {
-      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      const { tri } = resolveActiveTriAndTour(ctx);
       if (tri) {
           const teamKeys = triManager.getTeamKeys(tri);
           const isCap = teamKeys.some(key => tri[key].captainId === ctx.from.id);
@@ -849,7 +860,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('set_wickets', async (ctx) => {
-      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      const { tri } = resolveActiveTriAndTour(ctx);
       if (tri) {
           const teamKeys = triManager.getTeamKeys(tri);
           const isCap = teamKeys.some(key => tri[key].captainId === ctx.from.id);
@@ -931,7 +942,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const txt = ctx.message.text.split(' ').slice(1).join(' ');
       if (!txt) return ctx.reply("Usage: /teamname [New Team Name]");
       
-      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      const { tri } = resolveActiveTriAndTour(ctx);
       if (tri) {
           let teamKey = null;
           const teamKeys = triManager.getTeamKeys(tri);
@@ -973,7 +984,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command(['appointa_captain', 'appointb_captain', 'appointc_captain', 'captain'], async (ctx) => {
-      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      const { tri } = resolveActiveTriAndTour(ctx);
       if (tri) {
           let targetUserId = null;
           let first_name = "";
@@ -1102,7 +1113,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           return ctx.reply("Usage: Reply to a player with /add[a-h] or /add [A-H]");
       }
       
-      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      const { tri, tour: activeTour } = resolveActiveTriAndTour(ctx);
       if (tri) {
           const targetTriKey = 'team' + targetChar;
           if (!tri[targetTriKey]) {
@@ -1135,7 +1146,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   return ctx.reply(`❌ ${res.error}`);
               }
           } else if (tri.state === 'PLAYING') {
-              const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id) || tourManager.getTour(tri.activeTourId);
+              const tour = activeTour || tourManager.getTour(tri.activeTourId);
               
               let tourTeamKey = null;
               if (tour) {
@@ -1200,7 +1211,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command(['remove_player', 'remove'], async (ctx) => {
-      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      const { tri, tour: activeTour } = resolveActiveTriAndTour(ctx);
       if (tri) {
           const isHost = tri.hostId === ctx.from.id;
           let targetUserId = null;
@@ -1256,7 +1267,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
                   return ctx.reply("❌ Failed to remove player.");
               }
           } else if (tri.state === 'PLAYING') {
-              const tour = [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id) || tourManager.getTour(tri.activeTourId);
+              const tour = activeTour || tourManager.getTour(tri.activeTourId);
               
               let teamKey = null;
               if (tour) {
@@ -1459,34 +1470,74 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('rebat', async (ctx) => {
-      const tour = tourManager.getUserTour(ctx.from.id);
-      if (!tour) return ctx.reply("You are not in an active Tour match.");
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
+      
+      let tri = null;
+      if (tour && tour.triSeriesId) {
+          tri = triManager.getTriSeries(tour.triSeriesId);
+      }
+      if (!tri) {
+          tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      }
       
       const args = ctx.message.text.split(' ');
       const teamArg = args[1];
       const index = parseInt(args[2]);
       
       if (!teamArg || isNaN(index)) {
-          const nameA = tour.teamA.name;
-          const nameB = tour.teamB.name;
-          return ctx.reply(`Usage: /rebat [team] [playerIndex]\n\nTeams: <b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>\nExample: <code>/rebat ${escapeHtml(nameA)} 1</code>`, { parse_mode: 'HTML' });
+          if (tri) {
+              const teamKeys = triManager.getTeamKeys(tri);
+              const teamsList = teamKeys.map(k => `<b>${k.replace('team', '')}</b> (${escapeHtml(tri[k].name)})`).join(', ');
+              return ctx.reply(`Usage: /rebat [teamLetter] [playerIndex]\n\nTeams: ${teamsList}\nExample: <code>/rebat B 1</code>`, { parse_mode: 'HTML' });
+          } else {
+              if (!tour) return ctx.reply("You are not in an active Tour match.");
+              const nameA = tour.teamA.name;
+              const nameB = tour.teamB.name;
+              return ctx.reply(`Usage: /rebat [team] [playerIndex]\n\nTeams: <b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>\nExample: <code>/rebat A 1</code>`, { parse_mode: 'HTML' });
+          }
       }
       
       const teamArgUp = teamArg.toUpperCase();
       let teamKey = null;
       let teamChar = null;
+      let triTeamKey = null;
       
-      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
-      
-      if (tri && (tri.activeTourId === tour.id || [...tourManager.getAllTours()].some(t => t.triSeriesId === tri.id && t.id === tour.id))) {
-          // In tournament, use explicit A-H labels
-          const targetTriKey = 'team' + teamArgUp;
+      if (tri) {
           if (['A','B','C','D','E','F','G','H'].includes(teamArgUp)) {
-              if (tour.teamA.triTeamKey === targetTriKey) { teamKey = 'teamA'; teamChar = 'A'; }
-              else if (tour.teamB.triTeamKey === targetTriKey) { teamKey = 'teamB'; teamChar = 'B'; }
+              triTeamKey = 'team' + teamArgUp;
+              if (!tri[triTeamKey]) {
+                  return ctx.reply(`❌ Team ${teamArgUp} does not exist in this tournament.`);
+              }
+              if (tour) {
+                  if (tour.teamA.triTeamKey === triTeamKey) {
+                      teamKey = 'teamA';
+                      teamChar = 'A';
+                  } else if (tour.teamB.triTeamKey === triTeamKey) {
+                      teamKey = 'teamB';
+                      teamChar = 'B';
+                  }
+              }
+          } else {
+              const argLower = teamArg.toLowerCase();
+              const teamKeys = triManager.getTeamKeys(tri);
+              for (const k of teamKeys) {
+                  if (tri[k].name.toLowerCase().includes(argLower)) {
+                      triTeamKey = k;
+                      if (tour) {
+                          if (tour.teamA.triTeamKey === triTeamKey) {
+                              teamKey = 'teamA';
+                              teamChar = 'A';
+                          } else if (tour.teamB.triTeamKey === triTeamKey) {
+                              teamKey = 'teamB';
+                              teamChar = 'B';
+                          }
+                      }
+                      break;
+                  }
+              }
           }
       } else {
-          // Standard logic
+          if (!tour) return ctx.reply("You are not in an active Tour match.");
           if (teamArgUp === 'A') {
               teamKey = 'teamA'; teamChar = 'A';
           } else if (teamArgUp === 'B') {
@@ -1500,41 +1551,87 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               }
           }
       }
-      
-      if (!teamKey) {
-          const nameA = tour.teamA.name;
-          const nameB = tour.teamB.name;
-          return ctx.reply(`❌ Team not found in current match. Use:\n<b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>`, { parse_mode: 'HTML' });
-      }
-      
-      const team = tour[teamKey];
-      
-      if (ctx.from.id !== tour.hostId && ctx.from.id !== team.captainId) {
-          return ctx.reply("Only the host or team captain can allow a rebat.");
-      }
-      
-      const res = tourManager.rebatPlayer(tour.id, tour.hostId, teamChar, index);
-      if (res) {
-          if (tri && tri.activeTourId === tour.id) {
-              const triTeamKey = teamKey === 'teamA' ? tour.teamA.triTeamKey : tour.teamB.triTeamKey;
-              if (triTeamKey) {
-                  triManager.addPlayerToRosterForce(tri.chatId, { id: res.id, first_name: res.first_name, username: '' }, triTeamKey);
-              }
+      if (tri) {
+          if (!triTeamKey) {
+              return ctx.reply("❌ Team not found in the tournament.");
           }
-          const cleanName = res.first_name.replace(/\s*\(rebat\)/gi, '');
-          await ctx.reply(`🔄 <b>${escapeHtml(cleanName)} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
-          if (tour.state === 'LOBBY') {
-              await ctx.reply(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
-          } else {
-              await ctx.reply(renderScoreboard(tour), { parse_mode: 'HTML' });
-              if (tour.state === 'PLAYING') {
-                  await tagActivePlayers(ctx, tour);
-              } else if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
-                  await promptPlayerSelection(ctx, tour);
+          
+          const team = tri[triTeamKey];
+          if (ctx.from.id !== tri.hostId && ctx.from.id !== team.captainId) {
+              return ctx.reply("Only the host or team captain can allow a rebat.");
+          }
+          
+          const player = team.players[index - 1];
+          if (!player) {
+              return ctx.reply("❌ Player index not found in team roster.");
+          }
+          
+          const rebatObj = {
+              id: player.id + '_rebat_' + Date.now(),
+              originalId: player.originalId || player.id,
+              first_name: player.first_name.replace(/\s*\(rebat\)/gi, '') + " (rebat)",
+              runs: 0,
+              balls: 0,
+              wickets: 0,
+              runsConceded: 0,
+              ballsBowled: 0,
+              fours: 0,
+              sixes: 0,
+              dotBalls: 0
+          };
+          
+          team.players.push(rebatObj);
+          triManager.saveState();
+          
+          if (tour && teamKey) {
+              tour[teamKey].players.push(rebatObj);
+              
+              const cleanName = rebatObj.first_name.replace(/\s*\(rebat\)/gi, '');
+              await ctx.reply(`🔄 <b>${escapeHtml(cleanName)} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
+              
+              if (tour.state === 'LOBBY') {
+                  await ctx.reply(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
+              } else {
+                  await ctx.reply(renderScoreboard(tour), { parse_mode: 'HTML' });
+                  if (tour.state === 'PLAYING') {
+                      await tagActivePlayers(ctx, tour);
+                  } else if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
+                      await promptPlayerSelection(ctx, tour);
+                  }
               }
+          } else {
+              const cleanName = rebatObj.first_name.replace(/\s*\(rebat\)/gi, '');
+              await ctx.reply(`🔄 <b>${escapeHtml(cleanName)} (rebat)</b> has been registered in the <b>${escapeHtml(team.name)}</b> tournament roster (Not playing in current match)!`, { parse_mode: 'HTML' });
           }
       } else {
-          await ctx.reply("❌ Failed to register rebat. Make sure player index is correct.");
+          if (!teamKey) {
+              const nameA = tour.teamA.name;
+              const nameB = tour.teamB.name;
+              return ctx.reply(`❌ Team not found in current match. Use:\n<b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>`, { parse_mode: 'HTML' });
+          }
+          
+          const team = tour[teamKey];
+          if (ctx.from.id !== tour.hostId && ctx.from.id !== team.captainId) {
+              return ctx.reply("Only the host or team captain can allow a rebat.");
+          }
+          
+          const res = tourManager.rebatPlayer(tour.id, tour.hostId, teamChar, index);
+          if (res) {
+              const cleanName = res.first_name.replace(/\s*\(rebat\)/gi, '');
+              await ctx.reply(`🔄 <b>${escapeHtml(cleanName)} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
+              if (tour.state === 'LOBBY') {
+                  await ctx.reply(renderLobby(tour), { reply_markup: getLobbyKeyboard(tour), parse_mode: 'HTML' });
+              } else {
+                  await ctx.reply(renderScoreboard(tour), { parse_mode: 'HTML' });
+                  if (tour.state === 'PLAYING') {
+                      await tagActivePlayers(ctx, tour);
+                  } else if (tour.state === 'SELECT_BATTERS' || tour.state === 'WICKET_FALL' || tour.state === 'SELECT_BOWLER') {
+                      await promptPlayerSelection(ctx, tour);
+                  }
+              }
+          } else {
+              await ctx.reply("❌ Failed to register rebat. Make sure player index is correct.");
+          }
       }
   });
 
