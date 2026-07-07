@@ -772,7 +772,11 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('tour', async (ctx) => {
-    if (ctx.chat.type === 'private') return ctx.reply("Tour matches can only be started in groups.");
+    return ctx.reply("⚠️ Please use <code>/team</code> to start a custom team match.", { parse_mode: 'HTML' });
+  });
+
+  bot.command('team', async (ctx) => {
+    if (ctx.chat.type === 'private') return ctx.reply("Team matches can only be started in groups.");
     const activeGameType = checkActiveGame(ctx.chat.id);
     if (activeGameType) {
         return ctx.reply(`⚠️ There is already an active <b>${activeGameType}</b> in this group. Please end/cancel it first before starting a new game.`, { parse_mode: 'HTML' });
