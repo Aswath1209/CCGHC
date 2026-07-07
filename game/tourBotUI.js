@@ -472,10 +472,25 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           // 3. Send the tri series individual awards message
           const awards = triManager.calculateAwards(tri);
           if (awards) {
-              let awardMsg = `✨ <b>🏆 TRI-SERIES INDIVIDUAL AWARDS 🏆</b> ✨\n\n` +
+              let awardMsg = `✨ <b>🏆 TOURNAMENT INDIVIDUAL AWARDS 🏆</b> ✨\n\n` +
                              `🥇 <b>Player of the Series (POTS):</b> ${escapeHtml(awards.pots.name)} (${Number(awards.pots.potsPoints.toFixed(2))} pts)\n` +
                              `🏃‍♂️ <b>Most Runs (Orange Cap):</b> ${escapeHtml(awards.mostRuns.name)} (${awards.mostRuns.runs} runs)\n` +
-                       // 4. Delete the Tri-Series
+                             `🥎 <b>Most Wickets (Purple Cap):</b> ${escapeHtml(awards.mostWickets.name)} (${awards.mostWickets.wickets} wickets)\n\n` +
+                             `Congratulations to all the award winners and the champion team! 🥳🎉`;
+              await ctx.api.sendMessage(tri.chatId, awardMsg, { parse_mode: 'HTML' });
+
+              const potsUserId = parseInt(awards.pots.id);
+              if (!isNaN(potsUserId)) {
+                  try {
+                      const careerStatsHelper = require('../db/careerStats');
+                      await careerStatsHelper.incrementStats(potsUserId, { pots: 1 });
+                  } catch (err) {
+                      console.error("Failed to increment POTS stats:", err);
+                  }
+              }
+          }
+          
+          // 4. Delete the Tri-Series
           triManager.deleteTriSeries(tri.chatId);
       } else {
           // Non-final match: send the points table and next-match announcement
