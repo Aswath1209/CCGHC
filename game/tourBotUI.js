@@ -974,7 +974,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           return;
       }
       
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const res = tourManager.renameTeam(tour.id, ctx.from.id, txt);
@@ -1050,7 +1050,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           }
       }
 
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       let targetUserId = null;
@@ -1179,7 +1179,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           return ctx.reply("❌ That team is only available in tournament mode.");
       }
 
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const isHost = tour.hostId === ctx.from.id;
@@ -1318,7 +1318,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           }
       }
 
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       let targetUserId = null;
@@ -1361,7 +1361,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('batting', async (ctx) => {
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const batT = tour[tour.battingTeamId];
@@ -1403,7 +1403,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('bowling', async (ctx) => {
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const bowlT = tour[tour.bowlingTeamId];
@@ -1443,7 +1443,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command(['lms', 'mls'], async (ctx) => {
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       
       const res = tourManager.triggerLMS(tour.id, ctx.from.id);
@@ -1755,7 +1755,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('penalty', async (ctx) => {
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can issue penalties.");
       
@@ -1771,7 +1771,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
   });
 
   bot.command('bonus', async (ctx) => {
-      const tour = tourManager.getUserTour(ctx.from.id);
+      const tour = tourManager.getUserTour(ctx.from.id) || [...tourManager.getAllTours()].find(t => t.chatId === ctx.chat.id);
       if (!tour) return ctx.reply("You are not in an active Tour match.");
       if (tour.hostId !== ctx.from.id) return ctx.reply("Only the host can award bonuses.");
       
