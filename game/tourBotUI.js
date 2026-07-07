@@ -660,6 +660,13 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           }
           
           triManager.setOvers(tri.chatId, overs);
+          if (tri.state === 'PLAYING' && tri.activeTourId) {
+              const tour = tourManager.getTour(tri.activeTourId);
+              if (tour) {
+                  tour.config.overs = overs;
+                  tour.maxBalls = overs * 6;
+              }
+          }
           await ctx.reply(`⚙️ <b>Overs updated to:</b> <code>${overs}</code> overs for Tri-Series.`, { parse_mode: 'HTML' });
           await updateLobbyMessage(ctx, tri);
           return;
@@ -696,6 +703,14 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
           }
           
           triManager.setWickets(tri.chatId, wickets);
+          if (tri.state === 'PLAYING' && tri.activeTourId) {
+              const tour = tourManager.getTour(tri.activeTourId);
+              if (tour) {
+                  tour.config.wickets = wickets;
+                  tour.teamA.inningsRemainingWickets = wickets;
+                  tour.teamB.inningsRemainingWickets = wickets;
+              }
+          }
           await ctx.reply(`⚙️ <b>Wickets updated to:</b> <code>${wickets}</code> wickets for Tri-Series.`, { parse_mode: 'HTML' });
           await updateLobbyMessage(ctx, tri);
           return;
@@ -939,14 +954,15 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               const tour = tourManager.getTour(tri.activeTourId);
               if (!tour) return ctx.reply("Active match not found.");
 
-              // Map targetChar (A, B, C) to tour teamKey (teamA or teamB) based on team name
-              const targetTeamName = tri['team' + targetChar].name;
+              const targetTriKey = 'team' + targetChar;
               let tourTeamKey = null;
-              if (tour.teamA.name === targetTeamName) tourTeamKey = 'teamA';
-              else if (tour.teamB.name === targetTeamName) tourTeamKey = 'teamB';
+              if (tour.teamA.triTeamKey === targetTriKey) tourTeamKey = 'teamA';
+              else if (tour.teamB.triTeamKey === targetTriKey) tourTeamKey = 'teamB';
 
               if (!tourTeamKey) {
-                  return ctx.reply(`❌ That team (${targetTeamName}) is not playing in the current active match!`);
+                  triManager.addPlayerToRosterForce(tri.chatId, { id: targetUser.id, first_name: targetUser.first_name, username: targetUser.username || '' }, targetTriKey);
+                  await ctx.reply(`✅ Added <b>${escapeHtml(targetUser.first_name)}</b> to <b>${escapeHtml(tri[targetTriKey].name)}</b> roster (Not playing in current match)!`, { parse_mode: 'HTML' });
+                  return;
               }
 
               const res = tourManager.joinTeam(tour.id, { id: targetUser.id, first_name: targetUser.first_name }, tourTeamKey);
@@ -1060,7 +1076,21 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               if (tour.teamA.players.some(p => p.id === targetUserId)) teamKey = 'teamA';
               else if (tour.teamB.players.some(p => p.id === targetUserId)) teamKey = 'teamB';
 
-              if (!teamKey) return ctx.reply("Player not found in the current match.");
+              if (!teamKey) {
+                  let triTeamKey = null;
+                  if (tri.teamA.players.some(p => p.id === targetUserId)) triTeamKey = 'teamA';
+                  else if (tri.teamB.players.some(p => p.id === targetUserId)) triTeamKey = 'teamB';
+                  else if (tri.teamC.players.some(p => p.id === targetUserId)) triTeamKey = 'teamC';
+                  
+                  if (triTeamKey) {
+                      const isCaptain = tri[triTeamKey].captainId === ctx.from.id;
+                      if (!isHost && !isCaptain) return ctx.reply("❌ Only the host or the team captain can remove players.");
+                      
+                      triManager.removePlayerFromRosterForce(tri.chatId, targetUserId);
+                      return ctx.reply(`🚪 <b>${escapeHtml(first_name)}</b> was removed from <b>${escapeHtml(tri[triTeamKey].name)}</b> roster (Not playing in current match).`, { parse_mode: 'HTML' });
+                  }
+                  return ctx.reply("Player not found in the current match or roster.");
+              }
 
               const isCaptain = tour[teamKey].captainId === ctx.from.id;
               if (!isHost && !isCaptain) return ctx.reply("❌ Only the host or the team captain can remove players.");
@@ -1069,7 +1099,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
               if (res.success) {
                   // ALSO remove from the Tri-Series team roster!
                   const triTeamKey = teamKey === 'teamA' ? tour.teamA.triTeamKey : tour.teamB.triTeamKey;
-                  if (triTeamKey && !targetUserId.toString().includes('_rebat_')) {
+                  if (triTeamKey) {
                       triManager.removePlayerFromRosterForce(tri.chatId, targetUserId);
                   }
                   await ctx.reply(`🚪 <b>${escapeHtml(first_name)}</b> was removed from the match.`, { parse_mode: 'HTML' });
@@ -1254,23 +1284,36 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       const teamArgUp = teamArg.toUpperCase();
       let teamKey = null;
       let teamChar = null;
-      if (teamArgUp === 'A') {
-          teamKey = 'teamA'; teamChar = 'A';
-      } else if (teamArgUp === 'B') {
-          teamKey = 'teamB'; teamChar = 'B';
+      
+      const tri = triManager.getTriSeries(ctx.chat.id) || triManager.getUserTriSeries(ctx.from.id);
+      
+      if (tri && tri.activeTourId === tour.id) {
+          // In Tri-Series, use explicit Tri-Series A/B/C labels
+          const targetTriKey = 'team' + teamArgUp;
+          if (teamArgUp === 'A' || teamArgUp === 'B' || teamArgUp === 'C') {
+              if (tour.teamA.triTeamKey === targetTriKey) { teamKey = 'teamA'; teamChar = 'A'; }
+              else if (tour.teamB.triTeamKey === targetTriKey) { teamKey = 'teamB'; teamChar = 'B'; }
+          }
       } else {
-          const argLower = teamArg.toLowerCase();
-          if (tour.teamA.name.toLowerCase().includes(argLower)) {
+          // Standard logic
+          if (teamArgUp === 'A') {
               teamKey = 'teamA'; teamChar = 'A';
-          } else if (tour.teamB.name.toLowerCase().includes(argLower)) {
+          } else if (teamArgUp === 'B') {
               teamKey = 'teamB'; teamChar = 'B';
+          } else {
+              const argLower = teamArg.toLowerCase();
+              if (tour.teamA.name.toLowerCase().includes(argLower)) {
+                  teamKey = 'teamA'; teamChar = 'A';
+              } else if (tour.teamB.name.toLowerCase().includes(argLower)) {
+                  teamKey = 'teamB'; teamChar = 'B';
+              }
           }
       }
       
       if (!teamKey) {
           const nameA = tour.teamA.name;
           const nameB = tour.teamB.name;
-          return ctx.reply(`❌ Team not found. Use:\n<b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>`, { parse_mode: 'HTML' });
+          return ctx.reply(`❌ Team not found in current match. Use:\n<b>${escapeHtml(nameA)}</b> or <b>${escapeHtml(nameB)}</b>`, { parse_mode: 'HTML' });
       }
       
       const team = tour[teamKey];
@@ -1281,6 +1324,12 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
       
       const res = tourManager.rebatPlayer(tour.id, tour.hostId, teamChar, index);
       if (res) {
+          if (tri && tri.activeTourId === tour.id) {
+              const triTeamKey = teamKey === 'teamA' ? tour.teamA.triTeamKey : tour.teamB.triTeamKey;
+              if (triTeamKey) {
+                  triManager.addPlayerToRosterForce(tri.chatId, { id: res.id, first_name: res.first_name, username: '' }, triTeamKey);
+              }
+          }
           const cleanName = res.first_name.replace(/\s*\(rebat\)/gi, '');
           await ctx.reply(`🔄 <b>${escapeHtml(cleanName)} (rebat)</b> has been registered!`, { parse_mode: 'HTML' });
           if (tour.state === 'LOBBY') {

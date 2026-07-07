@@ -369,17 +369,45 @@ function recordMatchEnd(chatId, matchNum, tour, winnerKeyOverride = null) {
     winnerKey = winnerKeyOverride;
     resultText = `Won by forfeit / Free Win`;
   } else {
-    if (scoreA > scoreB) {
-      winnerKey = keyA;
-      const margin = scoreA - scoreB;
-      resultText = `${tour.teamA.name} won by ${margin} runs`;
-    } else if (scoreB > scoreA) {
-      winnerKey = keyB;
-      const margin = tour.config.wickets - tour.teamB.wickets;
-      resultText = `${tour.teamB.name} won by ${margin} wickets`;
+    const firstBat = tour.firstBattingTeamId || 'teamA';
+    const secondBat = firstBat === 'teamA' ? 'teamB' : 'teamA';
+    
+    if (tour.mainMatchTeamA) {
+      // It was a super over win
+      if (scoreA > scoreB) winnerKey = keyA;
+      else if (scoreB > scoreA) winnerKey = keyB;
+      else winnerKey = 'tie';
+
+      if (winnerKey !== 'tie') {
+          const winnerName = winnerKey === keyA ? tour.teamA.name : tour.teamB.name;
+          const superOverRunsMargin = Math.abs(scoreA - scoreB);
+          resultText = `${winnerName} won the Super Over by ${superOverRunsMargin} run${superOverRunsMargin > 1 ? 's' : ''}`;
+      } else {
+          resultText = `Match tied in Super Over`;
+      }
     } else {
-      winnerKey = 'tie';
-      resultText = `Match tied`;
+      if (scoreA > scoreB) {
+        winnerKey = keyA;
+        if (firstBat === 'teamA') {
+          const margin = scoreA - scoreB;
+          resultText = `${tour.teamA.name} won by ${margin} runs`;
+        } else {
+          const margin = tour.config.wickets - tour.teamA.wickets;
+          resultText = `${tour.teamA.name} won by ${margin} wicket${margin !== 1 ? 's' : ''}`;
+        }
+      } else if (scoreB > scoreA) {
+        winnerKey = keyB;
+        if (firstBat === 'teamB') {
+          const margin = scoreB - scoreA;
+          resultText = `${tour.teamB.name} won by ${margin} runs`;
+        } else {
+          const margin = tour.config.wickets - tour.teamB.wickets;
+          resultText = `${tour.teamB.name} won by ${margin} wicket${margin !== 1 ? 's' : ''}`;
+        }
+      } else {
+        winnerKey = 'tie';
+        resultText = `Match tied`;
+      }
     }
   }
 
