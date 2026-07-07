@@ -963,5 +963,6 @@ module.exports = {
   setOvers, setWickets, startMatch, recordMatchEnd, giveFreeWin,
   calculateAwards, getStandingsSorted, getAllTriSeries,
   addPlayerToRosterForce, removePlayerFromRosterForce,
-  createTeam, removeTeam, setQ, getTeamKeys, startTournament
+  createTeam, removeTeam, setQ, getTeamKeys, startTournament,
+  saveState
 };
