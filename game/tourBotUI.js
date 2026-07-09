@@ -681,7 +681,7 @@ module.exports = function installTourMode(bot, sleep, sendEventUpdate, COMMENTAR
         return ctx.reply("❌ Only the tournament host or captains of the playing teams can start the match.");
     }
     
-    const res = triManager.startMatch(mainChatId, matchNum, { id: tri.hostId, first_name: tri.hostName }, ctx.chat.id);
+    const res = triManager.startMatch(mainChatId, matchNum, { id: ctx.from.id, first_name: ctx.from.first_name }, ctx.chat.id);
     if (!res.success) return ctx.reply("❌ " + res.error);
     
     const tour = res.tour;
