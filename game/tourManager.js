@@ -1,4 +1,9 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+const STATE_FILE = path.join(__dirname, '../db/tour_state.json');
+
 
 const tours = new Map();
 const userTourMap = new Map(); // userId -> tourId
@@ -18,6 +23,45 @@ function getBasePlayerId(id) {
     }
     return str;
 }
+
+
+function saveState() {
+  try {
+    const data = {
+      tours: Array.from(tours.entries()),
+      userTourMap: Array.from(userTourMap.entries()),
+      chatTourMap: Array.from(chatTourMap.entries())
+    };
+    fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error("Failed to save tour state:", e);
+  }
+}
+
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const content = fs.readFileSync(STATE_FILE, 'utf-8');
+      const data = JSON.parse(content);
+      if (data.tours) {
+        tours.clear();
+        data.tours.forEach(([k, v]) => tours.set(k, v));
+      }
+      if (data.userTourMap) {
+        userTourMap.clear();
+        data.userTourMap.forEach(([k, v]) => userTourMap.set(k, v));
+      }
+      if (data.chatTourMap) {
+        chatTourMap.clear();
+        data.chatTourMap.forEach(([k, v]) => chatTourMap.set(k, v));
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load tour state:", e);
+  }
+}
+
+loadState();
 
 function createTour(chatId, hostUser, name = '') {
   if (chatTourMap.has(chatId)) return { success: false, error: "A match is already active in this group!" };
@@ -76,7 +120,10 @@ function createTour(chatId, hostUser, name = '') {
   tours.set(tourId, tour);
   userTourMap.set(hostUser.id, tourId);
   chatTourMap.set(chatId, tourId);
-  return { success: true, tour };
+  saveState();
+  saveState();
+    saveState();
+    return { success: true, tour };
 }
 
 function joinTeam(tourId, user, teamKey) {
@@ -120,6 +167,7 @@ function joinTeam(tourId, user, teamKey) {
                     team.name = teamKey === 'teamA' ? 'Team A' : 'Team B';
                 }
             }
+            saveState();
             return { success: true, left: true, tour };
         }
         return { success: false, error: 'Already in team.' };
@@ -166,6 +214,7 @@ function appointCaptain(tourId, callerId, targetUserId, teamKey) {
     if (!team.customName) {
         team.name = `${pObj.first_name}'s XI`;
     }
+    saveState();
     return true;
 }
 
@@ -192,6 +241,7 @@ function renameTeam(tourId, userId, newName) {
     const team = tour[teamKey];
     team.name = trimmed;
     team.customName = true;
+    saveState();
     return { success: true, teamName: team.name };
 }
 
@@ -254,6 +304,7 @@ function removePlayer(tourId, requesterId, targetUserId) {
         }
     }
 
+    saveState();
     return { success: true, player, tour, clearedActive };
 }
 
@@ -284,6 +335,7 @@ function startTour(tourId, hostId) {
     tour.maxBalls = tour.config.overs * 6;
     
     tour.state = 'TOSS';
+    saveState();
     return { success: true, tour };
 }
 
@@ -297,6 +349,7 @@ function handleToss(tourId, userId, choice) {
     
     tour.tossWinnerId = won ? tour.teamA.captainId : tour.teamB.captainId;
     tour.state = 'CHOOSE';
+    saveState();
     return { tour, tossResult, winnerTeam: won ? 'A' : 'B' };
 }
 
@@ -348,6 +401,8 @@ function setBatsman(tourId, userId, playerIndex, position) {
         }
     }
 
+    saveState();
+    saveState();
     return { success: true, player };
 }
 
@@ -389,6 +444,7 @@ function adjustRuns(tourId, hostId, teamChar, amount, isPenalty) {
     if (isPenalty) team.penaltyRuns += amount;
     else team.bonusRuns += amount;
 
+    saveState();
     return { teamName: team.name, total: team.penaltyRuns + team.bonusRuns };
 }
 
@@ -417,6 +473,7 @@ function rebatPlayer(tourId, hostId, teamChar, playerIndex) {
         dotBalls: 0
     };
     team.players.push(rebatObj);
+    saveState();
     return rebatObj;
 }
 
@@ -684,6 +741,7 @@ function submitPlay(tourId, userId, rawInput) {
         }
     }
     
+    saveState();
     return { success: true, ...res };
 }
 
@@ -841,6 +899,7 @@ function deleteTour(tourId) {
     userTourMap.delete(tour.hostId);
     chatTourMap.delete(tour.chatId);
     tours.delete(tourId);
+    saveState();
 }
 
 function getAllTours() {
@@ -851,5 +910,5 @@ module.exports = {
   createTour, getTour, getUserTour, deleteTour, joinTeam,
   appointCaptain, renameTeam, removePlayer, startTour, handleToss,
   setBatsman, setBowler, submitPlay, adjustRuns, rebatPlayer,
-  triggerLMS, totalScore, getAllTours, getBasePlayerId, calculateMOTM
+  triggerLMS, totalScore, getAllTours, getBasePlayerId, calculateMOTM, saveState
 };

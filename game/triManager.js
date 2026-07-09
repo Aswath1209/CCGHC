@@ -518,6 +518,16 @@ function startMatch(chatId, matchNum, hostUser, targetChatId = null) {
     return { success: false, error: 'Match teams are not determined yet!' };
   }
 
+  // Check if either team is already playing in another active match
+  const activeTeamMatch = tri.matches.find(m => 
+    m.state === 'PLAYING' && 
+    (m.team1Key === match.team1Key || m.team2Key === match.team1Key || 
+     m.team1Key === match.team2Key || m.team2Key === match.team2Key)
+  );
+  if (activeTeamMatch) {
+    return { success: false, error: `Cannot start match! One of the teams is already playing in Match ${activeTeamMatch.num}.` };
+  }
+
   if (team1.players.length === 0 || team2.players.length === 0) {
     return { success: false, error: `Both teams must have at least 1 registered player! (${team1.name}: ${team1.players.length}, ${team2.name}: ${team2.players.length})` };
   }
@@ -534,6 +544,9 @@ function startMatch(chatId, matchNum, hostUser, targetChatId = null) {
   // Clean up any stale tours in playChatId
   const activeT = [...tourManager.getAllTours()].find(t => t.chatId && t.chatId.toString() === playChatId.toString());
   if (activeT) {
+    if (activeT.state !== 'LOBBY' && activeT.state !== 'COMPLETED') {
+      return { success: false, error: 'An active match is already being played in this group! Please wait for it to finish or cancel it.' };
+    }
     tourManager.deleteTour(activeT.id);
   }
 
